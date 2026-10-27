@@ -4,6 +4,7 @@ import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/playing_card.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -72,14 +73,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: _listPadding(context),
             children: <Widget>[
               section(s.language),
-              SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: <ButtonSegment<String>>[
-                  ButtonSegment<String>(value: 'el', label: Text(s.greek)),
-                  ButtonSegment<String>(value: 'en', label: Text(s.english)),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final code in AppSettings.languages)
+                    ChoiceChip(
+                      label: Text(Strings.languageName(code)),
+                      selected: settings.language == code,
+                      onSelected: (_) => settings.language = code,
+                      selectedColor: PastraColors.gold,
+                      labelStyle: TextStyle(
+                        color: settings.language == code ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      backgroundColor: Colors.black.withValues(alpha: 0.25),
+                      showCheckmark: false,
+                    ),
                 ],
-                selected: <String>{settings.language},
-                onSelectionChanged: (v) => settings.language = v.first,
               ),
               label(s.yourName),
               TextField(
@@ -93,6 +104,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onChanged: (v) => settings.playerName = v,
+              ),
+              section(s.appearance),
+              label(s.tableColor),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: <Widget>[
+                  for (final t in TableTheme.values)
+                    _Swatch(
+                      selected: settings.tableTheme == t,
+                      onTap: () => settings.tableTheme = t,
+                      child: DecoratedBox(
+                        decoration: t.decoration.copyWith(borderRadius: BorderRadius.circular(12)),
+                        child: const SizedBox(width: 64, height: 44),
+                      ),
+                    ),
+                ],
+              ),
+              label(s.cardBackLabel),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: <Widget>[
+                  for (final b in CardBackStyle.values)
+                    _Swatch(
+                      selected: settings.cardBack == b,
+                      onTap: () => settings.cardBack = b,
+                      child: SizedBox(
+                        width: 44,
+                        height: 62,
+                        child: PlayingCardView(card: 0, faceUp: false, backStyle: b),
+                      ),
+                    ),
+                ],
               ),
               section(s.gameRules),
               label(s.variant, hint: s.variantHint(rules.variant)),
@@ -189,10 +234,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.haptics,
                 onChanged: (v) => settings.haptics = v,
               ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                title: Text(s.sound),
+                value: settings.sound,
+                onChanged: (v) => settings.sound = v,
+              ),
               section(s.about),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text(s.aboutBody, style: const TextStyle(color: Colors.white70)),
+                child: Text('${s.aboutBody}\n${s.credits}', style: const TextStyle(color: Colors.white70, height: 1.5)),
               ),
             ],
           ),
@@ -207,4 +258,28 @@ EdgeInsets _listPadding(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
   final side = w > 792 ? (w - 760) / 2 : 16.0;
   return EdgeInsets.fromLTRB(side, 8, side, 32);
+}
+
+/// A tappable preview with a gold ring when selected.
+class _Swatch extends StatelessWidget {
+  const _Swatch({required this.selected, required this.onTap, required this.child});
+
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: selected ? PastraColors.gold : Colors.white24, width: selected ? 3 : 1),
+        ),
+        child: child,
+      ),
+    );
+  }
 }

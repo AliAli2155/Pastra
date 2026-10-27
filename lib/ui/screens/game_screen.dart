@@ -1,7 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../engine/cards.dart';
 import '../../engine/game_state.dart';
+import '../../engine/pastra_engine.dart';
+import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
 import '../../l10n/strings.dart';
@@ -65,10 +69,85 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
+  /// Tutorial step being shown (null = no tutorial). The game starts when
+  /// the tutorial is finished or skipped.
+  int? _tutorialStep;
+
+  List<String> get _tutorialSteps => c.state.rules.isPile
+      ? const <String>['hand', 'pile', 'pastra', 'deck', 'timer', 'score']
+      : const <String>['hand', 'table', 'pastraSums', 'deckSums', 'timer', 'scoreSums'];
+
   @override
   void initState() {
     super.initState();
+    if (!c.settings.tutorialDone && c.state.round == 1 && PastraEngine.isOpeningPosition(c.state)) {
+      _tutorialStep = 0;
+    } else {
+      c.start();
+    }
+  }
+
+  void _tutorialNext() {
+    final step = _tutorialStep;
+    if (step == null) return;
+    if (step + 1 < _tutorialSteps.length) {
+      setState(() => _tutorialStep = step + 1);
+    } else {
+      _tutorialEnd();
+    }
+  }
+
+  void _tutorialEnd() {
+    setState(() => _tutorialStep = null);
+    c.settings.tutorialDone = true;
     c.start();
+  }
+
+  /// Area the current tutorial step points at, in table coordinates.
+  Rect? _tutorialFocus(String step, TableLayout layout, Size size) {
+    Rect? union(Iterable<Rect> rects) {
+      Rect? r;
+      for (final x in rects) {
+        r = r == null ? x : r.expandToInclude(x);
+      }
+      return r;
+    }
+
+    switch (step) {
+      case 'hand':
+        return union(layout.cards.values.where((p) => p.interactive).map((p) => p.rect))?.inflate(8);
+      case 'pile':
+      case 'table':
+      case 'pastra':
+      case 'pastraSums':
+        return union(c.state.table.map((card) => layout.cards[card]?.rect).whereType<Rect>())?.inflate(10);
+      case 'deck':
+      case 'deckSums':
+        final d = layout.deckRect;
+        return Rect.fromLTRB(d.left, d.top, d.right + d.width * 1.4, d.bottom).inflate(6);
+      case 'timer':
+        return layout.infoRect.inflate(4);
+      default:
+        return null;
+    }
+  }
+
+  Widget _tutorialOverlay(Strings s, TableLayout layout, Size size) {
+    final index = _tutorialStep!;
+    final step = _tutorialSteps[index];
+    return Positioned.fill(
+      child: _TutorialOverlay(
+        focus: _tutorialFocus(step, layout, size),
+        title: s.tutorialTitle(step),
+        body: s.tutorialBody(step),
+        step: index,
+        total: _tutorialSteps.length,
+        nextLabel: index + 1 < _tutorialSteps.length ? s.tutorialNext : s.tutorialDone,
+        skipLabel: s.tutorialSkip,
+        onNext: _tutorialNext,
+        onSkip: _tutorialEnd,
+      ),
+    );
   }
 
   @override
@@ -184,7 +263,9 @@ class _GameScreenState extends State<GameScreen> {
       final duration = Duration(milliseconds: settings.fastAnimations ? 240 : 420);
       final event = c.pastraEvent;
 
-      return Stack(
+      return _Shake(
+        trigger: event?.id ?? 0,
+        child: Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
@@ -219,6 +300,13 @@ class _GameScreenState extends State<GameScreen> {
               ),
           for (final entry in layout.seatRects.entries)
             _seatLabel(s, entry.key, entry.value, layout.seatSides[entry.key] ?? SeatSide.top),
+          if (c.lastMove != null && layout.seatRects.containsKey(c.lastMove!.seat)) _lastMoveChip(layout, c.lastMove!),
+          if (event != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _PastraBurst(key: ValueKey<int>(event.id), center: layout.playCenter),
+              ),
+            ),
           Positioned.fromRect(
             rect: layout.infoRect,
             child: IgnorePointer(child: _infoLine(s)),
@@ -235,6 +323,18 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          if (_tutorialStep != null) _tutorialOverlay(s, layout, Size(box.maxWidth, box.maxHeight)),
+          if (c.achievementToast != null)
+            Positioned(
+              top: 6,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: _AchievementToast(key: ValueKey<String>(c.achievementToast!), id: c.achievementToast!),
+                ),
+              ),
+            ),
           if (state.phase != GamePhase.playing && !c.busy)
             Positioned.fill(
               child: RoundSummaryPanel(
@@ -246,8 +346,51 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
         ],
+      ),
       );
     });
+  }
+
+  /// The card a bot just played, shown small next to it for a moment
+  /// (with a tick when it took the pile).
+  Widget _lastMoveChip(TableLayout layout, LastMove move) {
+    final rect = layout.seatRects[move.seat]!;
+    final side = layout.seatSides[move.seat] ?? SeatSide.top;
+    final w = layout.smallCardWidth * 0.8;
+    final h = w * TableLayout.cardRatio;
+    final topLeft = switch (side) {
+      SeatSide.top => Offset(rect.left - w - 12, rect.top + (rect.height - h) / 2),
+      SeatSide.left => Offset(rect.right + 6, rect.bottom - h),
+      SeatSide.right => Offset(rect.left - w - 6, rect.bottom - h),
+      SeatSide.bottom => Offset(rect.left, rect.top - h - 6),
+    };
+    return Positioned(
+      left: topLeft.dx,
+      top: topLeft.dy,
+      width: w,
+      height: h,
+      child: IgnorePointer(
+        child: _FadingChip(
+          key: ValueKey<int>(move.id),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Positioned.fill(child: PlayingCardView(card: move.card, faceUp: true)),
+              if (move.captured)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: PastraColors.gold, shape: BoxShape.circle),
+                    child: const Icon(Icons.check, size: 12, color: Colors.black),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _card(int card, CardPlacement p, Duration duration) {
@@ -653,4 +796,396 @@ class _PastraBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shakes its child briefly whenever [trigger] changes (a pastra). The child
+/// keeps its state, so card animations are not disturbed.
+class _Shake extends StatefulWidget {
+  const _Shake({required this.trigger, required this.child});
+
+  final int trigger;
+  final Widget child;
+
+  @override
+  State<_Shake> createState() => _ShakeState();
+}
+
+class _ShakeState extends State<_Shake> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
+
+  @override
+  void didUpdateWidget(_Shake old) {
+    super.didUpdateWidget(old);
+    if (widget.trigger != old.trigger && widget.trigger != 0) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) {
+        final t = _c.value;
+        final dx = _c.isAnimating ? sin(t * pi * 9) * (1 - t) * 7 : 0.0;
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+    );
+  }
+}
+
+/// Gold ring and sparks bursting from the pile on a pastra.
+class _PastraBurst extends StatefulWidget {
+  const _PastraBurst({super.key, required this.center});
+
+  final Offset center;
+
+  @override
+  State<_PastraBurst> createState() => _PastraBurstState();
+}
+
+class _PastraBurstState extends State<_PastraBurst> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _BurstPainter(_c, widget.center, widget.key.hashCode),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _BurstPainter extends CustomPainter {
+  _BurstPainter(this.anim, this.center, int seed)
+      : _particles = List<_Spark>.generate(34, (i) {
+          final r = Random(seed + i * 7919);
+          return _Spark(
+            angle: r.nextDouble() * 2 * pi,
+            speed: 90 + r.nextDouble() * 220,
+            size: 2.5 + r.nextDouble() * 4.5,
+            hue: r.nextInt(3),
+          );
+        }),
+        super(repaint: anim);
+
+  final Animation<double> anim;
+  final Offset center;
+  final List<_Spark> _particles;
+
+  static const List<Color> _colors = <Color>[
+    PastraColors.gold,
+    Color(0xFFFFF3C4),
+    Color(0xFFFF9F43),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = anim.value;
+    if (t <= 0 || t >= 1) return;
+    // Expanding ring.
+    final ringT = Curves.easeOutCubic.transform(min(1.0, t * 1.6));
+    canvas.drawCircle(
+      center,
+      20 + ringT * 120,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6 * (1 - ringT) + 1
+        ..color = PastraColors.gold.withValues(alpha: (1 - ringT) * 0.9),
+    );
+    // Sparks with a little gravity.
+    final fade = t < 0.6 ? 1.0 : (1 - (t - 0.6) / 0.4);
+    final paint = Paint();
+    for (final p in _particles) {
+      final d = p.speed * Curves.easeOutQuad.transform(t);
+      final pos = center + Offset(cos(p.angle) * d, sin(p.angle) * d + 140 * t * t);
+      paint.color = _colors[p.hue].withValues(alpha: fade);
+      canvas.drawCircle(pos, p.size * (1 - t * 0.5), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BurstPainter oldDelegate) => false;
+}
+
+class _Spark {
+  final double angle;
+  final double speed;
+  final double size;
+  final int hue;
+
+  const _Spark({required this.angle, required this.speed, required this.size, required this.hue});
+}
+
+/// Pops in, stays for a moment, then fades out.
+class _FadingChip extends StatelessWidget {
+  const _FadingChip({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 3200),
+      child: child,
+      builder: (context, t, child) {
+        final opacity = t < 0.06 ? t / 0.06 : (t > 0.8 ? (1 - t) / 0.2 : 1.0);
+        final scale = t < 0.06 ? 0.6 + 0.4 * (t / 0.06) : 1.0;
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+    );
+  }
+}
+
+/// "Achievement unlocked" banner that slides in from the top.
+class _AchievementToast extends StatelessWidget {
+  const _AchievementToast({super.key, required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final icon = kAchievements
+        .firstWhere((a) => a.id == id, orElse: () => const Achievement('?', Icons.emoji_events))
+        .icon;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 2700),
+      builder: (context, t, child) {
+        final inT = (t / 0.12).clamp(0.0, 1.0);
+        final outT = t > 0.88 ? (1 - (t - 0.88) / 0.12) : 1.0;
+        return Opacity(
+          opacity: (inT * outT).clamp(0.0, 1.0),
+          child: Transform.translate(offset: Offset(0, -30 * (1 - Curves.easeOut.transform(inT))), child: child),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: PastraColors.gold, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(color: PastraColors.gold, shape: BoxShape.circle),
+              child: Icon(icon, size: 20, color: Colors.black),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(s.achUnlocked, style: const TextStyle(fontSize: 11, color: PastraColors.gold)),
+                Text(
+                  s.achTitle(id),
+                  style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dims the table except [focus] and explains one thing.
+class _TutorialOverlay extends StatelessWidget {
+  const _TutorialOverlay({
+    required this.focus,
+    required this.title,
+    required this.body,
+    required this.step,
+    required this.total,
+    required this.nextLabel,
+    required this.skipLabel,
+    required this.onNext,
+    required this.onSkip,
+  });
+
+  final Rect? focus;
+  final String title;
+  final String body;
+  final int step;
+  final int total;
+  final String nextLabel;
+  final String skipLabel;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      final f = focus;
+      final bubble = Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
+        decoration: BoxDecoration(
+          color: PastraColors.panel,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: PastraColors.gold, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: PastraColors.gold)),
+            const SizedBox(height: 6),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Text(body, style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.35)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                for (var i = 0; i < total; i++)
+                  Container(
+                    width: 7,
+                    height: 7,
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i == step ? PastraColors.gold : Colors.white24,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Buttons wrap onto a second line when the labels are long.
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 4,
+                runSpacing: 4,
+                children: <Widget>[
+                  TextButton(
+                    onPressed: onSkip,
+                    child: Text(skipLabel, style: const TextStyle(color: Colors.white70)),
+                  ),
+                  FilledButton(
+                    onPressed: onNext,
+                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8)),
+                    child: Text(nextLabel),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+      return Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: CustomPaint(painter: _DimPainter(f)),
+            ),
+          ),
+          Positioned.fill(
+            child: CustomSingleChildLayout(delegate: _BubbleLayout(f), child: bubble),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+/// Places the tutorial bubble next to the highlighted area so that it is
+/// always fully on screen: below it, above it, beside it, or (on very small
+/// screens) wherever it fits best.
+class _BubbleLayout extends SingleChildLayoutDelegate {
+  _BubbleLayout(this.focus);
+
+  final Rect? focus;
+  static const double margin = 12;
+  static const double gap = 12;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final double w = min<double>(340.0, max<double>(0.0, constraints.maxWidth - 2 * margin));
+    final double h = max<double>(0.0, constraints.maxHeight - 2 * margin);
+    return BoxConstraints(minWidth: w, maxWidth: w, maxHeight: h);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size child) {
+    double clampX(double x) => x.clamp(margin, max<double>(margin, size.width - child.width - margin)).toDouble();
+    double clampY(double y) => y.clamp(margin, max<double>(margin, size.height - child.height - margin)).toDouble();
+    final f = focus;
+    if (f == null) {
+      return Offset(clampX((size.width - child.width) / 2), clampY((size.height - child.height) / 2));
+    }
+    final double x = clampX(f.center.dx - child.width / 2);
+    final double belowY = f.bottom + gap;
+    final double aboveY = f.top - gap - child.height;
+    final bool fitsBelow = belowY + child.height <= size.height - margin;
+    final bool fitsAbove = aboveY >= margin;
+    // Prefer the side with more room.
+    final bool preferBelow = f.center.dy < size.height / 2;
+    if (fitsBelow && (preferBelow || !fitsAbove)) return Offset(x, belowY);
+    if (fitsAbove) return Offset(x, aboveY);
+    final double y = clampY(f.center.dy - child.height / 2);
+    if (f.right + gap + child.width <= size.width - margin) return Offset(f.right + gap, y);
+    if (f.left - gap - child.width >= margin) return Offset(f.left - gap - child.width, y);
+    return Offset(x, clampY(preferBelow ? belowY : aboveY));
+  }
+
+  @override
+  bool shouldRelayout(_BubbleLayout oldDelegate) => oldDelegate.focus != focus;
+}
+
+class _DimPainter extends CustomPainter {
+  const _DimPainter(this.focus);
+
+  final Rect? focus;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dim = Path()..addRect(Offset.zero & size);
+    final f = focus;
+    if (f != null) {
+      dim.addRRect(RRect.fromRectAndRadius(f, const Radius.circular(14)));
+      dim.fillType = PathFillType.evenOdd;
+    }
+    canvas.drawPath(dim, Paint()..color = Colors.black.withValues(alpha: 0.62));
+    if (f != null) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(f, const Radius.circular(14)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = PastraColors.gold,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DimPainter oldDelegate) => oldDelegate.focus != focus;
 }

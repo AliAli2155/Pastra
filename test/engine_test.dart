@@ -7,6 +7,8 @@ import 'package:pastra/engine/game_state.dart';
 import 'package:pastra/engine/pastra_ai.dart';
 import 'package:pastra/engine/pastra_engine.dart';
 import 'package:pastra/engine/rules.dart';
+import 'package:pastra/game/achievements.dart';
+import 'package:pastra/game/app_settings.dart';
 
 int card(int suit, int rank) => Cards.make(suit, rank);
 
@@ -558,6 +560,31 @@ void main() {
       expect(v.hands[1].every((c) => c == -1), isTrue);
       expect(v.deck.every((c) => c == -1), isTrue);
       expect(v.table, s.table);
+    });
+  });
+
+  group('achievements', () {
+    test('counters and events', () {
+      final stats = GameStats()
+        ..games = 10
+        ..wins = 1
+        ..pastras = 0
+        ..bestStreak = 3;
+      final ids = earnedAchievements(
+        stats,
+        round: const RoundFacts(score: 41, pastras: 3, jackPastras: 1, goodCards: true),
+        game: const GameFacts(won: true, level: AiLevel.hard, players: 4, rounds: 5, target: 151, maxDeficit: 60),
+      );
+      expect(
+        ids.toSet(),
+        <String>{
+          'games_1', 'games_10', 'wins_1', 'streak_3', 'jack_pastra', 'three_pastras', 'big_round',
+          'good_cards', 'win_hard', 'win_2v2', 'comeback', 'quick_win',
+        },
+      );
+      expect(earnedAchievements(GameStats()), isEmpty);
+      final ids2 = <String>{for (final a in kAchievements) a.id};
+      expect(ids2.length, kAchievements.length, reason: 'ids are unique');
     });
   });
 }

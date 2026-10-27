@@ -61,6 +61,8 @@ class TableLayout {
     required this.handCardWidth,
     required this.handTop,
     required this.dropLine,
+    required this.playCenter,
+    required this.smallCardWidth,
   });
 
   final Map<int, CardPlacement> cards;
@@ -81,6 +83,12 @@ class TableLayout {
 
   /// A dragged hand card whose centre is above this line is played.
   final double dropLine;
+
+  /// Middle of the pile / table cards.
+  final Offset playCenter;
+
+  /// Width of the small cards (other hands, deck, piles).
+  final double smallCardWidth;
 
   static const double cardRatio = 1.42;
   static const double margin = 8;
@@ -376,6 +384,8 @@ class TableLayout {
       handCardWidth: hw,
       handTop: handTop,
       dropLine: handTop - hh * 0.25,
+      playCenter: contentRect.center,
+      smallCardWidth: sw,
     );
   }
 

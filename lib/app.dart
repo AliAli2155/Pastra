@@ -21,11 +21,11 @@ class PastraApp extends StatelessWidget {
       child: AnimatedBuilder(
         animation: settings,
         builder: (context, _) => MaterialApp(
-          title: settings.isGreek ? 'Πάστρα' : 'Pastra',
+          title: Strings(settings.language).appTitle,
           debugShowCheckedModeBanner: false,
           theme: _theme,
           locale: Locale(settings.language),
-          supportedLocales: const <Locale>[Locale('el'), Locale('en')],
+          supportedLocales: <Locale>[for (final code in AppSettings.languages) Locale(code)],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           builder: (context, child) => Stack(
             textDirection: TextDirection.ltr,

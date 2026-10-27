@@ -12,6 +12,7 @@ import '../widgets/playing_card.dart';
 import 'game_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -113,6 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.menu_book_outlined,
           label: s.rules,
           onTap: () => _open(const RulesScreen()),
+        ),
+        const SizedBox(height: 10),
+        _MenuButton(
+          icon: Icons.bar_chart_rounded,
+          label: s.statistics,
+          onTap: () => _open(const StatsScreen()),
         ),
         const SizedBox(height: 10),
         _MenuButton(

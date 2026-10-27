@@ -1,7 +1,8 @@
 # Πάστρα (Pastra)
 
 Yunanların oynadığı **Pastra** kart oyunu — Flutter ile. Android uygulaması,
-iPhone için web sürümü (Safari → Ana Ekrana Ekle). Arayüz Yunanca ve İngilizce.
+iPhone için web sürümü (Safari → Ana Ekrana Ekle). 12 dil: Yunanca, İngilizce, Türkçe, Almanca,
+Fransızca, İspanyolca, İtalyanca, Portekizce, Rusça, Bulgarca, Arapça, Çince.
 
 - Bilgisayara karşı **1v1** ve eşli **2v2** (eşin karşında oturur)
 - Üç zorluk: Kolay / Orta / Zor (zor bot Monte Carlo + oyun sonunda tam arama yapar, hile yapmaz:
@@ -19,6 +20,12 @@ iPhone için web sürümü (Safari → Ana Ekrana Ekle). Arayüz Yunanca ve İng
   ve **Αθροίσματα** (Kıbrıs usulü toplamalı pastra)
 - Ayarlardan: 51/101/151/251 puan, 4 ya da 6 kart dağıtım, vale-vale puanı, vale tek kartı
   alınca pastra sayılsın mı, son kartla pastra
+- Gerçek kart sesleri: Kenney.nl "Casino Audio", "Interface Sounds", "Music Jingles" (CC0);
+  `tool/sounds_raw/` içindeki paketlerden `python tool/make_sounds.py` ile `assets/sounds/` üretilir, pastrada parıltı + sarsıntı, botların son
+  attığı kart adlarının yanında kısa süre görünür
+- İstatistikler: oyun/galibiyet, seri, pastralar, en iyi el, mod ve zorluğa göre galibiyetler
+- Çeviriler `tool/l10n/` içindeki tablolarda; değiştirdikten sonra `python tool/l10n/gen.py`
+  `lib/l10n/translations.dart` dosyasını yeniden üretir
 - Online mod sonraki aşama: [docs/ONLINE.md](docs/ONLINE.md)
 
 Kuralların araştırması ve kaynaklar: [docs/ARASTIRMA.md](docs/ARASTIRMA.md)

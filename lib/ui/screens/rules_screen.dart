@@ -31,7 +31,19 @@ class RulesScreen extends StatelessWidget {
             <Object>[Cards.tenOfDiamonds, '3'],
           ];
     return Scaffold(
-      appBar: AppBar(title: Text('${s.rules} · ${s.variantName(v)}')),
+      appBar: AppBar(
+        title: Text('${s.rules} · ${s.variantName(v)}'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: s.tutorial,
+            icon: const Icon(Icons.school_outlined),
+            onPressed: () {
+              SettingsScope.read(context).tutorialDone = false;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.tutorialQueued)));
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: feltDecoration,
         child: SafeArea(

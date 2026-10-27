@@ -5,11 +5,14 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../engine/cards.dart';
 import '../engine/game_state.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
+import 'achievements.dart';
 import 'app_settings.dart';
 import 'seats.dart';
+import 'sound.dart';
 
 /// A card that was just played and is about to capture [captured].
 class PendingPlay {
@@ -18,6 +21,16 @@ class PendingPlay {
   final List<int> captured;
 
   const PendingPlay(this.seat, this.card, this.captured);
+}
+
+/// The latest card played, shown for a moment next to that player.
+class LastMove {
+  final int id;
+  final int seat;
+  final int card;
+  final bool captured;
+
+  const LastMove(this.id, this.seat, this.card, this.captured);
 }
 
 /// Shown as the big "ΠΑΣΤΡΑ!" banner.
@@ -89,6 +102,21 @@ class GameController extends ChangeNotifier {
 
   /// Seat whose team just received the leftover table cards.
   int? leftoverSeat;
+
+  LastMove? lastMove;
+
+  /// Achievement being announced right now (id), then the waiting ones.
+  String? achievementToast;
+  final List<String> _toastQueue = <String>[];
+  bool _toastRunning = false;
+
+  /// Largest lead the other team had after a round of this game.
+  int _maxDeficit = 0;
+
+  /// Pastras the local player made in this round (for the statistics).
+  int _roundPastras = 0;
+  int _roundJackPastras = 0;
+  Timer? _warnTimer;
 
   /// Pile game, start of a round: how many of the four opening cards have
   /// been dealt so far (null = all of them). The others are still drawn on
@@ -172,12 +200,14 @@ class GameController extends ChangeNotifier {
   Future<void> _revealOpening() async {
     _busy = true;
     tableShown = 0;
+    SoundFx.instance.play(Sfx.shuffle, volume: 0.8);
     _notify();
-    await _wait(400);
+    await _wait(settings.sound ? 1000 : 400);
     final n = _state.table.length;
     for (var i = 1; i <= n; i++) {
       if (_disposed) return;
       tableShown = i;
+      SoundFx.instance.play(Sfx.deal);
       _notify();
       await _wait(i == n ? 450 : 330);
     }
@@ -236,6 +266,8 @@ class GameController extends ChangeNotifier {
     _busy = true;
     _turnTimer?.cancel();
     _turnTimer = null;
+    _warnTimer?.cancel();
+    _warnTimer = null;
     final seat = _state.current;
     final pv = PastraEngine.preview(_state, card);
     selected = null;
@@ -248,11 +280,19 @@ class GameController extends ChangeNotifier {
     final result = PastraEngine.applyMove(_state, card);
     pending = null;
     landing = result.isCapture ? null : card;
+    lastMove = LastMove(++_eventCounter, seat, card, result.isCapture);
     if (result.isPastra) {
       final event = PastraEvent(++_eventCounter, seat, result.pastraPoints);
       pastraEvent = event;
-      if (settings.haptics) HapticFeedback.mediumImpact();
+      SoundFx.instance.play(Sfx.pastra);
+      if (settings.haptics) HapticFeedback.heavyImpact();
+      if (seat == humanSeat) {
+        _roundPastras++;
+        if (Cards.isJack(card)) _roundJackPastras++;
+      }
       _clearEventLater(event.id);
+    } else {
+      SoundFx.instance.play(result.isCapture ? Sfx.capture : Sfx.play);
     }
     _notify();
     await _wait(result.isCapture ? 450 : 380);
@@ -269,6 +309,7 @@ class GameController extends ChangeNotifier {
       await _wait(250);
       if (_disposed) return;
       PastraEngine.dealHands(_state);
+      SoundFx.instance.play(Sfx.deal);
       _notify();
       await _wait(700);
       if (_disposed) return;
@@ -284,12 +325,43 @@ class GameController extends ChangeNotifier {
         leftoverSeat = null;
       }
       PastraEngine.scoreRound(_state);
+      final ourTeam = GameState.teamOf(humanSeat);
+      final ours = _state.lastResult?.teams[ourTeam];
+      settings.recordRound(
+        score: ours?.total ?? 0,
+        pastras: _roundPastras,
+        jackPastras: _roundJackPastras,
+      );
+      final roundFacts = RoundFacts(
+        score: ours?.total ?? 0,
+        pastras: _roundPastras,
+        jackPastras: _roundJackPastras,
+        goodCards: (ours?.twoOfClubs ?? false) && (ours?.tenOfDiamonds ?? false),
+      );
+      _roundPastras = 0;
+      _roundJackPastras = 0;
+      lastMove = null;
+      final deficit = _state.scores[1 - ourTeam] - _state.scores[ourTeam];
+      if (deficit > _maxDeficit) _maxDeficit = deficit;
+      GameFacts? gameFacts;
       if (_state.phase == GamePhase.gameOver) {
-        settings.recordGame(won: _state.winner == GameState.teamOf(humanSeat));
+        final won = _state.winner == ourTeam;
+        settings.recordGame(won: won, players: _state.numPlayers, level: seats[1].level);
+        gameFacts = GameFacts(
+          won: won,
+          level: seats[1].level,
+          players: _state.numPlayers,
+          rounds: _state.round,
+          target: _state.rules.targetScore,
+          maxDeficit: _maxDeficit,
+        );
+        SoundFx.instance.play(won ? Sfx.win : Sfx.lose);
         settings.clearSavedGame();
-      } else {
-        _save();
       }
+      _announce(settings.unlockAchievements(
+        earnedAchievements(settings.stats, round: roundFacts, game: gameFacts),
+      ));
+      if (_state.phase != GamePhase.gameOver) _save();
       _busy = false;
       _notify();
       return;
@@ -316,8 +388,17 @@ class GameController extends ChangeNotifier {
     turnId++;
     _turnTimer?.cancel();
     _turnTimer = null;
+    _warnTimer?.cancel();
+    _warnTimer = null;
+    if (!seats[_state.current].isBot) SoundFx.instance.play(Sfx.turn, volume: 0.7);
     final limit = turnLimit;
     if (limit == null || seats[_state.current].isBot) return;
+    if (limit.inSeconds > 5) {
+      final warnId = turnId;
+      _warnTimer = Timer(limit - const Duration(seconds: 5), () {
+        if (!_disposed && warnId == turnId && isHumanTurn) SoundFx.instance.play(Sfx.tick);
+      });
+    }
     final id = turnId;
     _turnTimer = Timer(limit, () {
       if (_disposed || id != turnId || !isHumanTurn) return;
@@ -371,6 +452,22 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  /// Shows newly unlocked achievements one after another.
+  Future<void> _announce(List<String> ids) async {
+    _toastQueue.addAll(ids);
+    if (_toastRunning) return;
+    _toastRunning = true;
+    while (_toastQueue.isNotEmpty && !_disposed) {
+      achievementToast = _toastQueue.removeAt(0);
+      _notify();
+      await Future<void>.delayed(const Duration(milliseconds: 2800));
+    }
+    if (_disposed) return;
+    achievementToast = null;
+    _toastRunning = false;
+    _notify();
+  }
+
   void _clearEventLater(int id) {
     Future<void>.delayed(_duration(1500), () {
       if (_disposed || pastraEvent?.id != id) return;
@@ -397,6 +494,7 @@ class GameController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _turnTimer?.cancel();
+    _warnTimer?.cancel();
     super.dispose();
   }
 }

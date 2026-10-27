@@ -43,3 +43,7 @@ app.*.map.json
 
 # Windows zip from windows_exe.bat
 Pastra-Windows.zip
+
+# Downloaded sound packs (only the chosen sounds go to assets/sounds)
+tool/sounds_raw/
+test_log.txt

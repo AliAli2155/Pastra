@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('home screen in Greek', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'el'});
+    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'el', 'sound': false});
     final settings = await AppSettings.load();
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
@@ -17,7 +17,7 @@ void main() {
   });
 
   testWidgets('starting a 1v1 game shows the table and the hand', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en'});
+    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false, 'tutorialDone': true});
     final settings = await AppSettings.load();
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
@@ -36,7 +36,7 @@ void main() {
   });
 
   testWidgets('settings screen switches the language', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en'});
+    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false});
     final settings = await AppSettings.load();
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
@@ -47,5 +47,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(settings.language, 'el');
     expect(find.text('Ρυθμίσεις'), findsOneWidget);
+  });
+
+  testWidgets('the first game starts with the tutorial', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false});
+    final settings = await AppSettings.load();
+    await tester.pumpWidget(PastraApp(settings: settings));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New game'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    // The sheet closes, then the game screen opens on the next frames.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.text('Your cards'), findsOneWidget);
+    for (var i = 0; i < 5; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text("Let's play!"));
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(settings.tutorialDone, isTrue);
+    expect(find.text('Your turn'), findsOneWidget);
   });
 }

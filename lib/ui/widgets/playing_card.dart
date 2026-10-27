@@ -21,9 +21,13 @@ class PlayingCardView extends StatelessWidget {
     this.highlighted = false,
     this.selected = false,
     this.covered = false,
+    this.backStyle,
   });
 
   static const double baseWidth = 120;
+
+  /// Back design; null = the one chosen in the settings ([Look.back]).
+  final CardBackStyle? backStyle;
   static const double baseHeight = baseWidth * 1.42;
 
   final int card;
@@ -46,7 +50,7 @@ class PlayingCardView extends StatelessWidget {
     final glow = highlighted || selected;
     final glowColor = highlighted ? PastraColors.gold : Colors.white;
     final Widget content = !faceUp
-        ? const CardBack(key: ValueKey<String>('back'), width: w, height: h)
+        ? CardBack(key: const ValueKey<String>('back'), width: w, height: h, style: backStyle ?? Look.back)
         : covered
             ? const _BlankCard(key: ValueKey<String>('blank'), width: w, height: h)
             : CardFace(
@@ -284,21 +288,24 @@ class _FaceCardArt extends StatelessWidget {
   }
 }
 
-/// Card back: Aegean blue with a lattice, a white frame and a "Π" emblem.
+/// Card back: a lattice, a frame and a "Π" emblem in the chosen colours.
 class CardBack extends StatelessWidget {
-  const CardBack({super.key, required this.width, required this.height});
+  const CardBack({super.key, required this.width, required this.height, this.style = CardBackStyle.aegean});
 
   final double width;
   final double height;
+  final CardBackStyle style;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: Size(width, height), painter: const CardBackPainter());
+    return CustomPaint(size: Size(width, height), painter: CardBackPainter(style));
   }
 }
 
 class CardBackPainter extends CustomPainter {
-  const CardBackPainter();
+  const CardBackPainter([this.style = CardBackStyle.aegean]);
+
+  final CardBackStyle style;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -310,16 +317,16 @@ class CardBackPainter extends CustomPainter {
     canvas.drawRRect(
       inner,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[PastraColors.navy, PastraColors.aegean],
+          colors: <Color>[style.dark, style.light],
         ).createShader(inner.outerRect),
     );
     canvas.save();
     canvas.clipRRect(inner);
     final line = Paint()
-      ..color = Colors.white.withValues(alpha: 0.16)
+      ..color = style.accent.withValues(alpha: 0.16)
       ..strokeWidth = max(0.7, w * 0.012)
       ..style = PaintingStyle.stroke;
     final step = max(4.0, w * 0.14);
@@ -331,26 +338,26 @@ class CardBackPainter extends CustomPainter {
     canvas.drawRRect(
       inner.deflate(w * 0.045),
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.85)
+        ..color = style.accent.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.8, w * 0.02),
     );
     if (w >= 28) {
       final center = Offset(w / 2, h / 2);
       final r = w * 0.2;
-      canvas.drawCircle(center, r, Paint()..color = Colors.white);
+      canvas.drawCircle(center, r, Paint()..color = style.accent);
       canvas.drawCircle(
         center,
         r * 0.8,
         Paint()
-          ..color = PastraColors.navy
+          ..color = style.dark
           ..style = PaintingStyle.stroke
           ..strokeWidth = max(0.8, w * 0.018),
       );
       final tp = TextPainter(
         text: TextSpan(
           text: 'Π',
-          style: TextStyle(color: PastraColors.navy, fontSize: r * 1.05, fontWeight: FontWeight.w800, height: 1.0),
+          style: TextStyle(color: style.dark, fontSize: r * 1.05, fontWeight: FontWeight.w800, height: 1.0),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -360,5 +367,5 @@ class CardBackPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CardBackPainter oldDelegate) => false;
+  bool shouldRepaint(CardBackPainter oldDelegate) => oldDelegate.style != style;
 }
