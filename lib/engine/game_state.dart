@@ -198,9 +198,9 @@ class GameState {
   GameState redactedFor(int seat) {
     final c = copy();
     for (var i = 0; i < c.hands.length; i++) {
-      if (i != seat) c.hands[i] = List<int>.filled(c.hands[i].length, -1);
+      if (i != seat) c.hands[i] = <int>[for (final x in c.hands[i]) exposed.contains(x) ? x : -1];
     }
-    c.deck = List<int>.filled(c.deck.length, -1);
+    c.deck = <int>[for (final x in c.deck) exposed.contains(x) ? x : -1];
     c.seed = 0;
     return c;
   }

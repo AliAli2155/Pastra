@@ -557,8 +557,8 @@ void main() {
       final s = PastraEngine.newGame(rules: pile, numPlayers: 2, seed: 4);
       final v = s.redactedFor(0);
       expect(v.hands[0], s.hands[0]);
-      expect(v.hands[1].every((c) => c == -1), isTrue);
-      expect(v.deck.every((c) => c == -1), isTrue);
+      expect(v.hands[1].every((c) => c == -1 || s.exposed.contains(c)), isTrue);
+      expect(v.deck.every((c) => c == -1 || s.exposed.contains(c)), isTrue);
       expect(v.table, s.table);
     });
   });

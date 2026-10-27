@@ -53,7 +53,9 @@ class GameController extends ChangeNotifier {
     this.link,
     this.isGuest = false,
     this.hostTurnSeconds = 0,
-  }) : _state = state;
+  }) : _state = state {
+    if (isGuest) _state = _stabilize(_state, null);
+  }
 
   /// Online connection (null in a local game).
   final OnlineLink? link;
@@ -636,6 +638,94 @@ class GameController extends ChangeNotifier {
   /// already translated to our numbering).
   void applyHostView(GameState next, Map<String, dynamic>? ev) {
     if (_disposed) return;
+    _viewQueue.add(_HostView(next, ev));
+    if (!_viewBusy) _drainViews();
+  }
+
+  /// Opponents' hidden cards arrive as -1. To animate them like in a local
+  /// game every hidden card gets its own negative id, kept stable from one
+  /// view to the next (the deck's tail feeds the hands when cards are dealt).
+  int _ph = -2;
+  final List<_HostView> _viewQueue = <_HostView>[];
+  bool _viewBusy = false;
+
+  List<int> _fill(List<int> fresh, List<int> reuse, List<int> pool) {
+    final out = <int>[];
+    for (final x in fresh) {
+      if (x >= 0) {
+        out.add(x);
+      } else if (reuse.isNotEmpty) {
+        out.add(reuse.removeAt(0));
+      } else if (pool.isNotEmpty) {
+        out.add(pool.removeLast());
+      } else {
+        out.add(_ph--);
+      }
+    }
+    return out;
+  }
+
+  GameState _stabilize(GameState next, GameState? prior) {
+    final s = next.copy();
+    final deckReuse = <int>[if (prior != null) ...prior.deck.where((x) => x < -1)];
+    final pool = <int>[];
+    s.deck = _fill(s.deck, deckReuse, pool);
+    pool.addAll(deckReuse);
+    for (var i = 0; i < s.hands.length; i++) {
+      final reuse = <int>[if (prior != null && i < prior.hands.length) ...prior.hands[i].where((x) => x < -1)];
+      s.hands[i] = _fill(s.hands[i], reuse, pool);
+    }
+    return s;
+  }
+
+  Future<void> _drainViews() async {
+    _viewBusy = true;
+    try {
+      while (_viewQueue.isNotEmpty && !_disposed) {
+        final v = _viewQueue.removeAt(0);
+        // Far behind (after a reconnect): skip the animations.
+        await _showView(v.state, v.events, _viewQueue.length < 2);
+      }
+    } finally {
+      _viewBusy = false;
+    }
+  }
+
+  /// Plays the card first (from the hand to the table), then shows the new state.
+  Future<void> _showView(GameState next, Map<String, dynamic>? ev, bool animate) async {
+    final mv = ev?['move'];
+    int? landingCard;
+    if (mv is Map) {
+      final id = (mv['id'] as num).toInt();
+      if (lastMove?.id != id) {
+        final seat = (mv['seat'] as num).toInt();
+        final card = (mv['card'] as num).toInt();
+        final cap = mv['cap'] == true;
+        if (!cap) landingCard = card;
+        if (animate && _state.phase == GamePhase.playing && seat >= 0 && seat < _state.hands.length) {
+          final hand = _state.hands[seat];
+          if (hand.isNotEmpty && !hand.contains(card)) {
+            // Unknown card of an opponent: it is the one leaving the hand.
+            final shown = _state.copy();
+            shown.hands[seat][hand.length ~/ 2] = card;
+            _state = shown;
+          }
+          if (_state.hands[seat].contains(card)) {
+            if (cap) pending = PendingPlay(seat, card, PastraEngine.preview(_state, card).captured);
+            stateVersion++;
+            _notify();
+            await _wait(cap ? 650 : 70);
+            if (_disposed) return;
+          }
+        }
+      }
+    }
+    await _applyView(next, ev, landingCard);
+  }
+
+  Future<void> _applyView(GameState next, Map<String, dynamic>? ev, int? landingCard) async {
+    if (_disposed) return;
+    next = _stabilize(next, _state);
     final wasOver = _state.phase == GamePhase.gameOver;
     final turnChanged = next.current != _state.current ||
         next.cardsInHands != _state.cardsInHands ||
@@ -646,7 +736,7 @@ class GameController extends ChangeNotifier {
     _sentTimer?.cancel();
     selected = null;
     pending = null;
-    landing = null;
+    landing = landingCard;
     tableShown = null;
     final mv = ev?['move'];
     if (mv is Map) {
@@ -678,6 +768,14 @@ class GameController extends ChangeNotifier {
       SoundFx.instance.play(_state.winner == 0 ? Sfx.win : Sfx.lose);
     }
     _notify();
+    if (landingCard != null) {
+      await _wait(380);
+      if (_disposed) return;
+      if (landing == landingCard) {
+        landing = null;
+        _notify();
+      }
+    }
   }
 
   @override
@@ -700,4 +798,12 @@ class _BotTask {
   final int seed;
 
   const _BotTask(this.state, this.level, this.seed);
+}
+
+/// A state sent by the host, waiting to be shown (guest).
+class _HostView {
+  final GameState state;
+  final Map<String, dynamic>? events;
+
+  const _HostView(this.state, this.events);
 }

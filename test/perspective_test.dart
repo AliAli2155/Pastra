@@ -37,8 +37,8 @@ void main() {
     final back = GameState.fromJson(Map<String, dynamic>.from(jsonDecode(jsonEncode(view.toJson())) as Map));
     expect(back.hands[0], s.hands[1]);
     // Other hands are hidden but keep their size.
-    expect(back.hands[1].every((c) => c == -1), isTrue);
+    expect(back.hands[1].every((c) => c == -1 || s.exposed.contains(c)), isTrue);
     expect(back.hands[1].length, s.hands[2].length);
-    expect(back.deck.every((c) => c == -1), isTrue);
+    expect(back.deck.every((c) => c == -1 || s.exposed.contains(c)), isTrue);
   });
 }
