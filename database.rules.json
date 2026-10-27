@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || data.child('host').val() === auth.uid)"
+        },
+        "seats": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && (root.child('rooms').child($room).child('meta').child('host').val() === auth.uid || data.child('uid').val() === auth.uid || (!data.exists() && newData.child('uid').val() === auth.uid))"
+          }
+        },
+        "views": {
+          "$seat": {
+            ".read": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".write": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid"
+          }
+        },
+        "moves": {
+          "$seat": {
+            ".read": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid",
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid"
+          }
+        }
+      }
+    }
+  }
+}

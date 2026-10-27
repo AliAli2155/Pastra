@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "605780791892",
+    "firebase_url": "https://pastra-95bc5-default-rtdb.firebaseio.com",
+    "project_id": "pastra-95bc5",
+    "storage_bucket": "pastra-95bc5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605780791892:android:edada3fa56eff989f3d3c1",
+        "android_client_info": {
+          "package_name": "io.github.aliali2155.pastra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnnbHDinooznXGhT64jrpFhZLZdol6MOM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

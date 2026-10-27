@@ -6,10 +6,12 @@ import '../../engine/cards.dart';
 import '../../engine/pastra_ai.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
+import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/playing_card.dart';
 import 'game_screen.dart';
+import 'online_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
@@ -128,7 +130,11 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: () => _open(const SettingsScreen()),
         ),
         const SizedBox(height: 10),
-        _MenuButton(icon: Icons.public, label: s.onlineSoon, onTap: null),
+        _MenuButton(
+          icon: Icons.public,
+          label: OnlineStrings(settings.language).online,
+          onTap: () => _open(const OnlineScreen()),
+        ),
       ],
     );
     return Scaffold(

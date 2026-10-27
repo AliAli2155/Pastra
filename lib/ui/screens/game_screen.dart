@@ -8,6 +8,7 @@ import '../../engine/pastra_engine.dart';
 import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
+import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../table_layout.dart';
 import '../theme.dart';
@@ -80,7 +81,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    if (!c.settings.tutorialDone && c.state.round == 1 && PastraEngine.isOpeningPosition(c.state)) {
+    if (!c.isOnline && !c.settings.tutorialDone && c.state.round == 1 && PastraEngine.isOpeningPosition(c.state)) {
       _tutorialStep = 0;
     } else {
       c.start();
@@ -158,6 +159,7 @@ class _GameScreenState extends State<GameScreen> {
 
   String _seatName(Strings s, int seat) {
     final info = c.seats[seat];
+    if (info.name != null && info.name!.isNotEmpty) return info.name!;
     if (info.isHuman) {
       final name = c.settings.playerName;
       return name.isEmpty ? s.you : name;
@@ -190,6 +192,10 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _playAgain() {
+    if (c.isOnline) {
+      Navigator.of(context).pop();
+      return;
+    }
     final settings = c.settings;
     final next = GameController.newGame(
       settings,
@@ -335,7 +341,15 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
-          if (state.phase != GamePhase.playing && !c.busy)
+          if (c.onlineClosed)
+            Positioned.fill(
+              child: _OnlineClosedOverlay(
+                text: OnlineStrings(c.settings.language).hostLeft,
+                button: OnlineStrings(c.settings.language).back,
+                onBack: () => Navigator.of(context).pop(),
+              ),
+            ),
+          if (state.phase != GamePhase.playing && !c.busy && !c.onlineClosed)
             Positioned.fill(
               child: RoundSummaryPanel(
                 state: state,
@@ -1188,4 +1202,35 @@ class _DimPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DimPainter oldDelegate) => oldDelegate.focus != focus;
+}
+
+
+/// Shown to an online guest when the host has left the game.
+class _OnlineClosedOverlay extends StatelessWidget {
+  const _OnlineClosedOverlay({required this.text, required this.button, required this.onBack});
+
+  final String text;
+  final String button;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Colors.black87,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onBack, child: Text(button)),
+          ],
+        ),
+      ),
+    );
+  }
 }

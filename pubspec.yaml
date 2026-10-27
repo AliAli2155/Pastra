@@ -13,6 +13,9 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.3.2
   audioplayers: ^6.1.0
+  firebase_core: ^5.1.0
+  firebase_auth: ^7.0.1
+  firebase_database: ^13.0.1
 
 dev_dependencies:
   flutter_test:

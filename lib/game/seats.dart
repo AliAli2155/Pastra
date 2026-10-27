@@ -1,6 +1,6 @@
 import '../engine/pastra_ai.dart';
 
-/// Who sits on a seat. `remote` is reserved for online play (next phase).
+/// Who sits on a seat. `remote` is a real person playing online.
 enum SeatKind { human, bot, remote }
 
 class SeatInfo {
@@ -10,18 +10,31 @@ class SeatInfo {
   /// Index of the bot's display name (see `Strings.botName`), -1 for humans.
   final int botIndex;
 
-  const SeatInfo({required this.kind, this.level = AiLevel.medium, this.botIndex = -1});
+  /// Display name of an online player (null: use the usual naming).
+  final String? name;
+
+  const SeatInfo({required this.kind, this.level = AiLevel.medium, this.botIndex = -1, this.name});
 
   const SeatInfo.human()
       : kind = SeatKind.human,
         level = AiLevel.medium,
-        botIndex = -1;
+        botIndex = -1,
+        name = null;
 
-  const SeatInfo.bot(this.level, this.botIndex) : kind = SeatKind.bot;
+  const SeatInfo.bot(this.level, this.botIndex)
+      : kind = SeatKind.bot,
+        name = null;
+
+  const SeatInfo.remote(this.name)
+      : kind = SeatKind.remote,
+        level = AiLevel.medium,
+        botIndex = -1;
 
   bool get isHuman => kind == SeatKind.human;
 
   bool get isBot => kind == SeatKind.bot;
+
+  bool get isRemote => kind == SeatKind.remote;
 
   /// Seat 0 is always the local player. In 2v2 seat 2 is the partner.
   static List<SeatInfo> lineup(int players, AiLevel level) {

@@ -11,6 +11,7 @@ import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
+import 'online_link.dart';
 import 'seats.dart';
 import 'sound.dart';
 
@@ -49,7 +50,26 @@ class GameController extends ChangeNotifier {
     required this.settings,
     required this.seats,
     required GameState state,
+    this.link,
+    this.isGuest = false,
+    this.hostTurnSeconds = 0,
   }) : _state = state;
+
+  /// Online connection (null in a local game).
+  final OnlineLink? link;
+
+  /// Online guest: the host runs the game, this controller only shows the
+  /// states it receives and sends the player's moves.
+  final bool isGuest;
+
+  /// Online guest: the host's time limit per move (0 = none).
+  final int hostTurnSeconds;
+
+  bool get isOnline => link != null;
+
+  /// Grows every time the game state changes (the online host publishes
+  /// the new state when it sees a new value).
+  int stateVersion = 0;
 
   /// The local player always sits on seat 0.
   static const int humanSeat = 0;
@@ -133,13 +153,35 @@ class GameController extends ChangeNotifier {
   Timer? _turnTimer;
 
   /// Time each player has for a move, or null without a limit.
-  Duration? get turnLimit =>
-      settings.turnSeconds > 0 ? Duration(seconds: settings.turnSeconds) : null;
+  Duration? get turnLimit {
+    final secs = isGuest ? hostTurnSeconds : settings.turnSeconds;
+    return secs > 0 ? Duration(seconds: secs) : null;
+  }
 
   int _eventCounter = 0;
   bool _busy = false;
   bool _started = false;
   bool _disposed = false;
+
+  /// Online guest: a move was sent and the host has not answered yet.
+  bool _sent = false;
+  Timer? _sentTimer;
+
+  /// Online host: seat whose move we are waiting for.
+  int? _awaitingRemote;
+  Timer? _offlineTimer;
+  int _offlineTicks = 0;
+  Timer? _autoNextTimer;
+  final Map<int, int> _queuedMoves = <int, int>{};
+
+  /// Online guest: the host left, the game cannot continue.
+  bool onlineClosed = false;
+
+  void markOnlineClosed() {
+    if (onlineClosed) return;
+    onlineClosed = true;
+    _notify();
+  }
 
   int get numPlayers => _state.numPlayers;
 
@@ -152,6 +194,7 @@ class GameController extends ChangeNotifier {
       !_busy &&
       pending == null &&
       _state.current == humanSeat &&
+      !_sent &&
       _state.hands[humanSeat].isNotEmpty;
 
   /// A bot is choosing its card right now.
@@ -181,6 +224,10 @@ class GameController extends ChangeNotifier {
   void start() {
     if (_started) return;
     _started = true;
+    if (isGuest) {
+      _notify();
+      return;
+    }
     if (PastraEngine.needsDeal(_state) || PastraEngine.roundCardsExhausted(_state)) {
       _busy = true;
       _afterMove();
@@ -263,6 +310,10 @@ class GameController extends ChangeNotifier {
   // ----------------------------------------------------------------- flow
 
   Future<void> _play(int card) async {
+    if (isGuest) {
+      _guestPlay(card);
+      return;
+    }
     _busy = true;
     _turnTimer?.cancel();
     _turnTimer = null;
@@ -278,6 +329,7 @@ class GameController extends ChangeNotifier {
       if (_disposed) return;
     }
     final result = PastraEngine.applyMove(_state, card);
+    stateVersion++;
     pending = null;
     landing = result.isCapture ? null : card;
     lastMove = LastMove(++_eventCounter, seat, card, result.isCapture);
@@ -309,6 +361,7 @@ class GameController extends ChangeNotifier {
       await _wait(250);
       if (_disposed) return;
       PastraEngine.dealHands(_state);
+      stateVersion++;
       SoundFx.instance.play(Sfx.deal);
       _notify();
       await _wait(700);
@@ -319,12 +372,14 @@ class GameController extends ChangeNotifier {
       if (_state.table.isNotEmpty) {
         leftoverSeat = _state.lastCapturer >= 0 ? _state.lastCapturer : _state.dealer;
         PastraEngine.collectLeftovers(_state);
+        stateVersion++;
         _notify();
         await _wait(1100);
         if (_disposed) return;
         leftoverSeat = null;
       }
       PastraEngine.scoreRound(_state);
+      stateVersion++;
       final ourTeam = GameState.teamOf(humanSeat);
       final ours = _state.lastResult?.teams[ourTeam];
       settings.recordRound(
@@ -364,6 +419,11 @@ class GameController extends ChangeNotifier {
       if (_state.phase != GamePhase.gameOver) _save();
       _busy = false;
       _notify();
+      if (link != null && _state.phase == GamePhase.roundOver) {
+        // Online: nobody waits forever for the host to tap "next round".
+        _autoNextTimer?.cancel();
+        _autoNextTimer = Timer(const Duration(seconds: 12), nextRound);
+      }
       return;
     }
     _busy = false;
@@ -376,6 +436,10 @@ class GameController extends ChangeNotifier {
     if (_disposed || _busy || _state.phase != GamePhase.playing) return;
     _beginTurn();
     final seat = _state.current;
+    if (seats[seat].isRemote) {
+      _waitForRemote(seat);
+      return;
+    }
     if (!seats[seat].isBot) return;
     _busy = true;
     _notify();
@@ -390,7 +454,7 @@ class GameController extends ChangeNotifier {
     _turnTimer = null;
     _warnTimer?.cancel();
     _warnTimer = null;
-    if (!seats[_state.current].isBot) SoundFx.instance.play(Sfx.turn, volume: 0.7);
+    if (seats[_state.current].isHuman) SoundFx.instance.play(Sfx.turn, volume: 0.7);
     final limit = turnLimit;
     if (limit == null || seats[_state.current].isBot) return;
     if (limit.inSeconds > 5) {
@@ -401,7 +465,13 @@ class GameController extends ChangeNotifier {
     }
     final id = turnId;
     _turnTimer = Timer(limit, () {
-      if (_disposed || id != turnId || !isHumanTurn) return;
+      if (_disposed || id != turnId) return;
+      final cur = _state.current;
+      if (seats[cur].isRemote) {
+        _remoteFallback(cur);
+        return;
+      }
+      if (!isHumanTurn) return;
       final hand = _state.hands[humanSeat];
       final pick = selected != null && hand.contains(selected)
           ? selected!
@@ -440,8 +510,11 @@ class GameController extends ChangeNotifier {
 
   /// Starts the next round after the summary.
   void nextRound() {
+    if (isGuest) return;
     if (_state.phase != GamePhase.roundOver || _busy) return;
+    _autoNextTimer?.cancel();
     PastraEngine.startNextRound(_state);
+    stateVersion++;
     selected = null;
     _save();
     if (_isFreshRound) {
@@ -477,7 +550,7 @@ class GameController extends ChangeNotifier {
   }
 
   void _save() {
-    if (_state.phase == GamePhase.gameOver) return;
+    if (link != null || _state.phase == GamePhase.gameOver) return;
     settings.saveGame(jsonEncode(toJson()));
   }
 
@@ -490,11 +563,132 @@ class GameController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  // --------------------------------------------------------------- online
+
+  /// Host: the player on [seat] wants to play [card].
+  void submitRemoteMove(int seat, int card) {
+    if (_disposed || isGuest) return;
+    if (_state.phase != GamePhase.playing || _state.current != seat) return;
+    if (!_state.hands[seat].contains(card)) return;
+    if (_awaitingRemote != seat) {
+      // The move came in before we started waiting (the host is still
+      // finishing the previous animation): keep it for a moment.
+      _queuedMoves[seat] = card;
+      return;
+    }
+    _stopWaiting();
+    _busy = true;
+    _play(card);
+  }
+
+  void _waitForRemote(int seat) {
+    _awaitingRemote = seat;
+    final queued = _queuedMoves.remove(seat);
+    if (queued != null && _state.hands[seat].contains(queued)) {
+      submitRemoteMove(seat, queued);
+      return;
+    }
+    _offlineTicks = 0;
+    _offlineTimer?.cancel();
+    _offlineTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_disposed || _awaitingRemote != seat) return;
+      if (link?.isRemoteOnline(seat) ?? true) {
+        _offlineTicks = 0;
+        return;
+      }
+      // Disconnected: after a few seconds a bot plays for that player.
+      if (++_offlineTicks >= 4) _remoteFallback(seat);
+    });
+    _notify();
+  }
+
+  void _stopWaiting() {
+    _awaitingRemote = null;
+    _offlineTimer?.cancel();
+    _offlineTimer = null;
+  }
+
+  /// Time ran out or the player is offline: a bot picks the card.
+  void _remoteFallback(int seat) {
+    if (_disposed || _awaitingRemote != seat || _busy) return;
+    _stopWaiting();
+    _busy = true;
+    _runBot(seat);
+  }
+
+  /// Guest: asks the host to play [card].
+  void _guestPlay(int card) {
+    selected = null;
+    _sent = true;
+    _sentTimer?.cancel();
+    // If the host never answers (move refused), the player may try again.
+    _sentTimer = Timer(const Duration(seconds: 4), () {
+      if (_disposed || !_sent) return;
+      _sent = false;
+      _notify();
+    });
+    link?.sendMove(card);
+    _notify();
+  }
+
+  /// Guest: the host sent a new state (already seen from our seat) and,
+  /// optionally, what just happened (`move`, `pastra`, `leftover`; seats
+  /// already translated to our numbering).
+  void applyHostView(GameState next, Map<String, dynamic>? ev) {
+    if (_disposed) return;
+    final wasOver = _state.phase == GamePhase.gameOver;
+    final turnChanged = next.current != _state.current ||
+        next.cardsInHands != _state.cardsInHands ||
+        next.phase != _state.phase;
+    _state = next;
+    stateVersion++;
+    _sent = false;
+    _sentTimer?.cancel();
+    selected = null;
+    pending = null;
+    landing = null;
+    tableShown = null;
+    final mv = ev?['move'];
+    if (mv is Map) {
+      final id = (mv['id'] as num).toInt();
+      if (lastMove?.id != id) {
+        final isCapture = mv['cap'] == true;
+        lastMove = LastMove(id, (mv['seat'] as num).toInt(), (mv['card'] as num).toInt(), isCapture);
+        SoundFx.instance.play(isCapture ? Sfx.capture : Sfx.play);
+      }
+    }
+    final pa = ev?['pastra'];
+    if (pa is Map) {
+      final id = (pa['id'] as num).toInt();
+      if (pastraEvent?.id != id) {
+        final event = PastraEvent(id, (pa['seat'] as num).toInt(), (pa['pts'] as num).toInt());
+        pastraEvent = event;
+        SoundFx.instance.play(Sfx.pastra);
+        if (settings.haptics) HapticFeedback.heavyImpact();
+        _clearEventLater(event.id);
+      }
+    }
+    final lo = ev?['leftover'];
+    leftoverSeat = lo is num ? lo.toInt() : null;
+    if (_state.phase == GamePhase.playing && turnChanged) {
+      turnId++;
+      if (_state.current == humanSeat) SoundFx.instance.play(Sfx.turn, volume: 0.7);
+    }
+    if (_state.phase == GamePhase.gameOver && !wasOver) {
+      SoundFx.instance.play(_state.winner == 0 ? Sfx.win : Sfx.lose);
+    }
+    _notify();
+  }
+
   @override
   void dispose() {
     _disposed = true;
     _turnTimer?.cancel();
     _warnTimer?.cancel();
+    _offlineTimer?.cancel();
+    _autoNextTimer?.cancel();
+    _sentTimer?.cancel();
+    link?.close();
     super.dispose();
   }
 }
