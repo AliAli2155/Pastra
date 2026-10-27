@@ -1,0 +1,42 @@
+# GitHub Actions: copy this file to .github/workflows/android-apk.yml
+# Builds an installable APK on every push to main (or by hand from the
+# Actions tab). Download it from the run's "Artifacts" section.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create platform folders (if not committed)
+        run: |
+          if [ ! -d android ]; then
+            flutter create . --project-name pastra --org io.github.aliali2155 --platforms android,ios
+          fi
+
+      - run: flutter pub get
+      - run: dart run tool/post_create.dart
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pastra-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
