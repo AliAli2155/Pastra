@@ -17,7 +17,8 @@ void main() {
         expect(names(table[key]!), names(english[key]!), reason: '$code.$key');
       }
       expect(kLanguageNames[code], isNotNull);
-      expect(kBotNames[code], hasLength(4));
+      expect(kBotNames[code], hasLength(40), reason: code);
+      expect(kBotNames[code]!.toSet(), hasLength(40), reason: '$code: duplicate bot names');
       for (final v in GameVariant.values) {
         expect(Strings(code).rulesSections(v), hasLength(8), reason: '$code ${v.name}');
       }

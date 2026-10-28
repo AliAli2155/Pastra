@@ -27,7 +27,10 @@ class RoomSeat {
   final bool bot;
   final bool online;
 
-  const RoomSeat({this.uid, this.name = '', this.bot = false, this.online = false});
+  /// Bot seats: index of the bot's name (the same on every screen), -1 = unknown.
+  final int botIndex;
+
+  const RoomSeat({this.uid, this.name = '', this.bot = false, this.online = false, this.botIndex = -1});
 
   bool get taken => uid != null || bot;
 }
@@ -96,6 +99,7 @@ class RoomWatcher extends ChangeNotifier {
                   name: s['name'] as String? ?? '',
                   bot: s['bot'] == true,
                   online: s['online'] == true,
+                  botIndex: (s['botIndex'] as num?)?.toInt() ?? -1,
                 ),
         );
       }
@@ -187,17 +191,19 @@ class HostRoom implements OnlineLink {
   Future<GameController> start() async {
     final info = watcher.info;
     final seats = <SeatInfo>[const SeatInfo.human()];
+    final botNames = SeatInfo.randomBotNames(players);
     for (var i = 1; i < players; i++) {
       final rs = i < info.seats.length ? info.seats[i] : const RoomSeat();
       if (rs.uid != null) {
         seats.add(SeatInfo.remote(rs.name));
       } else {
         final botLevel = (i == 2 && level == AiLevel.easy) ? AiLevel.medium : level;
-        seats.add(SeatInfo.bot(botLevel, i));
+        seats.add(SeatInfo.bot(botLevel, botNames[i]));
         await OnlineService.ref('rooms/$code/seats/s$i').set(<String, Object?>{
           'bot': true,
           'name': '',
           'online': true,
+          'botIndex': botNames[i],
         });
       }
     }
@@ -399,7 +405,7 @@ class GuestRoom implements OnlineLink {
       final rs = real < info.seats.length ? info.seats[real] : const RoomSeat();
       if (rs.bot || rs.uid == null) {
         final botLevel = (real == 2 && info.level == AiLevel.easy) ? AiLevel.medium : info.level;
-        seats.add(SeatInfo.bot(botLevel, real));
+        seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
       } else {
         seats.add(SeatInfo.remote(rs.name));
       }

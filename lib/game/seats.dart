@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import '../engine/pastra_ai.dart';
+import '../l10n/translations.dart';
 
 /// Who sits on a seat. `remote` is a real person playing online.
 enum SeatKind { human, bot, remote }
@@ -38,16 +41,23 @@ class SeatInfo {
 
   /// Seat 0 is always the local player. In 2v2 seat 2 is the partner.
   static List<SeatInfo> lineup(int players, AiLevel level) {
+    final names = randomBotNames(players - 1);
     if (players == 2) {
-      return <SeatInfo>[const SeatInfo.human(), SeatInfo.bot(level, 0)];
+      return <SeatInfo>[const SeatInfo.human(), SeatInfo.bot(level, names[0])];
     }
     final partnerLevel = level == AiLevel.easy ? AiLevel.medium : level;
     return <SeatInfo>[
       const SeatInfo.human(),
-      SeatInfo.bot(level, 1),
-      SeatInfo.bot(partnerLevel, 2),
-      SeatInfo.bot(level, 3),
+      SeatInfo.bot(level, names[0]),
+      SeatInfo.bot(partnerLevel, names[1]),
+      SeatInfo.bot(level, names[2]),
     ];
+  }
+
+  /// [count] different random indices into the list of bot names.
+  static List<int> randomBotNames(int count) {
+    final pool = List<int>.generate(kBotNames['en']!.length, (i) => i)..shuffle(Random());
+    return pool.take(count).toList();
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{

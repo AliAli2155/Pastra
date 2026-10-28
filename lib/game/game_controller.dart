@@ -669,12 +669,16 @@ class GameController extends ChangeNotifier {
   /// Guest: asks the host to play [card].
   void _guestPlay(int card) {
     selected = null;
+    // Show the card on the table at once; the host's answer takes a moment.
+    final pv = PastraEngine.preview(_state, card);
+    pending = PendingPlay(humanSeat, card, pv.captured);
     _sent = true;
     _sentTimer?.cancel();
     // If the host never answers (move refused), the player may try again.
     _sentTimer = Timer(const Duration(seconds: 4), () {
       if (_disposed || !_sent) return;
       _sent = false;
+      pending = null;
       _notify();
     });
     link?.sendMove(card);
@@ -750,7 +754,11 @@ class GameController extends ChangeNotifier {
         final card = (mv['card'] as num).toInt();
         final cap = mv['cap'] == true;
         if (!cap) landingCard = card;
-        if (animate && _state.phase == GamePhase.playing && seat >= 0 && seat < _state.hands.length) {
+        if (animate &&
+            _state.phase == GamePhase.playing &&
+            seat >= 0 &&
+            seat < _state.hands.length &&
+            !(seat == humanSeat && pending?.card == card)) {
           final hand = _state.hands[seat];
           if (hand.isNotEmpty && !hand.contains(card)) {
             // Unknown card of an opponent: it is the one leaving the hand.

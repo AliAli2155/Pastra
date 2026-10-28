@@ -8,6 +8,7 @@ from base import EN, EL
 from langs_a import TR, DE, FR, ES, IT
 from langs_b import PT, RU, BG, AR, ZH
 import rules_a, rules_b
+from botnames import EXTRA
 
 def parse(block):
     d = {}
@@ -50,6 +51,10 @@ bots = {'el': ['Γιώργος', 'Νίκος', 'Μαρία', 'Ελένη'], 'en'
         'it': ['Marco', 'Luca', 'Giulia', 'Sofia'], 'pt': ['João', 'Pedro', 'Maria', 'Ana'],
         'ru': ['Иван', 'Дмитрий', 'Анна', 'Мария'], 'bg': ['Георги', 'Иван', 'Мария', 'Елена'],
         'ar': ['أحمد', 'عمر', 'ليلى', 'مريم'], 'zh': ['小明', '阿强', '小红', '小美']}
+
+for _c in bots:
+    bots[_c] = bots[_c] + EXTRA[_c]
+    assert len(bots[_c]) == 40 and len(set(bots[_c])) == 40, (_c, len(bots[_c]))
 
 def q(s):
     return "'" + s.replace('\\', '\\\\').replace("'", "\\'").replace('$', '\\$').replace('\n', '\\n') + "'"
