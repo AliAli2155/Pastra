@@ -723,6 +723,24 @@ class GameController extends ChangeNotifier {
     await _applyView(next, ev, landingCard);
   }
 
+  int _openingRound = -1;
+
+  Future<void> _guestReveal() async {
+    SoundFx.instance.play(Sfx.shuffle, volume: 0.8);
+    await _wait(settings.sound ? 1000 : 400);
+    final n = _state.table.length;
+    for (var i = 1; i <= n; i++) {
+      if (_disposed) return;
+      tableShown = i;
+      SoundFx.instance.play(Sfx.deal);
+      _notify();
+      await _wait(i == n ? 450 : 330);
+    }
+    if (_disposed) return;
+    tableShown = null;
+    _notify();
+  }
+
   Future<void> _applyView(GameState next, Map<String, dynamic>? ev, int? landingCard) async {
     if (_disposed) return;
     next = _stabilize(next, _state);
@@ -737,7 +755,10 @@ class GameController extends ChangeNotifier {
     selected = null;
     pending = null;
     landing = landingCard;
-    tableShown = null;
+    // Pile game, new round: the opening cards are dealt one by one (like on the host).
+    final reveal = _state.rules.isPile && PastraEngine.isOpeningPosition(_state) && _openingRound != _state.round;
+    if (reveal) _openingRound = _state.round;
+    tableShown = reveal ? 0 : null;
     final mv = ev?['move'];
     if (mv is Map) {
       final id = (mv['id'] as num).toInt();
@@ -768,6 +789,7 @@ class GameController extends ChangeNotifier {
       SoundFx.instance.play(_state.winner == 0 ? Sfx.win : Sfx.lose);
     }
     _notify();
+    if (reveal) await _guestReveal();
     if (landingCard != null) {
       await _wait(380);
       if (_disposed) return;
