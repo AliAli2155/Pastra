@@ -192,18 +192,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-            // About: small, bottom-left corner of the home screen only.
+            // About: plain text in the bottom-left corner (home screen only).
             Positioned.fill(
-              child: SafeArea(
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(foregroundColor: Colors.white60),
-                      onPressed: _showAbout,
-                      icon: const Icon(Icons.info_outline, size: 18),
-                      label: Text(s.about),
+              child: IgnorePointer(
+                child: SafeArea(
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            s.about,
+                            style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(s.aboutBody, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -211,21 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showAbout() {
-    final s = Strings.of(context);
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: PastraColors.panel,
-        title: Text(s.appTitle),
-        content: Text('${s.aboutBody}\n${s.appSubtitle}', style: const TextStyle(height: 1.5)),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.ok)),
-        ],
       ),
     );
   }

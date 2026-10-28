@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
+import '../../game/sound.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/playing_card.dart';
@@ -77,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: <Widget>[
-                  for (final code in AppSettings.languages)
+                  for (final code in _languagesAlphabetical)
                     ChoiceChip(
                       label: Text(Strings.languageName(code)),
                       selected: settings.language == code,
@@ -234,11 +235,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.haptics,
                 onChanged: (v) => settings.haptics = v,
               ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                title: Text(s.sound),
-                value: settings.sound,
-                onChanged: (v) => settings.sound = v,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: <Widget>[
+                    Icon(settings.volume == 0 ? Icons.volume_off : Icons.volume_up, color: Colors.white70),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(s.sound, style: const TextStyle(fontSize: 16))),
+                    Text('${(settings.volume * 100).round()}%', style: const TextStyle(color: Colors.white70)),
+                  ],
+                ),
+              ),
+              Slider(
+                value: settings.volume,
+                divisions: 20,
+                activeColor: PastraColors.gold,
+                onChanged: (v) => settings.volume = v,
+                onChangeEnd: (_) => SoundFx.instance.play(Sfx.play),
               ),
               section(s.about),
               Padding(
@@ -252,6 +265,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
+/// English names, used only to order the language chips alphabetically.
+const Map<String, String> _englishLanguageNames = <String, String>{
+  'ar': 'Arabic',
+  'bg': 'Bulgarian',
+  'zh': 'Chinese',
+  'en': 'English',
+  'fr': 'French',
+  'de': 'German',
+  'el': 'Greek',
+  'it': 'Italian',
+  'pt': 'Portuguese',
+  'ru': 'Russian',
+  'es': 'Spanish',
+  'tr': 'Turkish',
+};
+
+final List<String> _languagesAlphabetical = AppSettings.languages.toList()
+  ..sort((a, b) => (_englishLanguageNames[a] ?? a).compareTo(_englishLanguageNames[b] ?? b));
 
 /// Side padding that keeps the list readable on a wide (landscape) screen.
 EdgeInsets _listPadding(BuildContext context) {

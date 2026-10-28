@@ -96,6 +96,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kWon = 'gamesWon';
   static const String _kStats = 'stats';
   static const String _kSound = 'sound';
+  static const String _kVolume = 'volume';
   static const String _kTable = 'tableTheme';
   static const String _kBack = 'cardBack';
   static const String _kTutorial = 'tutorialDone';
@@ -116,7 +117,7 @@ class AppSettings extends ChangeNotifier {
   bool _fastAnimations = false;
   bool _haptics = true;
   int _turnSeconds = 15;
-  bool _sound = true;
+  double _volume = 1.0;
   bool _tutorialDone = false;
 
   /// Unlocked achievement id → when (milliseconds since epoch).
@@ -156,7 +157,8 @@ class AppSettings extends ChangeNotifier {
     _haptics = _prefs.getBool(_kHaptics) ?? true;
     final turn = _prefs.getInt(_kTurnSeconds);
     _turnSeconds = turn != null && turnSecondsOptions.contains(turn) ? turn : 15;
-    _sound = _prefs.getBool(_kSound) ?? true;
+    // Older versions only had an on/off switch.
+    _volume = (_prefs.getDouble(_kVolume) ?? ((_prefs.getBool(_kSound) ?? true) ? 1.0 : 0.0)).clamp(0.0, 1.0).toDouble();
     _tutorialDone = _prefs.getBool(_kTutorial) ?? false;
     Look.table = TableTheme.values.firstWhere(
       (t) => t.name == _prefs.getString(_kTable),
@@ -175,7 +177,7 @@ class AppSettings extends ChangeNotifier {
         _achievements = <String, int>{};
       }
     }
-    SoundFx.instance.enabled = _sound;
+    SoundFx.instance.master = _volume;
     final statsJson = _prefs.getString(_kStats);
     if (statsJson != null) {
       try {
@@ -193,7 +195,10 @@ class AppSettings extends ChangeNotifier {
 
   String get language => _language;
   bool get isGreek => _language == 'el';
-  bool get sound => _sound;
+  /// Sound effects volume, 0..1.
+  double get volume => _volume;
+
+  bool get sound => _volume > 0;
   bool get tutorialDone => _tutorialDone;
   TableTheme get tableTheme => Look.table;
   CardBackStyle get cardBack => Look.back;
@@ -289,10 +294,10 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  set sound(bool value) {
-    _sound = value;
-    SoundFx.instance.enabled = value;
-    _prefs.setBool(_kSound, value);
+  set volume(double value) {
+    _volume = value.clamp(0.0, 1.0).toDouble();
+    SoundFx.instance.master = _volume;
+    _prefs.setDouble(_kVolume, _volume);
     notifyListeners();
   }
 
