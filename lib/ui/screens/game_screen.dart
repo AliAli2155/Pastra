@@ -329,6 +329,20 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          if (c.quadAlert != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: _QuadBanner(
+                    key: ValueKey<int>(c.quadAlert!.id),
+                    cards: c.quadAlert!.cards,
+                    subtitle: s.quadBy(_seatName(s, c.quadAlert!.seat)),
+                    footer: s.quadRedeal,
+                    cardWidth: min(64.0, max(36.0, box.maxWidth / 11)),
+                  ),
+                ),
+              ),
+            ),
           if (_tutorialStep != null) _tutorialOverlay(s, layout, Size(box.maxWidth, box.maxHeight)),
           if (c.achievementToast != null)
             Positioned(
@@ -761,6 +775,89 @@ class _Countdown extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Four of a kind: the hand is shown face up to everybody.
+class _QuadBanner extends StatelessWidget {
+  const _QuadBanner({
+    super.key,
+    required this.cards,
+    required this.subtitle,
+    required this.footer,
+    required this.cardWidth,
+  });
+
+  final List<int> cards;
+  final String subtitle;
+  final String footer;
+  final double cardWidth;
+
+  static String _label(int rank) => switch (rank) {
+        1 => 'A',
+        11 => 'J',
+        12 => 'Q',
+        13 => 'K',
+        _ => '$rank',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = <int, int>{};
+    for (final c in cards) {
+      counts[Cards.rank(c)] = (counts[Cards.rank(c)] ?? 0) + 1;
+    }
+    var rank = Cards.rank(cards.first);
+    counts.forEach((r, n) {
+      if (n >= 4) rank = r;
+    });
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 520),
+      curve: Curves.easeOutBack,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0.0, 1.0).toDouble(),
+        child: Transform.scale(scale: 0.6 + 0.4 * t, child: child),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.78),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: PastraColors.gold, width: 2),
+          boxShadow: <BoxShadow>[
+            BoxShadow(color: PastraColors.gold.withValues(alpha: 0.45), blurRadius: 30),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              '4 × ${_label(rank)}',
+              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: PastraColors.gold),
+            ),
+            Text(subtitle, style: const TextStyle(fontSize: 16, color: Colors.white)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final c in cards)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: SizedBox(
+                      width: cardWidth,
+                      height: cardWidth * 1.42,
+                      child: PlayingCardView(card: c, faceUp: true),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(footer, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+          ],
+        ),
       ),
     );
   }

@@ -72,6 +72,8 @@ ach_pastras_25_t=Pastra master
 ach_pastras_25_d=Make 25 pastras
 ach_pastras_100_t=Pastra legend
 ach_pastras_100_d=Make 100 pastras
+quadBy={name} was dealt four of a kind!
+quadRedeal=The same dealer deals again
 """
 
 P2['el'] = """
@@ -145,6 +147,8 @@ ach_pastras_25_t=Μάστορας της πάστρας
 ach_pastras_25_d=Κάνε 25 πάστρες
 ach_pastras_100_t=Θρύλος της πάστρας
 ach_pastras_100_d=Κάνε 100 πάστρες
+quadBy={name}: τέσσερα ίδια φύλλα!
+quadRedeal=Μοιράζονται ξανά τα φύλλα από τον ίδιο
 """
 
 P2['tr'] = """
@@ -218,6 +222,8 @@ ach_pastras_25_t=Pastra ustası
 ach_pastras_25_d=25 pastra yap
 ach_pastras_100_t=Pastra efsanesi
 ach_pastras_100_d=100 pastra yap
+quadBy={name} aynı karttan 4 tane aldı!
+quadRedeal=Kartlar aynı oyuncu tarafından yeniden dağıtılıyor
 """
 
 P2['de'] = """
@@ -291,6 +297,8 @@ ach_pastras_25_t=Pastra-Meister
 ach_pastras_25_d=Mach 25 Pastras
 ach_pastras_100_t=Pastra-Legende
 ach_pastras_100_d=Mach 100 Pastras
+quadBy={name} hat vier gleiche Karten!
+quadRedeal=Derselbe Geber teilt neu aus
 """
 
 P2['fr'] = """
@@ -364,6 +372,8 @@ ach_pastras_25_t=Maître de la pastra
 ach_pastras_25_d=Fais 25 pastras
 ach_pastras_100_t=Légende de la pastra
 ach_pastras_100_d=Fais 100 pastras
+quadBy={name} a quatre cartes identiques !
+quadRedeal=Le même donneur redistribue
 """
 
 P2['es'] = """
@@ -437,4 +447,6 @@ ach_pastras_25_t=Maestro de la pastra
 ach_pastras_25_d=Haz 25 pastras
 ach_pastras_100_t=Leyenda de la pastra
 ach_pastras_100_d=Haz 100 pastras
+quadBy=¡{name} tiene cuatro cartas iguales!
+quadRedeal=El mismo repartidor vuelve a repartir
 """

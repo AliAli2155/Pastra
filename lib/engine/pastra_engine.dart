@@ -101,14 +101,66 @@ class PastraEngine {
 
   /// Deals [PastraRules.cardsPerDeal] cards to everybody, starting after the
   /// dealer. No cards go to the table on re-deals.
+  ///
+  /// A player who is dealt four cards of the same rank voids the deal: the
+  /// cards are shuffled back (the visible bottom cards stay where they are,
+  /// see [GameState.exposed]) and the same dealer deals again. Each void deal
+  /// is recorded in [GameState.quads].
   static void dealHands(GameState s) {
+    s.quads = <QuadEvent>[];
+    for (var attempt = 0;; attempt++) {
+      if (!_dealOnce(s)) return;
+      if (attempt >= maxRedeals) break;
+      final found = <QuadEvent>[
+        for (var p = 0; p < s.numPlayers; p++)
+          if (hasFourOfAKind(s.hands[p])) QuadEvent(p, List<int>.of(s.hands[p])..sort()),
+      ];
+      if (found.isEmpty) break;
+      s.quads.addAll(found);
+      _shuffleBack(s, attempt);
+    }
+    s.dealNumber++;
+  }
+
+  /// Safety net against an endless loop of void deals.
+  static const int maxRedeals = 20;
+
+  /// Four cards of the same rank in [hand].
+  static bool hasFourOfAKind(List<int> hand) {
+    final counts = <int, int>{};
+    for (final c in hand) {
+      final n = (counts[Cards.rank(c)] ?? 0) + 1;
+      if (n >= 4) return true;
+      counts[Cards.rank(c)] = n;
+    }
+    return false;
+  }
+
+  static bool _dealOnce(GameState s) {
     for (var k = 0; k < s.rules.cardsPerDeal; k++) {
       for (var i = 1; i <= s.numPlayers; i++) {
-        if (s.deck.isEmpty) return;
+        if (s.deck.isEmpty) return false;
         s.hands[(s.dealer + i) % s.numPlayers].add(s.deck.removeLast());
       }
     }
-    s.dealNumber++;
+    return true;
+  }
+
+  /// Puts the dealt hands back into the deck and shuffles it again. The
+  /// face-up cards stay at the bottom, in their old order.
+  static void _shuffleBack(GameState s, int attempt) {
+    final pool = <int>[...s.deck];
+    for (final h in s.hands) {
+      pool.addAll(h);
+      h.clear();
+    }
+    final bottom = <int>[
+      for (final c in s.exposed.reversed)
+        if (pool.contains(c)) c,
+    ];
+    pool.removeWhere(bottom.contains);
+    pool.shuffle(Random(s.seed * 104729 + s.round * 1009 + s.dealNumber * 31 + attempt + 1));
+    s.deck = <int>[...bottom, ...pool];
   }
 
   /// Nothing has been played yet in this round: the opening table cards and

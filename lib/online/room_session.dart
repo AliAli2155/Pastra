@@ -243,6 +243,8 @@ class HostRoom implements OnlineLink {
       if (move != null)
         'move': <String, Object?>{'id': move.id, 'seat': move.seat, 'card': move.card, 'cap': move.captured},
       if (pastra != null) 'pastra': <String, Object?>{'id': pastra.id, 'seat': pastra.seat, 'pts': pastra.points},
+      if (c.quadAlert != null)
+        'quad': <String, Object?>{'id': c.quadAlert!.id, 'seat': c.quadAlert!.seat, 'cards': c.quadAlert!.cards},
       'leftover': c.leftoverSeat,
     });
     for (var i = 1; i < players; i++) {
@@ -429,6 +431,8 @@ class GuestRoom implements OnlineLink {
     if (mv != null) out['move'] = <String, dynamic>{...mv, 'seat': tr(mv['seat'])};
     final pa = _map(ev['pastra']);
     if (pa != null) out['pastra'] = <String, dynamic>{...pa, 'seat': tr(pa['seat'])};
+    final qd = _map(ev['quad']);
+    if (qd != null) out['quad'] = <String, dynamic>{...qd, 'seat': tr(qd['seat'])};
     final lo = ev['leftover'];
     if (lo is num) out['leftover'] = tr(lo);
     return out;

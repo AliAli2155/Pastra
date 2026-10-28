@@ -34,6 +34,15 @@ class LastMove {
   const LastMove(this.id, this.seat, this.card, this.captured);
 }
 
+/// Four of a kind in one hand: shown to everybody, then the cards are dealt again.
+class QuadAlert {
+  final int id;
+  final int seat;
+  final List<int> cards;
+
+  const QuadAlert(this.id, this.seat, this.cards);
+}
+
 /// Shown as the big "ΠΑΣΤΡΑ!" banner.
 class PastraEvent {
   final int id;
@@ -121,6 +130,9 @@ class GameController extends ChangeNotifier {
   PendingPlay? pending;
 
   PastraEvent? pastraEvent;
+
+  /// Void deal being announced right now.
+  QuadAlert? quadAlert;
 
   /// Seat whose team just received the leftover table cards.
   int? leftoverSeat;
@@ -233,10 +245,46 @@ class GameController extends ChangeNotifier {
     if (PastraEngine.needsDeal(_state) || PastraEngine.roundCardsExhausted(_state)) {
       _busy = true;
       _afterMove();
-    } else if (_isFreshRound) {
-      _revealOpening();
     } else {
+      _afterRoundStart();
+    }
+  }
+
+  /// A round has just been dealt: opening animation, void-deal notice, then play.
+  void _afterRoundStart() {
+    if (_isFreshRound) {
+      _revealOpening();
+    } else if (_state.quads.isNotEmpty) {
+      _busy = true;
+      _showQuads().then((_) {
+        if (_disposed) return;
+        _busy = false;
+        _notify();
+        _scheduleBot();
+      });
+    } else {
+      _notify();
       _scheduleBot();
+    }
+  }
+
+  /// Announces the deals that were void (four of a kind): the hand is shown
+  /// to everybody for a few seconds.
+  Future<void> _showQuads() async {
+    if (_state.quads.isEmpty) return;
+    final list = List<QuadEvent>.of(_state.quads);
+    _state.quads = <QuadEvent>[];
+    for (final q in list) {
+      if (_disposed) return;
+      quadAlert = QuadAlert(++_eventCounter, q.seat, q.cards);
+      stateVersion++;
+      SoundFx.instance.play(Sfx.pastra);
+      if (settings.haptics) HapticFeedback.heavyImpact();
+      _notify();
+      await _wait(4200);
+      quadAlert = null;
+      stateVersion++;
+      _notify();
     }
   }
 
@@ -262,6 +310,9 @@ class GameController extends ChangeNotifier {
     }
     if (_disposed) return;
     tableShown = null;
+    _notify();
+    await _showQuads();
+    if (_disposed) return;
     _busy = false;
     _notify();
     _scheduleBot();
@@ -366,6 +417,8 @@ class GameController extends ChangeNotifier {
       stateVersion++;
       SoundFx.instance.play(Sfx.deal);
       _notify();
+      await _showQuads();
+      if (_disposed) return;
       await _wait(700);
       if (_disposed) return;
     } else if (PastraEngine.roundCardsExhausted(_state)) {
@@ -519,12 +572,7 @@ class GameController extends ChangeNotifier {
     stateVersion++;
     selected = null;
     _save();
-    if (_isFreshRound) {
-      _revealOpening();
-    } else {
-      _notify();
-      _scheduleBot();
-    }
+    _afterRoundStart();
   }
 
   /// Shows newly unlocked achievements one after another.
@@ -778,6 +826,17 @@ class GameController extends ChangeNotifier {
         if (settings.haptics) HapticFeedback.heavyImpact();
         _clearEventLater(event.id);
       }
+    }
+    final qd = ev?['quad'];
+    if (qd is Map) {
+      final id = (qd['id'] as num).toInt();
+      if (quadAlert?.id != id) {
+        quadAlert = QuadAlert(id, (qd['seat'] as num).toInt(), <int>[for (final x in qd['cards'] as List) (x as num).toInt()]);
+        SoundFx.instance.play(Sfx.pastra);
+        if (settings.haptics) HapticFeedback.heavyImpact();
+      }
+    } else {
+      quadAlert = null;
     }
     final lo = ev?['leftover'];
     leftoverSeat = lo is num ? lo.toInt() : null;

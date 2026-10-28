@@ -72,6 +72,8 @@ ach_pastras_25_t=Maestro della pastra
 ach_pastras_25_d=Fai 25 pastra
 ach_pastras_100_t=Leggenda della pastra
 ach_pastras_100_d=Fai 100 pastra
+quadBy={name} ha quattro carte uguali!
+quadRedeal=Lo stesso mazziere distribuisce di nuovo
 """
 
 P2['pt'] = """
@@ -145,6 +147,8 @@ ach_pastras_25_t=Mestre da pastra
 ach_pastras_25_d=Faça 25 pastras
 ach_pastras_100_t=Lenda da pastra
 ach_pastras_100_d=Faça 100 pastras
+quadBy={name} recebeu quatro cartas iguais!
+quadRedeal=O mesmo distribuidor volta a distribuir
 """
 
 P2['ru'] = """
@@ -218,6 +222,8 @@ ach_pastras_25_t=Мастер пастры
 ach_pastras_25_d=Сделайте 25 пастр
 ach_pastras_100_t=Легенда пастры
 ach_pastras_100_d=Сделайте 100 пастр
+quadBy=У {name} четыре одинаковые карты!
+quadRedeal=Тот же сдающий раздаёт заново
 """
 
 P2['bg'] = """
@@ -291,6 +297,8 @@ ach_pastras_25_t=Майстор на пастрата
 ach_pastras_25_d=Направи 25 пастри
 ach_pastras_100_t=Легенда на пастрата
 ach_pastras_100_d=Направи 100 пастри
+quadBy={name} получи четири еднакви карти!
+quadRedeal=Същият раздаващ раздава отново
 """
 
 P2['ar'] = """
@@ -364,6 +372,8 @@ ach_pastras_25_t=سيد الباسترا
 ach_pastras_25_d=حقق 25 باسترا
 ach_pastras_100_t=أسطورة الباسترا
 ach_pastras_100_d=حقق 100 باسترا
+quadBy={name} حصل على أربع أوراق متطابقة!
+quadRedeal=يعيد الموزّع نفسه توزيع الأوراق
 """
 
 P2['zh'] = """
@@ -437,4 +447,6 @@ ach_pastras_25_t=Pastra 大师
 ach_pastras_25_d=打出 25 次 Pastra
 ach_pastras_100_t=Pastra 传奇
 ach_pastras_100_d=打出 100 次 Pastra
+quadBy={name} 拿到四张相同的牌！
+quadRedeal=由同一位发牌者重新发牌
 """

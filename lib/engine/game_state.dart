@@ -75,6 +75,15 @@ class RoundResult {
 }
 
 /// Complete, serialisable state of a game. Seats go round the table:
+/// A player was dealt four cards of the same rank: the deal is void, their
+/// hand is shown to everybody and the dealer deals again.
+class QuadEvent {
+  final int seat;
+  final List<int> cards;
+
+  const QuadEvent(this.seat, this.cards);
+}
+
 /// 0 = local player, then the next players in turn order. Team = seat % 2,
 /// so in 2v2 partners sit opposite each other (0 & 2 vs 1 & 3).
 class GameState {
@@ -126,6 +135,10 @@ class GameState {
   int winner;
 
   RoundResult? lastResult;
+
+  /// Deals that were void because of four of a kind since the last time the
+  /// UI looked (not saved, not copied).
+  List<QuadEvent> quads = <QuadEvent>[];
 
   GameState({
     required this.rules,

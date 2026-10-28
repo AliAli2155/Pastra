@@ -94,6 +94,8 @@ class Strings {
   String pastras(int n) => n == 1 ? _s('pastras1') : _s('pastrasN', <String, Object>{'n': n});
   String leftoversTo(String name) => _s('leftoversTo', <String, Object>{'name': name});
   String get lastDeal => _s('lastDeal');
+  String quadBy(String name) => _s('quadBy', <String, Object>{'name': name});
+  String get quadRedeal => _s('quadRedeal');
   String get leaveTitle => _s('leaveTitle');
   String get leaveBody => _s('leaveBody');
   String get leave => _s('leave');

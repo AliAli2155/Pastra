@@ -224,6 +224,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Κάνε 25 πάστρες',
     'ach_pastras_100_t': 'Θρύλος της πάστρας',
     'ach_pastras_100_d': 'Κάνε 100 πάστρες',
+    'quadBy': '{name}: τέσσερα ίδια φύλλα!',
+    'quadRedeal': 'Μοιράζονται ξανά τα φύλλα από τον ίδιο',
   },
   'en': <String, String>{
     'appTitle': 'Pastra',
@@ -414,6 +416,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Make 25 pastras',
     'ach_pastras_100_t': 'Pastra legend',
     'ach_pastras_100_d': 'Make 100 pastras',
+    'quadBy': '{name} was dealt four of a kind!',
+    'quadRedeal': 'The same dealer deals again',
   },
   'tr': <String, String>{
     'appTitle': 'Pastra',
@@ -604,6 +608,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': '25 pastra yap',
     'ach_pastras_100_t': 'Pastra efsanesi',
     'ach_pastras_100_d': '100 pastra yap',
+    'quadBy': '{name} aynı karttan 4 tane aldı!',
+    'quadRedeal': 'Kartlar aynı oyuncu tarafından yeniden dağıtılıyor',
   },
   'de': <String, String>{
     'appTitle': 'Pastra',
@@ -794,6 +800,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Mach 25 Pastras',
     'ach_pastras_100_t': 'Pastra-Legende',
     'ach_pastras_100_d': 'Mach 100 Pastras',
+    'quadBy': '{name} hat vier gleiche Karten!',
+    'quadRedeal': 'Derselbe Geber teilt neu aus',
   },
   'fr': <String, String>{
     'appTitle': 'Pastra',
@@ -984,6 +992,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Fais 25 pastras',
     'ach_pastras_100_t': 'Légende de la pastra',
     'ach_pastras_100_d': 'Fais 100 pastras',
+    'quadBy': '{name} a quatre cartes identiques !',
+    'quadRedeal': 'Le même donneur redistribue',
   },
   'es': <String, String>{
     'appTitle': 'Pastra',
@@ -1174,6 +1184,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Haz 25 pastras',
     'ach_pastras_100_t': 'Leyenda de la pastra',
     'ach_pastras_100_d': 'Haz 100 pastras',
+    'quadBy': '¡{name} tiene cuatro cartas iguales!',
+    'quadRedeal': 'El mismo repartidor vuelve a repartir',
   },
   'it': <String, String>{
     'appTitle': 'Pastra',
@@ -1364,6 +1376,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Fai 25 pastra',
     'ach_pastras_100_t': 'Leggenda della pastra',
     'ach_pastras_100_d': 'Fai 100 pastra',
+    'quadBy': '{name} ha quattro carte uguali!',
+    'quadRedeal': 'Lo stesso mazziere distribuisce di nuovo',
   },
   'pt': <String, String>{
     'appTitle': 'Pastra',
@@ -1554,6 +1568,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Faça 25 pastras',
     'ach_pastras_100_t': 'Lenda da pastra',
     'ach_pastras_100_d': 'Faça 100 pastras',
+    'quadBy': '{name} recebeu quatro cartas iguais!',
+    'quadRedeal': 'O mesmo distribuidor volta a distribuir',
   },
   'ru': <String, String>{
     'appTitle': 'Пастра',
@@ -1744,6 +1760,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Сделайте 25 пастр',
     'ach_pastras_100_t': 'Легенда пастры',
     'ach_pastras_100_d': 'Сделайте 100 пастр',
+    'quadBy': 'У {name} четыре одинаковые карты!',
+    'quadRedeal': 'Тот же сдающий раздаёт заново',
   },
   'bg': <String, String>{
     'appTitle': 'Пастра',
@@ -1934,6 +1952,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'Направи 25 пастри',
     'ach_pastras_100_t': 'Легенда на пастрата',
     'ach_pastras_100_d': 'Направи 100 пастри',
+    'quadBy': '{name} получи четири еднакви карти!',
+    'quadRedeal': 'Същият раздаващ раздава отново',
   },
   'ar': <String, String>{
     'appTitle': 'باسترا',
@@ -2124,6 +2144,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': 'حقق 25 باسترا',
     'ach_pastras_100_t': 'أسطورة الباسترا',
     'ach_pastras_100_d': 'حقق 100 باسترا',
+    'quadBy': '{name} حصل على أربع أوراق متطابقة!',
+    'quadRedeal': 'يعيد الموزّع نفسه توزيع الأوراق',
   },
   'zh': <String, String>{
     'appTitle': 'Pastra 帕斯特拉',
@@ -2314,6 +2336,8 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'ach_pastras_25_d': '打出 25 次 Pastra',
     'ach_pastras_100_t': 'Pastra 传奇',
     'ach_pastras_100_d': '打出 100 次 Pastra',
+    'quadBy': '{name} 拿到四张相同的牌！',
+    'quadRedeal': '由同一位发牌者重新发牌',
   },
 };
 
