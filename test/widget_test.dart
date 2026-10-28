@@ -11,7 +11,7 @@ void main() {
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
     expect(find.text('Πάστρα'), findsWidgets);
-    expect(find.text('Νέο παιχνίδι'), findsOneWidget);
+    expect(find.text('Παίξε'), findsOneWidget);
     expect(find.text('Κανόνες'), findsOneWidget);
   });
 
@@ -21,7 +21,9 @@ void main() {
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('New game'));
+    await tester.tap(find.text('Play'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offline'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     // The four opening cards are put on the pile one by one.
@@ -54,7 +56,9 @@ void main() {
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('New game'));
+    await tester.tap(find.text('Play'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offline'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     // The sheet closes, then the game screen opens on the next frames.

@@ -74,6 +74,11 @@ ach_pastras_100_t=Pastra legend
 ach_pastras_100_d=Make 100 pastras
 quadBy={name} was dealt four of a kind!
 quadRedeal=The same dealer deals again
+play=Play
+playOffline=Offline
+playOnline=Online
+playOfflineHint=Play against the computer
+playOnlineHint=Play with friends using a room code
 """
 
 P2['el'] = """
@@ -149,6 +154,11 @@ ach_pastras_100_t=Θρύλος της πάστρας
 ach_pastras_100_d=Κάνε 100 πάστρες
 quadBy={name}: τέσσερα ίδια φύλλα!
 quadRedeal=Μοιράζονται ξανά τα φύλλα από τον ίδιο
+play=Παίξε
+playOffline=Εκτός σύνδεσης
+playOnline=Online
+playOfflineHint=Παίξε εναντίον του υπολογιστή
+playOnlineHint=Παίξε με φίλους με κωδικό δωματίου
 """
 
 P2['tr'] = """
@@ -224,6 +234,11 @@ ach_pastras_100_t=Pastra efsanesi
 ach_pastras_100_d=100 pastra yap
 quadBy={name} aynı karttan 4 tane aldı!
 quadRedeal=Kartlar aynı oyuncu tarafından yeniden dağıtılıyor
+play=Oyna
+playOffline=Çevrimdışı
+playOnline=Çevrimiçi
+playOfflineHint=Bilgisayara karşı oyna
+playOnlineHint=Oda koduyla arkadaşlarınla oyna
 """
 
 P2['de'] = """
@@ -299,6 +314,11 @@ ach_pastras_100_t=Pastra-Legende
 ach_pastras_100_d=Mach 100 Pastras
 quadBy={name} hat vier gleiche Karten!
 quadRedeal=Derselbe Geber teilt neu aus
+play=Spielen
+playOffline=Offline
+playOnline=Online
+playOfflineHint=Gegen den Computer spielen
+playOnlineHint=Mit Freunden per Raumcode spielen
 """
 
 P2['fr'] = """
@@ -374,6 +394,11 @@ ach_pastras_100_t=Légende de la pastra
 ach_pastras_100_d=Fais 100 pastras
 quadBy={name} a quatre cartes identiques !
 quadRedeal=Le même donneur redistribue
+play=Jouer
+playOffline=Hors ligne
+playOnline=En ligne
+playOfflineHint=Jouer contre l'ordinateur
+playOnlineHint=Jouer entre amis avec un code de salle
 """
 
 P2['es'] = """
@@ -449,4 +474,9 @@ ach_pastras_100_t=Leyenda de la pastra
 ach_pastras_100_d=Haz 100 pastras
 quadBy=¡{name} tiene cuatro cartas iguales!
 quadRedeal=El mismo repartidor vuelve a repartir
+play=Jugar
+playOffline=Sin conexión
+playOnline=En línea
+playOfflineHint=Juega contra el ordenador
+playOnlineHint=Juega con amigos con un código de sala
 """

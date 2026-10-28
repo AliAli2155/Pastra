@@ -28,6 +28,11 @@ class Strings {
   String get appSubtitle => _s('appSubtitle');
   String get continueGame => _s('continueGame');
   String get newGame => _s('newGame');
+  String get play => _s('play');
+  String get playOffline => _s('playOffline');
+  String get playOnline => _s('playOnline');
+  String get playOfflineHint => _s('playOfflineHint');
+  String get playOnlineHint => _s('playOnlineHint');
   String get rules => _s('rules');
   String get settings => _s('settings');
   String get statistics => _s('statistics');

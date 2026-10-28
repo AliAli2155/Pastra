@@ -6,12 +6,12 @@ import '../../engine/cards.dart';
 import '../../engine/pastra_ai.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
-import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/playing_card.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
+import 'play_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
@@ -29,21 +29,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-  void _continue() {
-    final settings = SettingsScope.read(context);
+  /// Continues the saved offline game (from the Play screen).
+  Future<void> _continue(BuildContext ctx) async {
+    final settings = SettingsScope.read(ctx);
     final controller = GameController.fromSaved(settings);
     if (controller == null) {
-      settings.clearSavedGame();
-      setState(() {});
+      await settings.clearSavedGame();
       return;
     }
-    _open(GameScreen(controller: controller));
+    await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller)));
   }
 
-  Future<void> _newGame() async {
-    final current = SettingsScope.read(context);
+  /// Offline: pick players and level, then play against the computer.
+  Future<void> _newGame(BuildContext ctx) async {
+    final current = SettingsScope.read(ctx);
     final choice = await showModalBottomSheet<NewGameChoice>(
-      context: context,
+      context: ctx,
       isScrollControlled: true,
       backgroundColor: PastraColors.panel,
       shape: const RoundedRectangleBorder(
@@ -51,14 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       builder: (_) => NewGameSheet(initialPlayers: current.players, initialLevel: current.level),
     );
-    if (choice == null || !mounted) return;
-    final settings = SettingsScope.read(context);
+    if (choice == null || !ctx.mounted) return;
+    final settings = SettingsScope.read(ctx);
     settings.players = choice.players;
     settings.level = choice.level;
     await settings.clearSavedGame();
-    if (!mounted) return;
+    if (!ctx.mounted) return;
     final controller = GameController.newGame(settings, players: choice.players, level: choice.level);
-    await _open(GameScreen(controller: controller));
+    await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller)));
   }
 
   @override
@@ -96,20 +97,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final menu = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (settings.hasSavedGame) ...<Widget>[
-          _MenuButton(
-            icon: Icons.play_arrow_rounded,
-            label: s.continueGame,
-            primary: true,
-            onTap: _continue,
-          ),
-          const SizedBox(height: 10),
-        ],
         _MenuButton(
-          icon: Icons.add_rounded,
-          label: s.newGame,
-          primary: !settings.hasSavedGame,
-          onTap: _newGame,
+          icon: Icons.sports_esports_rounded,
+          label: s.play,
+          primary: true,
+          onTap: () => _open(
+            PlayScreen(
+              onOffline: _newGame,
+              onContinue: _continue,
+              onOnline: (ctx) => Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const OnlineScreen())),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
         _MenuButton(
@@ -128,12 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.settings_outlined,
           label: s.settings,
           onTap: () => _open(const SettingsScreen()),
-        ),
-        const SizedBox(height: 10),
-        _MenuButton(
-          icon: Icons.public,
-          label: OnlineStrings(settings.language).online,
-          onTap: () => _open(const OnlineScreen()),
         ),
       ],
     );

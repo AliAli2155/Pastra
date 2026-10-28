@@ -74,6 +74,11 @@ ach_pastras_100_t=Leggenda della pastra
 ach_pastras_100_d=Fai 100 pastra
 quadBy={name} ha quattro carte uguali!
 quadRedeal=Lo stesso mazziere distribuisce di nuovo
+play=Gioca
+playOffline=Offline
+playOnline=Online
+playOfflineHint=Gioca contro il computer
+playOnlineHint=Gioca con gli amici con un codice stanza
 """
 
 P2['pt'] = """
@@ -149,6 +154,11 @@ ach_pastras_100_t=Lenda da pastra
 ach_pastras_100_d=Faça 100 pastras
 quadBy={name} recebeu quatro cartas iguais!
 quadRedeal=O mesmo distribuidor volta a distribuir
+play=Jogar
+playOffline=Offline
+playOnline=Online
+playOfflineHint=Joga contra o computador
+playOnlineHint=Joga com amigos com um código de sala
 """
 
 P2['ru'] = """
@@ -224,6 +234,11 @@ ach_pastras_100_t=Легенда пастры
 ach_pastras_100_d=Сделайте 100 пастр
 quadBy=У {name} четыре одинаковые карты!
 quadRedeal=Тот же сдающий раздаёт заново
+play=Играть
+playOffline=Офлайн
+playOnline=Онлайн
+playOfflineHint=Игра против компьютера
+playOnlineHint=Играйте с друзьями по коду комнаты
 """
 
 P2['bg'] = """
@@ -299,6 +314,11 @@ ach_pastras_100_t=Легенда на пастрата
 ach_pastras_100_d=Направи 100 пастри
 quadBy={name} получи четири еднакви карти!
 quadRedeal=Същият раздаващ раздава отново
+play=Играй
+playOffline=Офлайн
+playOnline=Онлайн
+playOfflineHint=Игра срещу компютъра
+playOnlineHint=Играй с приятели с код на стая
 """
 
 P2['ar'] = """
@@ -374,6 +394,11 @@ ach_pastras_100_t=أسطورة الباسترا
 ach_pastras_100_d=حقق 100 باسترا
 quadBy={name} حصل على أربع أوراق متطابقة!
 quadRedeal=يعيد الموزّع نفسه توزيع الأوراق
+play=العب
+playOffline=بدون إنترنت
+playOnline=أونلاين
+playOfflineHint=العب ضد الكمبيوتر
+playOnlineHint=العب مع الأصدقاء برمز الغرفة
 """
 
 P2['zh'] = """
@@ -449,4 +474,9 @@ ach_pastras_100_t=Pastra 传奇
 ach_pastras_100_d=打出 100 次 Pastra
 quadBy={name} 拿到四张相同的牌！
 quadRedeal=由同一位发牌者重新发牌
+play=开始游戏
+playOffline=单机
+playOnline=在线
+playOfflineHint=对战电脑
+playOnlineHint=用房间码和朋友一起玩
 """
