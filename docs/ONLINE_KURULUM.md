@@ -33,4 +33,6 @@ Mac'te `flutter run -d chrome` → **Play online → 1v1** → kodu not al.
 - Kurucu oyundan çıkarsa oyun biter (misafirlere "kurucu ayrıldı" görünür).
 - Kurucu oyunu yönettiği için teknik olarak hile yapabilir (arkadaş oyunları için yeterli).
 - Eski odalar veritabanında kalır; Realtime Database konsolundan `rooms` düğümünü ara sıra silebilirsin.
-- Rastgele eşleştirme sonraki aşamada.
+- Açık masalar listesi ve hızlı eşleşme `lobby` düğümünü kullanır. Kurallar dosyası güncellendi:
+  `firebase deploy --only database` ile (ya da konsolda Rules sekmesine yapıştırarak) yeniden yayınla.
+  Kurallar yayınlanmazsa odalar yine çalışır, sadece listede görünmez ve hızlı eşleşme masa açıp bekler.

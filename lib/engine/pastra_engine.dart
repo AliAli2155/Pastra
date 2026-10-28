@@ -51,7 +51,8 @@ class PastraEngine {
   ///
   /// * Pile game: the bottom card of the deck is turned face up ("kapak
   ///   altı") and stays visible under the deck; it is the very last card
-  ///   dealt, so it goes to the dealer. Four cards are opened; the last one
+  ///   dealt, so it goes to the dealer. If it is a jack, another card is
+  ///   turned up next to it (again, while that one is a jack too). Four cards are opened; the last one
   ///   is the top card. A jack may not be the top card: it goes face up
   ///   under the deck and another card is opened.
   /// * Sum game: four cards side by side; a jack is buried back in the deck
@@ -62,7 +63,14 @@ class PastraEngine {
     final table = <int>[];
     final exposed = <int>[];
     if (s.rules.isPile) {
-      exposed.add(deck.first);
+      // The bottom card is turned face up. A jack must not lie there alone:
+      // the next card is turned up next to it, and so on until it is not a
+      // jack. (`exposed` is kept in the reverse order of the deck.)
+      final under = <int>[deck.first];
+      while (Cards.isJack(under.last) && under.length < deck.length) {
+        under.add(deck[under.length]);
+      }
+      exposed.addAll(under.reversed);
       while (table.length < tableCardsAtStart) {
         final c = deck.removeLast();
         if (table.length == tableCardsAtStart - 1 && Cards.isJack(c)) {

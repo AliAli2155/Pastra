@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
+import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
 import 'game_screen.dart';
+import 'tables_screen.dart';
 
 /// Create a room or join one with its 4-digit code.
 class OnlineScreen extends StatefulWidget {
@@ -23,6 +25,9 @@ class _OnlineScreenState extends State<OnlineScreen> {
   bool _checking = true;
   bool _busy = false;
   bool _configured = false;
+
+  /// New rooms are listed in the open tables.
+  bool _public = true;
   String? _error;
 
   @override
@@ -63,7 +68,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       _error = null;
     });
     try {
-      final room = await HostRoom.create(settings, players: players, level: settings.level, name: name);
+      final room = await HostRoom.create(settings, players: players, level: settings.level, name: name, public: _public);
       if (!mounted) {
         room.close();
         return;
@@ -81,13 +86,19 @@ class _OnlineScreenState extends State<OnlineScreen> {
   }
 
   Future<void> _join() async {
-    final settings = SettingsScope.read(context);
-    final t = OnlineStrings(settings.language);
+    final t = OnlineStrings(SettingsScope.read(context).language);
     final code = _code.text.trim();
     if (code.length != 4) {
       setState(() => _error = t.error('notFound'));
       return;
     }
+    await _joinCode(code);
+  }
+
+  /// Joins the room with this code and opens its waiting room.
+  Future<void> _joinCode(String code) async {
+    final settings = SettingsScope.read(context);
+    final t = OnlineStrings(settings.language);
     final name = _playerName(t);
     settings.playerName = _name.text.trim();
     setState(() {
@@ -104,6 +115,64 @@ class _OnlineScreenState extends State<OnlineScreen> {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => LobbyScreen(guest: room)),
       );
+    } on OnlineException catch (e) {
+      if (mounted) setState(() => _error = t.error(e.code));
+    } catch (_) {
+      if (mounted) setState(() => _error = t.error('network'));
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _openTables() async {
+    final code = await Navigator.of(context).push<String>(MaterialPageRoute<String>(builder: (_) => const TablesScreen()));
+    if (code == null || !mounted) return;
+    await _joinCode(code);
+  }
+
+  /// Takes a seat at an open 1v1 table; with none, opens one and waits.
+  Future<void> _quickMatch() async {
+    final settings = SettingsScope.read(context);
+    final t = OnlineStrings(settings.language);
+    final name = _playerName(t);
+    settings.playerName = _name.text.trim();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      GuestRoom? guest;
+      final tables = (await Lobby.list()).where((x) => x.players == 2);
+      for (final table in tables) {
+        try {
+          guest = await GuestRoom.join(table.code, settings, name);
+          break;
+        } on OnlineException {
+          // Taken or started in the meantime: try the next one.
+        }
+      }
+      if (!mounted) {
+        guest?.close();
+        return;
+      }
+      if (guest != null) {
+        setState(() => _busy = false);
+        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LobbyScreen(guest: guest)));
+      } else {
+        final room = await HostRoom.create(
+          settings,
+          players: 2,
+          level: settings.level,
+          name: name,
+          public: true,
+          autoStart: true,
+        );
+        if (!mounted) {
+          room.close();
+          return;
+        }
+        setState(() => _busy = false);
+        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LobbyScreen(host: room)));
+      }
     } on OnlineException catch (e) {
       if (mounted) setState(() => _error = t.error(e.code));
     } catch (_) {
@@ -153,6 +222,29 @@ class _OnlineScreenState extends State<OnlineScreen> {
                                     decoration: _decoration(t.yourName),
                                   ),
                                   const SizedBox(height: 8),
+                                  FilledButton.icon(
+                                    onPressed: _busy ? null : _quickMatch,
+                                    icon: const Icon(Icons.bolt),
+                                    label: Text(t.quickMatch),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    t.quickMatchHint,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy ? null : _openTables,
+                                    icon: const Icon(Icons.table_restaurant_outlined),
+                                    label: Text(t.openTables),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(color: Colors.white38),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 22),
                                   Text(
                                     t.createRoom,
                                     style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w700),
@@ -175,7 +267,18 @@ class _OnlineScreenState extends State<OnlineScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 22),
+                                  SwitchListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    dense: true,
+                                    value: _public,
+                                    onChanged: _busy ? null : (v) => setState(() => _public = v),
+                                    title: Text(
+                                      t.showInTables,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                    ),
+                                    activeThumbColor: PastraColors.gold,
+                                  ),
+                                  const SizedBox(height: 12),
                                   Text(
                                     t.joinRoom,
                                     style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w700),
@@ -291,6 +394,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
     super.initState();
     widget.guest?.controller.addListener(_guestGameReady);
     widget.guest?.closed.addListener(_guestClosed);
+    if (widget.host?.autoStart == true) widget.host!.watcher.addListener(_autoStart);
+  }
+
+  /// Quick match: the game starts by itself once every seat is taken.
+  void _autoStart() {
+    final host = widget.host;
+    if (host == null || _starting || !mounted) return;
+    final info = host.watcher.info;
+    if (info.exists && info.joined >= info.players) _start();
   }
 
   void _guestGameReady() {
@@ -329,6 +441,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   void dispose() {
     widget.guest?.controller.removeListener(_guestGameReady);
     widget.guest?.closed.removeListener(_guestClosed);
+    widget.host?.watcher.removeListener(_autoStart);
     if (!_handedOver) {
       widget.host?.close();
       widget.guest?.close();
@@ -385,7 +498,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             const SizedBox(height: 18),
                             for (var i = 0; i < info.players; i++) _seatRow(t, info, i),
                             const SizedBox(height: 14),
-                            if (isHost) ...<Widget>[
+                            if (isHost && widget.host!.autoStart) ...<Widget>[
+                              Text(
+                                t.searching,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white, fontSize: 16),
+                              ),
+                              const SizedBox(height: 10),
+                              const Center(child: CircularProgressIndicator()),
+                              const SizedBox(height: 14),
+                              OutlinedButton(
+                                onPressed: _starting ? null : _start,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white38),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: Text(t.playVsBot),
+                              ),
+                            ] else if (isHost) ...<Widget>[
                               Text(
                                 t.botFills,
                                 textAlign: TextAlign.center,

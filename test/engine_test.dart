@@ -270,6 +270,26 @@ void main() {
       expect(jacksUnder, greaterThan(0));
     });
 
+    test('a jack under the deck is never alone: more cards are turned up next to it', () {
+      var several = 0;
+      for (var seed = 1; seed <= 400; seed++) {
+        final s = PastraEngine.newGame(rules: pile, numPlayers: 2, seed: seed);
+        // The face-up cards at the bottom of the deck, in deck order.
+        var k = 0;
+        while (k < s.deck.length && s.exposed.contains(s.deck[k])) {
+          k++;
+        }
+        expect(k, s.exposed.length, reason: 'seed $seed');
+        expect(k, greaterThanOrEqualTo(1));
+        // The card farthest from the deck is never a jack: a jack there would be alone.
+        expect(Cards.isJack(s.deck[k - 1]), isFalse, reason: 'seed $seed');
+        // `exposed` is the bottom of the deck in reverse order.
+        expect(s.exposed, s.deck.sublist(0, k).reversed.toList(), reason: 'seed $seed');
+        if (k > 1) several++;
+      }
+      expect(several, greaterThan(0));
+    });
+
     test('captured cards belong in front of the first capturer of the team', () {
       for (var seed = 1; seed <= 20; seed++) {
         final s = PastraEngine.newGame(rules: pile, numPlayers: 4, seed: seed);

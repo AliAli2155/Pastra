@@ -34,7 +34,9 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
 ## Rules (default: Stoiva / Xeri)
 
 The bottom card of the deck (the *kapak alti*) is turned face up and stays under the deck; it is
-the last card dealt, so the dealer gets it and everyone knows it. Every player is dealt 6 cards.
+the last card dealt, so the dealer gets it and everyone knows it. A jack never lies there alone:
+another card is turned face up next to it (and another one if that is a jack too). Every player is
+dealt 6 cards.
 Four cards are opened side by side in the middle and the rightmost one is the top card. A jack may
 not be the top card: it is turned face up next to the bottom card, so there are now two face-up
 cards under the deck, and another card is opened for the table. If that card is a jack again, it
@@ -108,6 +110,10 @@ game and settings stay on the phone.
 Online play uses **Firebase** (Anonymous Auth and Realtime Database; the free Spark plan is
 enough). One player, the room host, runs the game engine; the others receive their own view of
 the game (other hands are hidden) and send their moves to the host.
+
+Rooms can be private (join with a 4-digit code) or listed in the lobby as **open tables** that
+anybody can join. **Quick match** joins an open 1v1 table, or opens one and starts as soon as an
+opponent sits down (or plays against the computer if you prefer).
 
 Limits of this design: the host could technically cheat, and if the host leaves, the game ends.
 

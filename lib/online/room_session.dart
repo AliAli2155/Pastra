@@ -13,6 +13,7 @@ import '../game/app_settings.dart';
 import '../game/game_controller.dart';
 import '../game/online_link.dart';
 import '../game/seats.dart';
+import 'lobby.dart';
 import 'online_service.dart';
 
 Map<String, dynamic>? _map(Object? v) {
@@ -134,7 +135,25 @@ class RoomWatcher extends ChangeNotifier {
 /// host's [GameController], guests only send their moves and receive the
 /// state they are allowed to see.
 class HostRoom implements OnlineLink {
-  HostRoom._(this.code, this.players, this.level, this.settings, this.watcher, this._presence);
+  HostRoom._(
+    this.code,
+    this.players,
+    this.level,
+    this.settings,
+    this.watcher,
+    this._presence, {
+    this.isPublic = false,
+    this.autoStart = false,
+  }) {
+    if (isPublic) watcher.addListener(_syncLobby);
+  }
+
+  /// Listed in the lobby (open tables), so anybody can join.
+  final bool isPublic;
+
+  /// Starts by itself as soon as every seat is taken (quick match).
+  final bool autoStart;
+  int _listedJoined = 1;
 
   final String code;
   final int players;
@@ -155,6 +174,8 @@ class HostRoom implements OnlineLink {
     required int players,
     required AiLevel level,
     required String name,
+    bool public = false,
+    bool autoStart = false,
   }) async {
     final rnd = Random.secure();
     for (var attempt = 0; attempt < 10; attempt++) {
@@ -182,14 +203,37 @@ class HostRoom implements OnlineLink {
         'rooms/$code/meta/hostOnline',
         'rooms/$code/seats/s0/online',
       ]).listen((_) {});
-      return HostRoom._(code, players, level, settings, RoomWatcher(code), presence);
+      if (public) {
+        await Lobby.publish(code, <String, Object?>{
+          'host': uid,
+          'name': name,
+          'players': players,
+          'joined': 1,
+          'level': level.name,
+          'created': DateTime.now().millisecondsSinceEpoch,
+        });
+      }
+      return HostRoom._(code, players, level, settings, RoomWatcher(code), presence, isPublic: public, autoStart: autoStart);
     }
     throw const OnlineException('network');
   }
 
+  /// Keeps the number of players in the lobby list up to date.
+  void _syncLobby() {
+    if (_closed || _started) return;
+    final joined = watcher.info.joined;
+    if (joined < 1 || joined == _listedJoined) return;
+    _listedJoined = joined;
+    Lobby.setJoined(code, joined);
+  }
+
+  bool _started = false;
+
   /// Fills the empty seats with bots and starts the game.
   Future<GameController> start() async {
     final info = watcher.info;
+    _started = true;
+    if (isPublic) Lobby.remove(code);
     final seats = <SeatInfo>[const SeatInfo.human()];
     final botNames = SeatInfo.randomBotNames(players);
     for (var i = 1; i < players; i++) {
@@ -279,6 +323,10 @@ class HostRoom implements OnlineLink {
   void close() {
     if (_closed) return;
     _closed = true;
+    if (isPublic) {
+      watcher.removeListener(_syncLobby);
+      Lobby.remove(code);
+    }
     controller?.removeListener(_onChange);
     for (final s in _moveSubs) {
       s.cancel();
