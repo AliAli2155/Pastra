@@ -46,22 +46,14 @@ class Cards {
     return s == diamonds || s == hearts;
   }
 
-  /// Card points in the capture-by-sum game: each ace and jack 1, 2♣ 2, 10♦ 3.
+  /// Card points (both games): each ace and jack 1, 2♣ 2, 10♦ 3. Kings,
+  /// queens and tens are worth nothing. On top of that comes 3 for the most cards.
   static int points(int card) {
     if (card == tenOfDiamonds) return 3;
     if (card == twoOfClubs) return 2;
     final r = rank(card);
     if (r == ace || r == jack) return 1;
     return 0;
-  }
-
-  /// Card points in the pile game (Greek Xeri): each ace, king, queen, jack
-  /// and ten 1, the 10♦ one more (2), 2♣ 1.
-  static int xeriPoints(int card) {
-    if (card == tenOfDiamonds) return 2;
-    if (card == twoOfClubs) return 1;
-    final r = rank(card);
-    return r == ace || r >= 10 ? 1 : 0;
   }
 
   static String rankLabel(int card) {

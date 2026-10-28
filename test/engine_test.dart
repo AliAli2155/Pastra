@@ -80,11 +80,7 @@ GameState playGame({
           res.teams[0].pastraPoints -
           res.teams[1].pastraPoints;
       final tie = res.teams[0].cards == res.teams[1].cards;
-      if (r.isPile) {
-        expect(base, tie ? 22 : 25, reason: '25 points per round (22 on a 26-26 tie)');
-      } else {
-        expect(base, tie ? 13 : 16, reason: '16 points per round (13 on a 26-26 tie)');
-      }
+      expect(base, tie ? 13 : 16, reason: '16 points per round (13 on a 26-26 tie)');
       rounds++;
       expect(rounds, lessThan(200));
     } else if (PastraEngine.needsDeal(s)) {
@@ -125,17 +121,18 @@ void main() {
       expect(total, 13, reason: '4 aces + 4 jacks + 2 + 3');
     });
 
-    test('pile game card points', () {
-      expect(Cards.xeriPoints(Cards.tenOfDiamonds), 2);
-      expect(Cards.xeriPoints(Cards.twoOfClubs), 1);
-      expect(Cards.xeriPoints(card(spades, Cards.king)), 1);
-      expect(Cards.xeriPoints(card(spades, 10)), 1);
-      expect(Cards.xeriPoints(card(spades, 9)), 0);
+    test('pile game uses the same card points', () {
+      expect(pile.pointsOf(Cards.tenOfDiamonds), 3);
+      expect(pile.pointsOf(Cards.twoOfClubs), 2);
+      expect(pile.pointsOf(card(spades, Cards.ace)), 1);
+      expect(pile.pointsOf(card(spades, Cards.jack)), 1);
+      expect(pile.pointsOf(card(spades, Cards.king)), 0);
+      expect(pile.pointsOf(card(spades, 10)), 0);
       var total = 0;
       for (var c = 0; c < Cards.deckSize; c++) {
         total += pile.pointsOf(c);
       }
-      expect(total, 22, reason: '20 for A K Q J 10 + 1 for 10♦ + 1 for 2♣');
+      expect(total, 13, reason: '4 aces + 4 jacks + 2 + 3');
     });
   });
 
@@ -316,7 +313,7 @@ void main() {
       expect(s.table.last, card(clubs, 4));
     });
 
-    test('a round is worth 25 points plus pastras', () {
+    test('a round is worth 16 points plus pastras', () {
       final s = PastraEngine.newGame(rules: pile, numPlayers: 2, seed: 3);
       s.hands = <List<int>>[<int>[], <int>[]];
       s.deck = <int>[];
@@ -330,7 +327,7 @@ void main() {
       final r = PastraEngine.computeRoundResult(s);
       expect(r.teams[0].mostCards, isTrue);
       expect(r.teams[0].honours + r.teams[1].honours, 20);
-      expect(r.teams[0].total + r.teams[1].total, 25 + 10);
+      expect(r.teams[0].total + r.teams[1].total, 16 + 10);
     });
 
     test('old rules without a variant load as the sum game', () {

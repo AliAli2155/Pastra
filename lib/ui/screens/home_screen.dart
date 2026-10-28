@@ -8,6 +8,7 @@ import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
@@ -15,6 +16,7 @@ import 'play_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
+import 'tournament_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,17 +42,53 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller)));
   }
 
+  /// Offline: a quick game or the tournament.
+  Future<void> _offline(BuildContext ctx) async {
+    final choice = await showDialog<bool>(
+      context: ctx,
+      builder: (sheet) {
+        final s = Strings.of(sheet);
+        Widget option(IconData icon, String title, String hint, bool tournament) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              leading: CircleAvatar(
+                backgroundColor: PastraColors.gold,
+                foregroundColor: Colors.black,
+                child: Icon(icon),
+              ),
+              title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+              subtitle: Text(hint, style: const TextStyle(color: Colors.white60)),
+              onTap: () => Navigator.of(sheet).pop(tournament),
+            );
+        return _CenteredDialog(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                option(Icons.bolt, s.quickGame, s.quickGameHint, false),
+                option(Icons.emoji_events, s.tournament, s.tournamentHint, true),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (choice == null || !ctx.mounted) return;
+    if (choice) {
+      await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const TournamentScreen()));
+    } else {
+      await _newGame(ctx);
+    }
+  }
+
   /// Offline: pick players and level, then play against the computer.
   Future<void> _newGame(BuildContext ctx) async {
     final current = SettingsScope.read(ctx);
-    final choice = await showModalBottomSheet<NewGameChoice>(
+    final choice = await showDialog<NewGameChoice>(
       context: ctx,
-      isScrollControlled: true,
-      backgroundColor: PastraColors.panel,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (_) => _CenteredDialog(
+        child: NewGameSheet(initialPlayers: current.players, initialLevel: current.level),
       ),
-      builder: (_) => NewGameSheet(initialPlayers: current.players, initialLevel: current.level),
     );
     if (choice == null || !ctx.mounted) return;
     final settings = SettingsScope.read(ctx);
@@ -85,6 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 15, color: Colors.white70),
         ),
+        const SizedBox(height: 14),
+        LevelBadge(xp: settings.xp),
         if (settings.gamesPlayed > 0) ...<Widget>[
           const SizedBox(height: 12),
           Text(
@@ -103,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
           primary: true,
           onTap: () => _open(
             PlayScreen(
-              onOffline: _newGame,
+              onOffline: _offline,
               onContinue: _continue,
               onOnline: (ctx) => Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const OnlineScreen())),
             ),
@@ -331,19 +371,11 @@ class _NewGameSheetState extends State<NewGameSheet> {
     const labelStyle = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 16),
             Text(
               s.newGame,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
@@ -389,6 +421,27 @@ class _NewGameSheetState extends State<NewGameSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// A choice shown in the middle of the screen (not as a bottom sheet).
+class _CenteredDialog extends StatelessWidget {
+  const _CenteredDialog({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: PastraColors.panel,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: child,
       ),
     );
   }

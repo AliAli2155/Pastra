@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../engine/game_state.dart';
 import '../../engine/rules.dart';
+import '../../game/progression.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 
@@ -14,6 +15,8 @@ class RoundSummaryPanel extends StatelessWidget {
     required this.onNextRound,
     required this.onMainMenu,
     required this.onPlayAgain,
+    this.xpGain,
+    this.tournament = false,
   });
 
   final GameState state;
@@ -21,6 +24,12 @@ class RoundSummaryPanel extends StatelessWidget {
   final VoidCallback onNextRound;
   final VoidCallback onMainMenu;
   final VoidCallback onPlayAgain;
+
+  /// XP earned in the finished game (end-of-game panel only).
+  final GameXp? xpGain;
+
+  /// Tournament match: one "continue" button back to the bracket.
+  final bool tournament;
 
   @override
   Widget build(BuildContext context) {
@@ -46,19 +55,15 @@ class RoundSummaryPanel extends StatelessWidget {
 
     final rules = state.rules;
     String two(bool has) => has ? '${rules.twoOfClubsBonus}' : '–';
-    String ten(bool has) => has ? (rules.isPile ? '+${rules.tenOfDiamondsBonus}' : '${rules.tenOfDiamondsBonus}') : '–';
+    String ten(bool has) => has ? '${rules.tenOfDiamondsBonus}' : '–';
     final rows = <List<String>>[
       [
         s.mostCards,
         '${a.mostCards ? PastraRules.mostCardsBonus : 0}  (${a.cards})',
         '${b.mostCards ? PastraRules.mostCardsBonus : 0}  (${b.cards})',
       ],
-      if (rules.isPile)
-        [s.honours, pts(a.honours), pts(b.honours)]
-      else ...[
-        [s.aces, pts(a.aces), pts(b.aces)],
-        [s.jacks, pts(a.jacks), pts(b.jacks)],
-      ],
+      [s.aces, pts(a.aces), pts(b.aces)],
+      [s.jacks, pts(a.jacks), pts(b.jacks)],
       [s.twoOfClubs, two(a.twoOfClubs), two(b.twoOfClubs)],
       [s.tenOfDiamonds, ten(a.tenOfDiamonds), ten(b.tenOfDiamonds)],
       [
@@ -125,11 +130,20 @@ class RoundSummaryPanel extends StatelessWidget {
           s.target(state.rules.targetScore),
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),
+        if (over && xpGain != null) ...<Widget>[
+          const SizedBox(height: 12),
+          _XpLine(gain: xpGain!),
+        ],
         const SizedBox(height: 16),
         if (!over)
           SizedBox(
             width: double.infinity,
             child: FilledButton(onPressed: onNextRound, child: Text(s.nextRound)),
+          )
+        else if (tournament)
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(onPressed: onMainMenu, child: Text(s.continueGame)),
           )
         else
           Row(
@@ -208,6 +222,55 @@ class RoundSummaryPanel extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+
+/// "+120 XP", and a level-up message when the game gave a new level.
+class _XpLine extends StatelessWidget {
+  const _XpLine({required this.gain});
+
+  final GameXp gain;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          '+${gain.amount} XP',
+          style: const TextStyle(color: PastraColors.gold, fontSize: 20, fontWeight: FontWeight.w900),
+        ),
+        if (gain.leveledUp) ...<Widget>[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: PastraColors.gold.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: PastraColors.gold),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  '${s.levelUp}  ${s.levelN(gain.levelAfter)}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+                if (gain.newColors)
+                  Text(
+                    s.newColors,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

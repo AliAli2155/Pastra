@@ -378,7 +378,7 @@ class PastraEngine {
       final two = pile.contains(Cards.twoOfClubs);
       final ten = pile.contains(Cards.tenOfDiamonds);
       final most = counts[t] > counts[1 - t];
-      final cardPoints = rules.isPile ? honours : aces + jacks;
+      final cardPoints = aces + jacks;
       final total = (most ? PastraRules.mostCardsBonus : 0) +
           cardPoints +
           (two ? rules.twoOfClubsBonus : 0) +

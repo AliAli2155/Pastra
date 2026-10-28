@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/rules.dart';
 import '../ui/theme.dart';
+import 'progression.dart';
 import 'sound.dart';
 
 /// Lifetime statistics of the local player.
@@ -102,6 +103,8 @@ class AppSettings extends ChangeNotifier {
   static const String _kTutorial = 'tutorialDone';
   static const String _kAchievements = 'achievements';
   static const String _kSaved = 'savedGame';
+  static const String _kXp = 'xp';
+  static const String _kTournament = 'tournament';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -119,6 +122,7 @@ class AppSettings extends ChangeNotifier {
   int _turnSeconds = 15;
   double _volume = 1.0;
   bool _tutorialDone = false;
+  int _xp = 0;
 
   /// Unlocked achievement id → when (milliseconds since epoch).
   Map<String, int> _achievements = <String, int>{};
@@ -191,6 +195,17 @@ class AppSettings extends ChangeNotifier {
         ..games = _prefs.getInt(_kPlayed) ?? 0
         ..wins = _prefs.getInt(_kWon) ?? 0;
     }
+    final xp = _prefs.getInt(_kXp);
+    if (xp != null) {
+      _xp = xp < 0 ? 0 : xp;
+    } else {
+      // Stats from before levels existed count towards the first level.
+      _xp = Progression.backfill(games: _stats.games, wins: _stats.wins, pastras: _stats.pastras);
+      _prefs.setInt(_kXp, _xp);
+    }
+    // A colour that is still locked (e.g. an old save) falls back to the default.
+    if (Progression.levelFor(Look.table) > playerLevel) Look.table = TableTheme.green;
+    if (Progression.levelForBack(Look.back) > playerLevel) Look.back = CardBackStyle.aegean;
   }
 
   String get language => _language;
@@ -210,13 +225,33 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Experience points and the level they give.
+  int get xp => _xp;
+  int get playerLevel => Progression.levelOf(_xp);
+
+  bool isUnlocked(TableTheme t) => Progression.levelFor(t) <= playerLevel;
+  bool isBackUnlocked(CardBackStyle b) => Progression.levelForBack(b) <= playerLevel;
+
+  /// Adds experience points; returns the level before and after. Does not
+  /// notify (called during games; screens read the value when they build).
+  ({int before, int after}) addXp(int amount) {
+    final before = playerLevel;
+    if (amount > 0) {
+      _xp += amount;
+      _prefs.setInt(_kXp, _xp);
+    }
+    return (before: before, after: playerLevel);
+  }
+
   set tableTheme(TableTheme value) {
+    if (!isUnlocked(value)) return;
     Look.table = value;
     _prefs.setString(_kTable, value.name);
     notifyListeners();
   }
 
   set cardBack(CardBackStyle value) {
+    if (!isBackUnlocked(value)) return;
     Look.back = value;
     _prefs.setString(_kBack, value.name);
     notifyListeners();
@@ -346,6 +381,13 @@ class AppSettings extends ChangeNotifier {
     }
     _saveStats();
   }
+
+  /// The running offline tournament (JSON), if any.
+  String? get tournamentJson => _prefs.getString(_kTournament);
+
+  Future<void> saveTournament(String json) => _prefs.setString(_kTournament, json);
+
+  Future<void> clearTournament() => _prefs.remove(_kTournament);
 
   // The saved game is written after every move; this does not notify
   // listeners on purpose (it would rebuild the whole app each move).

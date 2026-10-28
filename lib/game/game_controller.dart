@@ -12,6 +12,7 @@ import '../engine/pastra_engine.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
 import 'online_link.dart';
+import 'progression.dart';
 import 'seats.dart';
 import 'sound.dart';
 
@@ -62,9 +63,24 @@ class GameController extends ChangeNotifier {
     this.link,
     this.isGuest = false,
     this.hostTurnSeconds = 0,
-  }) : _state = state {
+    this.tournament = false,
+  })  : _state = state,
+        _levelAtStart = settings.playerLevel {
     if (isGuest) _state = _stabilize(_state, null);
   }
+
+  /// The player's level when this game started (for the level-up message).
+  final int _levelAtStart;
+
+  /// XP earned in this game so far.
+  int _gameXp = 0;
+
+  /// Set when the game is over: what it gave the local player.
+  GameXp? xpGain;
+
+  /// A match of the offline tournament: not saved as a normal game, and the
+  /// summary panel just continues to the bracket.
+  final bool tournament;
 
   /// Online connection (null in a local game).
   final OnlineLink? link;
@@ -96,6 +112,18 @@ class GameController extends ChangeNotifier {
       settings: settings,
       seats: SeatInfo.lineup(players, level),
       state: state,
+    );
+  }
+
+  /// One match of the offline tournament against a bot with this name.
+  factory GameController.tournamentMatch(AppSettings settings, {required AiLevel level, required int botIndex}) {
+    final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
+    final state = PastraEngine.newGame(rules: settings.rules, numPlayers: 2, seed: seed);
+    return GameController(
+      settings: settings,
+      seats: <SeatInfo>[const SeatInfo.human(), SeatInfo.bot(level, botIndex)],
+      state: state,
+      tournament: true,
     );
   }
 
@@ -442,6 +470,9 @@ class GameController extends ChangeNotifier {
         pastras: _roundPastras,
         jackPastras: _roundJackPastras,
       );
+      final roundXp = Progression.roundXp(pastras: _roundPastras, jackPastras: _roundJackPastras);
+      _gameXp += roundXp;
+      settings.addXp(roundXp);
       final roundFacts = RoundFacts(
         score: ours?.total ?? 0,
         pastras: _roundPastras,
@@ -457,6 +488,10 @@ class GameController extends ChangeNotifier {
       if (_state.phase == GamePhase.gameOver) {
         final won = _state.winner == ourTeam;
         settings.recordGame(won: won, players: _state.numPlayers, level: seats[1].level);
+        final endXp = Progression.gameXp(won: won, level: seats[1].level);
+        _gameXp += endXp;
+        final lv = settings.addXp(endXp);
+        xpGain = GameXp(amount: _gameXp, levelBefore: _levelAtStart, levelAfter: lv.after);
         gameFacts = GameFacts(
           won: won,
           level: seats[1].level,
@@ -600,7 +635,7 @@ class GameController extends ChangeNotifier {
   }
 
   void _save() {
-    if (link != null || _state.phase == GamePhase.gameOver) return;
+    if (tournament || link != null || _state.phase == GamePhase.gameOver) return;
     settings.saveGame(jsonEncode(toJson()));
   }
 
@@ -736,7 +771,7 @@ class GameController extends ChangeNotifier {
       while (_viewQueue.isNotEmpty && !_disposed) {
         final v = _viewQueue.removeAt(0);
         // Far behind (after a reconnect): skip the animations.
-        await _showView(v.state, v.events, _viewQueue.length < 2);
+        await _showView(v.state, v.events, _viewQueue.length < 4);
       }
     } finally {
       _viewBusy = false;
@@ -770,7 +805,7 @@ class GameController extends ChangeNotifier {
             if (cap) pending = PendingPlay(seat, card, PastraEngine.preview(_state, card).captured);
             stateVersion++;
             _notify();
-            await _wait(cap ? 650 : 70);
+            await _wait(cap ? 420 : 40);
             if (_disposed) return;
           }
         }
@@ -858,12 +893,14 @@ class GameController extends ChangeNotifier {
     _notify();
     if (reveal) await _guestReveal();
     if (landingCard != null) {
-      await _wait(380);
-      if (_disposed) return;
-      if (landing == landingCard) {
-        landing = null;
-        _notify();
-      }
+      // Non-blocking: the next queued view must not wait for the landing flag.
+      Future<void>.delayed(_duration(380), () {
+        if (_disposed) return;
+        if (landing == landingCard) {
+          landing = null;
+          _notify();
+        }
+      });
     }
   }
 

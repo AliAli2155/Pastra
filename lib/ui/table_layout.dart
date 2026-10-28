@@ -140,7 +140,8 @@ class TableLayout {
     const topY = 4.0;
     const labelH = 18.0;
     final topRowBottom = topY + sh + labelH;
-    final sideW = teamGame ? sw + 12 : 0.0;
+    // Side hands lie sideways (card tops point to the middle), so they are sh wide.
+    final sideW = teamGame ? sh + 10 : 0.0;
 
     // ---- hint line just above the hand
     final infoBottom = handTop - raise - 2;
@@ -155,7 +156,16 @@ class TableLayout {
     );
     // Deck in the top-left corner, the face-up bottom card (kapak altı)
     // sticking out under it.
-    final deckRect = Rect.fromLTWH(margin, topY, sw, sh);
+    // The whole block (deck + kapak altı) is turned by [deckTilt], so the kapak
+    // altı cards stick out towards the bottom-right corner. The deck keeps
+    // clear of the screen edges after the turn.
+    const deckTilt = pi / 4;
+    final deckReach = (sw + sh) / 2 * 0.72;
+    final deckRect = Rect.fromCenter(
+      center: Offset(margin + deckReach, topY + max(deckReach, sh / 2)),
+      width: sw,
+      height: sh,
+    );
 
     // Captured cards: in front of the player who captured first for the team.
     final fullHandW = hw * handSpan;
@@ -181,15 +191,28 @@ class TableLayout {
       tableRect.bottom,
     );
 
-    // ---- deck
+    // ---- deck. The face-up cards under it ("kapak altı": the bottom card and
+    // every jack that was put there at the opening) lie side by side, all
+    // visible, the one nearest to the deck on top.
+    var faceUpUnder = 0;
+    while (faceUpUnder < state.deck.length && state.exposed.contains(state.deck[faceUpUnder])) {
+      faceUpUnder++;
+    }
     for (var i = 0; i < state.deck.length; i++) {
       final c = state.deck[i];
-      if (i == 0 && state.exposed.contains(c)) {
+      if (i < faceUpUnder) {
         placements[c] = CardPlacement(
-          rect: deckRect.shift(Offset(sw * 0.62, 0)),
+          rect: Rect.fromCenter(
+            // The first one sticks out under the tilted deck, further ones
+            // follow to the right.
+            center: deckRect.center + Offset(cos(deckTilt), sin(deckTilt)) * (sw * 0.62) + Offset(i * sw * 0.85, 0),
+            width: sw,
+            height: sh,
+          ),
           faceUp: true,
-          z: -1,
-          angle: pi / 2,
+          z: -1 - i,
+          // Turned with the deck: the card's top points to the bottom-right.
+          angle: pi / 2 + deckTilt,
         );
         continue;
       }
@@ -198,6 +221,7 @@ class TableLayout {
         rect: deckRect.shift(Offset(-o, -o)),
         faceUp: false,
         z: i,
+        angle: deckTilt,
       );
     }
 
@@ -251,7 +275,7 @@ class TableLayout {
         final c = table[i];
         if (i >= shown) {
           // Opening card still waiting on the deck.
-          placements[c] = CardPlacement(rect: deckRect, faceUp: false, z: 90 - i);
+          placements[c] = CardPlacement(rect: deckRect, faceUp: false, z: 90 - i, angle: deckTilt);
           continue;
         }
         final rect = spread
@@ -358,16 +382,21 @@ class TableLayout {
           );
         }
       } else {
-        final step = n <= 1 ? 0.0 : min(sh * 0.24, max(4.0, (tableRect.height - sh) / (n - 1)));
-        final total = sh + (n - 1) * step;
+        // Cards lie sideways: the top of each card points to the middle of the
+        // table, away from its owner. Rects are unrotated (sw x sh) and turned
+        // around their centre, so the visual box is sh wide and sw tall.
+        final step = n <= 1 ? 0.0 : min(sw * 0.55, max(3.0, (tableRect.height - sw) / (n - 1)));
+        final total = sw + (n - 1) * step;
         final top0 = tableRect.center.dy - total / 2;
-        final x = side == SeatSide.right ? w - margin - sw : margin;
-        seatRects[seat] = Rect.fromLTWH(x, top0, sw, total);
+        final cx = side == SeatSide.right ? w - margin - sh / 2 : margin + sh / 2;
+        seatRects[seat] = Rect.fromLTWH(cx - sh / 2, top0, sh, total);
+        final angle = side == SeatSide.right ? -pi / 2 : pi / 2;
         for (var i = 0; i < hand.length; i++) {
           placements[hand[i]] = CardPlacement(
-            rect: Rect.fromLTWH(x, top0 + i * step, sw, sh),
+            rect: Rect.fromCenter(center: Offset(cx, top0 + sw / 2 + i * step), width: sw, height: sh),
             faceUp: false,
             z: 300 + seat * 10 + i,
+            angle: angle,
           );
         }
       }

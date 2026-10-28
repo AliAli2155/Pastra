@@ -25,6 +25,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Offline'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Quick game'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     // The four opening cards are put on the pile one by one.
     for (var i = 0; i < 60; i++) {
@@ -34,6 +36,29 @@ void main() {
     // 4 on the pile + 6 in my hand + 6 opponent cards + 36 in the deck.
     expect(find.byType(PlayingCardView), findsNWidgets(52));
     expect(find.text('Your turn'), findsOneWidget);
+  });
+
+  testWidgets('offline offers a quick game and the tournament', (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false, 'tutorialDone': true});
+    final settings = await AppSettings.load();
+    await tester.pumpWidget(PastraApp(settings: settings));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Play'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offline'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quick game'), findsOneWidget);
+    expect(find.text('Tournament'), findsOneWidget);
+
+    await tester.tap(find.text('Tournament'));
+    await tester.pumpAndSettle();
+    // The round names are column headers (the current one is also in the status panel).
+    expect(find.text('Quarterfinal'), findsWidgets);
+    expect(find.text('Semifinal'), findsOneWidget);
+    expect(find.text('Final'), findsOneWidget);
+    expect(find.text('Play match'), findsOneWidget);
+    expect(settings.tournamentJson, isNotNull);
   });
 
   testWidgets('settings screen switches the language', (tester) async {
@@ -59,6 +84,8 @@ void main() {
     await tester.tap(find.text('Play'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Offline'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quick game'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     // The sheet closes, then the game screen opens on the next frames.

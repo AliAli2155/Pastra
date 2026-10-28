@@ -26,6 +26,8 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
 - **Settings:** target score (51 / 101 / 151 / 251), 4 or 6 cards per deal, jack-on-jack points,
   whether a jack taking a single card counts as a pastra, pastra on the last card.
 - **Statistics and achievements**, table and card-back colors, real card sounds.
+- **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
+- **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. New table and card-back colors unlock at certain levels.
 - Sound effects: Kenney.nl "Casino Audio", "Interface Sounds" and "Music Jingles" (CC0).
   `python tool/make_sounds.py` builds `assets/sounds/` from the packs in `tool/sounds_raw/`.
 
@@ -34,7 +36,9 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
 The bottom card of the deck (the *kapak alti*) is turned face up and stays under the deck; it is
 the last card dealt, so the dealer gets it and everyone knows it. Every player is dealt 6 cards.
 Four cards are opened side by side in the middle and the rightmost one is the top card. A jack may
-not be the top card: it goes under the deck and another card is opened. When the first card is
+not be the top card: it is turned face up next to the bottom card, so there are now two face-up
+cards under the deck, and another card is opened for the table. If that card is a jack again, it
+joins them under the deck too, and so on. When the first card is
 played, the four cards are gathered into one pile, and from then on only the top card is visible
 (you have to remember what is underneath).
 
@@ -42,8 +46,9 @@ A card of the same rank as the top card, or a jack, takes the **whole pile**; an
 laid on top. Taking a single card with a card of the same rank is a **pastra: 10 points**; a jack
 on a lone jack is worth 20. The final card of a round does not make a pastra.
 
-Round scoring: most cards 3; every ace, king, queen, jack and ten 1; the 10♦ one extra (2 in
-total); the 2♣ 1 (25 points per round plus pastras). The first side to reach **151** wins.
+Round scoring: the 10♦ 3 points; each ace 1; each jack 1; the 2♣ 2; and the side with more cards at
+the end of the round gets 3 (nobody on a 26–26 tie). That is 16 points per round plus pastras. The
+first side to reach the target score (151 by default) wins.
 
 If a player is dealt **four cards of the same rank**, the deal is void: the hand is shown to
 everyone, and the same dealer shuffles and deals again.
@@ -129,6 +134,8 @@ lib/
     game_controller.dart  game flow: turns, bot moves, dealing, saving, online host/guest
     app_settings.dart     settings, statistics and the saved game (shared_preferences)
     seats.dart            seats (human / bot / remote player)
+    progression.dart     XP, levels and the colors that unlock at each level
+    tournament.dart      the offline knockout tournament (bracket, rounds, results)
   online/            Firebase: sign-in, rooms, host and guest sessions
   l10n/              UI texts (generated from tool/l10n/)
   ui/

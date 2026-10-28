@@ -180,7 +180,7 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(s.leaveTitle),
-        content: Text(s.leaveBody),
+        content: Text(c.tournament ? s.leaveMatchBody : s.leaveBody),
         actions: <Widget>[
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(s.cancel)),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(s.leave)),
@@ -371,6 +371,8 @@ class _GameScreenState extends State<GameScreen> {
                 onNextRound: c.nextRound,
                 onMainMenu: () => Navigator.of(context).pop(),
                 onPlayAgain: _playAgain,
+                xpGain: c.xpGain,
+                tournament: c.tournament,
               ),
             ),
         ],

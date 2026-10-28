@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
+import '../../game/progression.dart';
 import '../../game/sound.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -107,6 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => settings.playerName = v,
               ),
               section(s.appearance),
+              Padding(padding: const EdgeInsets.only(bottom: 4), child: LevelBadge(xp: settings.xp, width: 280)),
               label(s.tableColor),
               Wrap(
                 spacing: 12,
@@ -115,6 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   for (final t in TableTheme.values)
                     _Swatch(
                       selected: settings.tableTheme == t,
+                      lockedLevel: settings.isUnlocked(t) ? null : Progression.levelFor(t),
                       onTap: () => settings.tableTheme = t,
                       child: DecoratedBox(
                         decoration: t.decoration.copyWith(borderRadius: BorderRadius.circular(12)),
@@ -131,6 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   for (final b in CardBackStyle.values)
                     _Swatch(
                       selected: settings.cardBack == b,
+                      lockedLevel: settings.isBackUnlocked(b) ? null : Progression.levelForBack(b),
                       onTap: () => settings.cardBack = b,
                       child: SizedBox(
                         width: 44,
@@ -294,23 +299,51 @@ EdgeInsets _listPadding(BuildContext context) {
 
 /// A tappable preview with a gold ring when selected.
 class _Swatch extends StatelessWidget {
-  const _Swatch({required this.selected, required this.onTap, required this.child});
+  const _Swatch({required this.selected, required this.onTap, required this.child, this.lockedLevel});
 
   final bool selected;
   final VoidCallback onTap;
   final Widget child;
 
+  /// Level that unlocks this colour (null = available).
+  final int? lockedLevel;
+
   @override
   Widget build(BuildContext context) {
+    final locked = lockedLevel != null;
     return GestureDetector(
-      onTap: onTap,
+      onTap: locked
+          ? () {
+              final s = Strings.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.hideCurrentSnackBar();
+              messenger.showSnackBar(SnackBar(content: Text(s.unlocksAt(lockedLevel!)), duration: const Duration(seconds: 2)));
+            }
+          : onTap,
       child: Container(
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: selected ? PastraColors.gold : Colors.white24, width: selected ? 3 : 1),
         ),
-        child: child,
+        child: locked
+            ? Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  Opacity(opacity: 0.35, child: child),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(Icons.lock, size: 18, color: Colors.white),
+                      Text(
+                        '$lockedLevel',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : child,
       ),
     );
   }

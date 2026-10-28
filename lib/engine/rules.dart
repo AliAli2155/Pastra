@@ -70,13 +70,13 @@ class PastraRules {
   List<int> get jackOnJackOptions => isPile ? const [10, 20, 25] : const [0, 10, 20];
 
   /// Points a captured card is worth at the end of a round.
-  int pointsOf(int card) => isPile ? Cards.xeriPoints(card) : Cards.points(card);
+  int pointsOf(int card) => Cards.points(card);
 
-  /// Round bonus for 2♣ (pile: 1, sums: 2).
-  int get twoOfClubsBonus => isPile ? 1 : 2;
+  /// Round bonus for 2♣.
+  int get twoOfClubsBonus => 2;
 
-  /// Round bonus for 10♦ on top of what its rank gives (pile: +1, sums: 3).
-  int get tenOfDiamondsBonus => isPile ? 1 : 3;
+  /// Round bonus for 10♦.
+  int get tenOfDiamondsBonus => 3;
 
   static const int mostCardsBonus = 3;
 
