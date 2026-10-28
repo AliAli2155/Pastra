@@ -1,137 +1,156 @@
-# Πάστρα (Pastra)
+# Pastra (Πάστρα)
 
-Yunanların oynadığı **Pastra** kart oyunu — Flutter ile. Android uygulaması,
-iPhone için web sürümü (Safari → Ana Ekrana Ekle). 12 dil: Yunanca, İngilizce, Türkçe, Almanca,
-Fransızca, İspanyolca, İtalyanca, Portekizce, Rusça, Bulgarca, Arapça, Çince.
+**Pastra** is the Greek fishing card game, built with Flutter. It runs as an Android app, a web
+app (playable on iPhone through Safari → Add to Home Screen) and a Windows desktop app.
+Languages: English (default), Greek, Turkish, German, French, Spanish, Italian, Portuguese,
+Russian, Bulgarian, Arabic and Chinese.
 
-- Bilgisayara karşı **1v1** ve eşli **2v2** (eşin karşında oturur)
-- Üç zorluk: Kolay / Orta / Zor (zor bot Monte Carlo + oyun sonunda tam arama yapar, hile yapmaz:
-  sadece bir oyuncunun görebildiği bilgiyi kullanır)
-- **Yatay** oynanır (okey / uno uygulamaları gibi); telefonda ekran yan döner, web'de dik tutulan
-  telefona "çevir" uyarısı çıkar
-- Her hamle için süre (varsayılan 15 sn, Ayarlar'dan 10/15/20/30 ya da kapalı); süre bitince senin
-  yerine bir kart oynanır
-- Bir takımın aldığı kartlar, o turda takımdan ilk alan oyuncunun önünde durur
-- Kartı **sürükleyip ortaya bırakarak** oynarsın (sürüklerken alıp almayacağı parlar); istersen
-  dokun-dokun da çalışır
-- Pastra efekti, tur sonu puan tablosu, hedef puana kadar oyun
-- Oyun her hamlede kaydedilir; uygulama kapansa da "Συνέχεια / Continue" ile devam
-- İki oyun: **Στοίβα** (varsayılan, Yunan Ξερή usulü: tek yığın, sadece üstteki kart görünür)
-  ve **Αθροίσματα** (Kıbrıs usulü toplamalı pastra)
-- Ayarlardan: 51/101/151/251 puan, 4 ya da 6 kart dağıtım, vale-vale puanı, vale tek kartı
-  alınca pastra sayılsın mı, son kartla pastra
-- Gerçek kart sesleri: Kenney.nl "Casino Audio", "Interface Sounds", "Music Jingles" (CC0);
-  `tool/sounds_raw/` içindeki paketlerden `python tool/make_sounds.py` ile `assets/sounds/` üretilir, pastrada parıltı + sarsıntı, botların son
-  attığı kart adlarının yanında kısa süre görünür
-- İstatistikler: oyun/galibiyet, seri, pastralar, en iyi el, mod ve zorluğa göre galibiyetler
-- Çeviriler `tool/l10n/` içindeki tablolarda; değiştirdikten sonra `python tool/l10n/gen.py`
-  `lib/l10n/translations.dart` dosyasını yeniden üretir
-- Online mod sonraki aşama: [docs/ONLINE.md](docs/ONLINE.md)
+Play it in the browser: <https://aliali2155.github.io/Pastra/>
 
-Kuralların araştırması ve kaynaklar: [docs/ARASTIRMA.md](docs/ARASTIRMA.md)
+## Features
 
-## Kurulum (Windows)
+- **Play against the computer:** 1v1, or 2v2 with a partner who sits opposite you.
+- **Online multiplayer:** create a room, share the 4-digit code and play 1v1 or 2v2 with
+  friends; empty seats are filled by bots. Disconnected players can rejoin, and a bot plays for
+  them in the meantime.
+- **Three difficulty levels:** Easy / Medium / Hard. The hard bot uses Monte Carlo sampling and an
+  exact search near the end of a round, and never cheats: it only uses what a player can see.
+- **Landscape play**, like Okey or Uno apps. On the web, a phone held upright gets a rotate hint.
+- **Turn timer** (15 s by default; 10 / 15 / 20 / 30 s or off). When it runs out, a card is played
+  for you.
+- **Drag a card onto the table** to play it (the cards it would capture light up), or tap twice.
+- Pastra effects, a round summary and play to a target score. The game is saved after every move,
+  so you can continue later.
+- **Two game variants:** *Stoiva* (default, the Greek Xeri style: one pile, only the top card is
+  visible) and *Athroismata* (the Cypriot capture-by-sum style).
+- **Settings:** target score (51 / 101 / 151 / 251), 4 or 6 cards per deal, jack-on-jack points,
+  whether a jack taking a single card counts as a pastra, pastra on the last card.
+- **Statistics and achievements**, table and card-back colors, real card sounds.
+- Sound effects: Kenney.nl "Casino Audio", "Interface Sounds" and "Music Jingles" (CC0).
+  `python tool/make_sounds.py` builds `assets/sounds/` from the packs in `tool/sounds_raw/`.
 
-1. **Flutter SDK** kur: <https://docs.flutter.dev/get-started/install/windows/mobile>
-   (Android Studio ile birlikte; ardından `flutter doctor --android-licenses`).
-2. Bu klasörde **`setup.bat`** dosyasını çalıştır. Sırasıyla:
-   - `flutter create` → `android/` ve `ios/` klasörlerini oluşturur (mevcut dosyalara dokunmaz)
-   - `flutter pub get`
-   - `dart run tool/post_create.dart` → uygulama adı (Yunanca telefonda "Πάστρα") ve ikonlar
-   - `flutter test`
-3. Telefonu USB ile bağla (Geliştirici seçenekleri → USB hata ayıklama) ya da emülatör aç:
-   ```
-   flutter run
-   ```
-4. Kurulabilir APK:
-   ```
-   flutter build apk --release
-   ```
-   Dosya: `build\app\outputs\flutter-apk\app-release.apk` → telefona kopyalayıp kur.
+## Rules (default: Stoiva / Xeri)
 
-macOS/Linux için aynı adımlar `setup.sh` ile.
+The bottom card of the deck (the *kapak alti*) is turned face up and stays under the deck; it is
+the last card dealt, so the dealer gets it and everyone knows it. Every player is dealt 6 cards.
+Four cards are opened side by side in the middle and the rightmost one is the top card. A jack may
+not be the top card: it goes under the deck and another card is opened. When the first card is
+played, the four cards are gathered into one pile, and from then on only the top card is visible
+(you have to remember what is underneath).
 
-## Windows (.exe)
+A card of the same rank as the top card, or a jack, takes the **whole pile**; any other card is
+laid on top. Taking a single card with a card of the same rank is a **pastra: 10 points**; a jack
+on a lone jack is worth 20. The final card of a round does not make a pastra.
 
-1. Visual Studio 2022 Community'yi kur, kurulumda **"Desktop development with C++"** bileşenini seç
-   (`flutter doctor`'daki Visual Studio satırı ✓ olmalı).
-2. Bu klasörde **`windows_exe.bat`** çalıştır: `windows/` klasörünü oluşturur, pencere adı ve ikonu
-   ayarlar, derler ve **`Pastra-Windows.zip`** dosyasını hazırlar.
-3. Zip'i gönder; karşı taraf bir klasöre çıkarıp `pastra.exe`'yi açar. İmzasız uygulama olduğu için
-   Windows "bilgisayarınız korundu" derse **Ek bilgi → Yine de çalıştır**.
+Round scoring: most cards 3; every ace, king, queen, jack and ten 1; the 10♦ one extra (2 in
+total); the 2♣ 1 (25 points per round plus pastras). The first side to reach **151** wins.
 
-## iPhone: web sürümü
+If a player is dealt **four cards of the same rank**, the deal is void: the hand is shown to
+everyone, and the same dealer shuffles and deals again.
 
-Windows'ta iOS uygulaması derlenemediği için iPhone'da oyun web sürümüyle çalışır (aynı kod).
-Safari'de açıp **Paylaş → Ana Ekrana Ekle** dersen tam ekran, ikonlu bir uygulama gibi açılır;
-kayıtlı oyun ve ayarlar telefonda kalır.
+Settings → Variant switches to the Cypriot capture-by-sum game (open table, sums such as 8 → 5+3,
+101 points).
 
-1. **Bilgisayarda dene:** `flutter run -d chrome`
-2. **iPhone'da dene (aynı Wi-Fi):** `web_telefon.bat` çalıştır, ekrana yazdığı
-   `http://192.168.x.x:8080` adresini iPhone Safari'de aç.
-3. **Kalıcı yayın (GitHub Pages, ücretsiz):**
-   1. [Git for Windows](https://git-scm.com/download/win) kur (varsayılan ayarlar).
-   2. GitHub'da **public** bir `pastra` deposu oluştur (README eklemeden).
-   3. Bu klasörde **`web_yayinla.bat`** çalıştır: testleri çalıştırır, Actions ayarını
-      `.github/workflows/` içine kopyalar, kaydedip GitHub'a gönderir.
-   4. Depoda **Settings → Pages → Source: GitHub Actions** seç, sonra **Actions** sekmesinde
-      kırmızı çarpılı ilk çalıştırmayı **Re-run all jobs** ile tekrar çalıştır (Pages açılmadan
-      başladığı için ilk sefer hata verir).
-   5. 3-4 dakika sonra: <https://aliali2155.github.io/Pastra/>
-   Sonraki güncellemelerde sadece `web_yayinla.bat`'ı tekrar çalıştırman yeterli.
+## Getting started
 
-Web dosyaları `web/` klasöründe: `index.html` (iPhone çentiği/ana ekran çubuğu için güvenli
-alan, telefon dik tutulunca "çevir" uyarısı), `flutter_bootstrap.js`, `manifest.json`, ikonlar.
+You need the [Flutter SDK](https://docs.flutter.dev/get-started/install). Then:
 
-### Bilgisayara Android Studio kurmadan APK
+```
+flutter pub get
+flutter test
+flutter run            # pick a device, or: flutter run -d chrome
+```
 
-`tool/ci/android-apk.yml` dosyasını `.github/workflows/` klasörüne kopyala ve projeyi GitHub'a
-gönder; her `main` push'unda GitHub APK'yı derler. Actions sekmesindeki çalıştırmanın
-**Artifacts** kısmından `pastra-apk` indir.
+The repository does not contain the `android/`, `ios/` or `windows/` boilerplate that
+`flutter create` generates. The setup scripts create it and apply the app name and icons:
 
-## Proje yapısı
+- **macOS / Linux:** `./setup.sh`
+- **Windows:** `setup.bat`
+
+Both run `flutter create`, `flutter pub get`, `dart run tool/post_create.dart` and `flutter test`.
+
+### Android APK
+
+```
+flutter build apk --release
+```
+
+The file is `build/app/outputs/flutter-apk/app-release.apk`. Without Android Studio, copy
+`tool/ci/android-apk.yml` to `.github/workflows/`; GitHub then builds the APK on every push to
+`main` and you can download it from the run's **Artifacts**.
+
+### Windows (.exe)
+
+Install Visual Studio 2022 with the **Desktop development with C++** workload, then run
+`windows_exe.bat`. It creates the `windows/` folder, builds a release and writes
+`Pastra-Windows.zip`. Unzip it anywhere and run `pastra.exe`. If Windows warns about an unsigned
+app, choose **More info → Run anyway**.
+
+### Web / iPhone
+
+- Try it on your computer: `flutter run -d chrome`.
+- Try it on an iPhone on the same Wi-Fi: run `web_telefon.bat` and open the printed address in
+  Safari.
+- Publish for free with **GitHub Pages**: the workflow in `.github/workflows/web-pages.yml`
+  runs the tests, builds the web app and deploys it on every push to `main`. In the repository,
+  choose **Settings → Pages → Source: GitHub Actions** once.
+
+On an iPhone, **Share → Add to Home Screen** opens the game full screen like an app; the saved
+game and settings stay on the phone.
+
+## Online multiplayer
+
+Online play uses **Firebase** (Anonymous Auth and Realtime Database; the free Spark plan is
+enough). One player, the room host, runs the game engine; the others receive their own view of
+the game (other hands are hidden) and send their moves to the host.
+
+Limits of this design: the host could technically cheat, and if the host leaves, the game ends.
+
+Setup: create a Firebase project, enable **Anonymous** sign-in, create a Realtime Database,
+deploy `database.rules.json` (`firebase deploy --only database`), run
+`flutterfire configure` to generate `lib/firebase_options.dart`, and add your web domain (for
+example `<user>.github.io`) to **Authentication → Settings → Authorized domains**. Pick a database
+region that answers from your network: a database in `europe-west1` never responded during
+development, while `us-central1` worked. A step-by-step guide (in Turkish) is in
+[docs/ONLINE_KURULUM.md](docs/ONLINE_KURULUM.md).
+
+## Project structure
 
 ```
 lib/
-  engine/            saf Dart oyun mantığı (Flutter'a bağımlı değil → online sunucuda da çalışır)
-    cards.dart         kart id'leri (0..51), puan değerleri
-    rules.dart         ayarlanabilir kurallar
-    game_state.dart    serileştirilebilir oyun durumu, tur sonuçları
-    pastra_engine.dart dağıtım, alma (eşleme + toplamlar + vale), pastra, puanlama
-    pastra_ai.dart     botlar (kolay / orta / zor)
+  engine/            pure Dart game logic (no Flutter, so it can run anywhere)
+    cards.dart         card ids (0..51) and point values
+    rules.dart         configurable rules
+    game_state.dart    serializable game state and round results
+    pastra_engine.dart dealing, capturing, pastra, scoring
+    pastra_ai.dart     the bots (easy / medium / hard)
+    perspective.dart   rotates a state so that any seat sees itself as seat 0
   game/
-    game_controller.dart  akış: sıra, bot hamleleri, dağıtım, kayıt
-    app_settings.dart     ayarlar + istatistik + kayıtlı oyun (shared_preferences)
-    seats.dart            koltuklar (insan / bot / ileride uzak oyuncu)
-  l10n/strings.dart  Yunanca + İngilizce metinler
+    game_controller.dart  game flow: turns, bot moves, dealing, saving, online host/guest
+    app_settings.dart     settings, statistics and the saved game (shared_preferences)
+    seats.dart            seats (human / bot / remote player)
+  online/            Firebase: sign-in, rooms, host and guest sessions
+  l10n/              UI texts (generated from tool/l10n/)
   ui/
-    table_layout.dart  her kartın ekrandaki yeri (her yer değişimi animasyonlu)
-    screens/           ana menü, oyun masası, ayarlar, kurallar
-    widgets/           kart çizimi (suit şekilleri path ile), tur özeti
-web/                 web sürümü (iPhone Safari / ana ekran uygulaması)
-test/                motor testleri (alma, pastra, puan, binlerce hamlelik bot oyunları) + widget testleri
-tool/post_create.dart  uygulama adı + ikonları platform klasörlerine kopyalar
+    table_layout.dart  where every card is drawn (every change of place is animated)
+    screens/           home, game table, settings, rules, statistics, online
+    widgets/           card drawing, round summary
+web/                 web app (iPhone Safari / home-screen app)
+test/                engine tests, bot games, localisation and widget tests
+tool/                setup helpers, translation generator, sound builder
+docs/                design notes and research
 ```
 
-## Kurallar (varsayılan: Στοίβα / Ξερή)
+### Translations
 
-Destenin en alttaki kartı (**kapak altı**) açık olarak destenin altında durur; son dağıtımda
-dağıtana gider, herkes onda olduğunu bilir. Her oyuncuya 6 kart dağıtılır. Ortaya 4 kart yan yana
-açılır, en sağdaki en üstteki sayılır; oraya vale gelirse kapak altına gider ve yeni kart açılır.
-İlk kart atılınca hepsi tek yığına toplanır ve bundan sonra sadece en üstteki görünür (alttakileri
-aklında tutman gerekir). Attığın kart en üstteki kartla aynı
-değerdeyse ya da valeyse **bütün yığını** alırsın, değilse kartın yığının üstüne kapanır. Tek kartlık
-yığını aynı kartla almak **pastra = 10 puan**, valeyle valeyi almak 20 puan. Turun en son kartı
-pastra sayılmaz.
-Tur puanı: en çok kart 3; her As, Papaz, Kız, Vale, 10 için 1; 10♦ +1 (toplam 2); 2♣ 1
-(tur başına 25 puan + pastralar). **151**'e ilk ulaşan kazanır.
+All texts live in the tables in `tool/l10n/`. After changing them, run
+`python tool/l10n/gen.py` to regenerate `lib/l10n/translations.dart`.
 
-Ayarlar → Παραλλαγή'dan Kıbrıs usulü toplamalı oyuna (açık masa, 8 → 5+3 gibi toplamlar,
-101 puan) geçilebilir.
+## Contributing and commits
 
-## Not
+Commit messages are written in English, in the imperative mood ("Add online lobby", not
+"added online lobby").
 
-Kod, Flutter SDK'ya erişimi olmayan bir ortamda yazıldı: oyun mantığı aynı algoritmanın
-TypeScript kopyasıyla binlerce simüle oyunda test edildi ve Dart dosyaları sözdizimi denetiminden
-geçti, ama `flutter analyze` / `flutter run` ilk kez senin bilgisayarında çalışacak. Bir hata
-çıkarsa mesajı olduğu gibi gönder, düzeltirim.
+## Credits
+
+Made by A. Ali. Sound effects by [Kenney](https://kenney.nl) (CC0).

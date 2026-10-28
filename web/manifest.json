@@ -1,8 +1,8 @@
 {
-  "name": "Πάστρα · Pastra",
-  "short_name": "Πάστρα",
-  "description": "Pastra – the Greek card game. Play vs the computer, 1v1 or 2v2.",
-  "lang": "el",
+  "name": "Pastra",
+  "short_name": "Pastra",
+  "description": "Pastra – the Greek card game. Play against the computer or online, 1v1 or 2v2.",
+  "lang": "en",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

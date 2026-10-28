@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
   <!-- Replaced by `flutter build web --base-href /pastra/` (GitHub Pages). -->
   <base href="$FLUTTER_BASE_HREF">
@@ -7,19 +7,19 @@
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Πάστρα – the Greek card game. Pastra vs the computer, 1v1 or 2v2.">
+  <meta name="description" content="Pastra – the Greek card game. Play against the computer or online, 1v1 or 2v2.">
 
   <!-- iPhone: "Add to Home Screen" opens full screen, status bar over the felt. -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Πάστρα">
+  <meta name="apple-mobile-web-app-title" content="Pastra">
   <meta name="theme-color" content="#052E1E">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
 
-  <title>Πάστρα · Pastra</title>
+  <title>Pastra</title>
 
   <style>
     html, body {
@@ -79,9 +79,25 @@
 <body>
   <div id="app"></div>
   <div id="loading">
-    <div class="title">Πάστρα</div>
+    <div class="title" id="splash-title">Pastra</div>
     <div class="spinner"></div>
   </div>
+  <script>
+    // Splash title in the language the player chose (English the first time).
+    (function () {
+      var titles = {
+        el: 'Πάστρα', ru: 'Пастра', bg: 'Пастра', ar: 'باسترا', zh: 'Pastra 帕斯特拉'
+      };
+      try {
+        var raw = window.localStorage.getItem('flutter.language');
+        var lang = 'en';
+        if (raw) { try { lang = JSON.parse(raw); } catch (e) { lang = raw; } }
+        var title = titles[lang] || 'Pastra';
+        document.getElementById('splash-title').textContent = title;
+        document.documentElement.lang = lang;
+      } catch (e) {}
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

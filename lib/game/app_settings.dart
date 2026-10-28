@@ -102,13 +102,13 @@ class AppSettings extends ChangeNotifier {
   static const String _kAchievements = 'achievements';
   static const String _kSaved = 'savedGame';
 
-  /// Supported languages (the first one the phone uses is picked at the
-  /// first start; English otherwise).
+  /// Supported languages. The app always starts in English; the language the
+  /// user picks is remembered.
   static const List<String> languages = [
     'el', 'en', 'tr', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'bg', 'ar', 'zh',
   ];
 
-  String _language = 'el';
+  String _language = 'en';
   PastraRules _rules = const PastraRules();
   AiLevel _level = AiLevel.medium;
   int _players = 2;
@@ -131,9 +131,8 @@ class AppSettings extends ChangeNotifier {
   }
 
   void _read() {
-    final system = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
     final lang = _prefs.getString(_kLanguage);
-    _language = languages.contains(lang) ? lang! : (languages.contains(system) ? system : 'en');
+    _language = languages.contains(lang) ? lang! : 'en';
 
     final rulesJson = _prefs.getString(_kRules);
     if (rulesJson != null) {

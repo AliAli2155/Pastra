@@ -140,8 +140,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Container(
         decoration: feltDecoration,
-        child: SafeArea(
-          child: LayoutBuilder(
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: SafeArea(
+                child: LayoutBuilder(
             builder: (context, box) {
               final wide = box.maxWidth > box.maxHeight;
               if (!wide) {
@@ -188,6 +191,41 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
+      ),
+            // About: small, bottom-left corner of the home screen only.
+            Positioned.fill(
+              child: SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(foregroundColor: Colors.white60),
+                      onPressed: _showAbout,
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: Text(s.about),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAbout() {
+    final s = Strings.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: PastraColors.panel,
+        title: Text(s.appTitle),
+        content: Text('${s.aboutBody}\n${s.appSubtitle}', style: const TextStyle(height: 1.5)),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.ok)),
+        ],
       ),
     );
   }
