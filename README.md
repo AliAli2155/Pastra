@@ -115,6 +115,9 @@ Rooms can be private (join with a 4-digit code) or listed in the lobby as **open
 anybody can join. **Quick match** joins an open 1v1 table, or opens one and starts as soon as an
 opponent sits down (or plays against the computer if you prefer).
 
+The **leaderboard** lists the players with the most XP (name, level, wins). Players can turn
+it off in the settings; it trusts the app, so it is for fun, not a secure ranking.
+
 Limits of this design: the host could technically cheat, and if the host leaves, the game ends.
 
 Setup: create a Firebase project, enable **Anonymous** sign-in, create a Realtime Database,

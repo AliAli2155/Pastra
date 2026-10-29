@@ -20,9 +20,9 @@ def parse(block):
 
 langs = {'el': EL, 'en': EN, 'tr': TR, 'de': DE, 'fr': FR, 'es': ES, 'it': IT, 'pt': PT, 'ru': RU, 'bg': BG, 'ar': AR, 'zh': ZH}
 tables = {k: parse(v) for k, v in langs.items()}
-import phase2_a, phase2_b, phase2_c, phase3
+import phase2_a, phase2_b, phase2_c, phase3, phase4
 P2 = dict(phase2_a.P2); P2.update(phase2_b.P2)
-for _k, _v in list(phase2_c.P2.items()) + list(phase3.P2.items()):
+for _k, _v in list(phase2_c.P2.items()) + list(phase3.P2.items()) + list(phase4.P2.items()):
     P2[_k] = P2[_k].rstrip('\n') + '\n' + _v.strip('\n')
 for k in langs:
     extra = parse(P2[k])
@@ -44,16 +44,16 @@ for code, t in tables.items():
 import rules_base
 rules = dict(rules_base.RULES)
 rules.update(rules_a.RULES); rules.update(rules_b.RULES)
-# Both games score cards the same way (A 1, J 1, 2♣ 2, 10♦ 3, most cards 3);
-# the pile game keeps its own pastra line (jack on jack).
+# Dealing (section 2) and Points (section 6) come from rules_v2: the house
+# scoring (10♦ 3, A 1, J 1, 2♣ 2, most cards 3), the kapak altı and the void deal.
+import rules_v2
 for code in langs:
-    pile_pts = rules[code]['pile'][5][1].split('\n')
-    sums_pts = rules[code]['sums'][5][1].split('\n')
-    assert len(pile_pts) == 6 and len(sums_pts) == 6, (code, len(pile_pts), len(sums_pts))
-    merged = sums_pts[:4] + [pile_pts[4]] + [sums_pts[5]]
-    pile = list(rules[code]['pile'])
-    pile[5] = (pile[5][0], '\n'.join(merged))
-    rules[code] = dict(rules[code], pile=pile)
+    assert set(rules_v2.T[code]) == set(rules_v2.T['en']), code
+    for v in ('pile', 'sums'):
+        sec = list(rules[code][v])
+        sec[1] = (sec[1][0], rules_v2.dealing(code, v))
+        sec[5] = (sec[5][0], rules_v2.points(code, v))
+        rules[code] = dict(rules[code], **{v: sec})
 for code in langs:
     for v in ('pile', 'sums'):
         assert len(rules[code][v]) == 8, (code, v, len(rules[code][v]))

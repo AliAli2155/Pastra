@@ -72,6 +72,10 @@ class GameController extends ChangeNotifier {
   /// The player's level when this game started (for the level-up message).
   final int _levelAtStart;
 
+  /// Called when a game of the local player is over and their XP changed
+  /// (the app uses it to update the online leaderboard).
+  static void Function(AppSettings settings)? onGameFinished;
+
   /// XP earned in this game so far.
   int _gameXp = 0;
 
@@ -492,6 +496,7 @@ class GameController extends ChangeNotifier {
         _gameXp += endXp;
         final lv = settings.addXp(endXp);
         xpGain = GameXp(amount: _gameXp, levelBefore: _levelAtStart, levelAfter: lv.after);
+        onGameFinished?.call(settings);
         gameFacts = GameFacts(
           won: won,
           level: seats[1].level,
@@ -889,6 +894,7 @@ class GameController extends ChangeNotifier {
     }
     if (_state.phase == GamePhase.gameOver && !wasOver) {
       SoundFx.instance.play(_state.winner == 0 ? Sfx.win : Sfx.lose);
+      _recordGuestGame();
     }
     _notify();
     if (reveal) await _guestReveal();
@@ -902,6 +908,18 @@ class GameController extends ChangeNotifier {
         }
       });
     }
+  }
+
+  /// An online guest's game counts for the statistics and XP too (the host
+  /// does the same for itself). The view is rotated: our team is team 0.
+  void _recordGuestGame() {
+    if (!isGuest || xpGain != null) return;
+    final won = _state.winner == 0;
+    settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium);
+    final amount = Progression.gameXp(won: won, level: AiLevel.medium);
+    final lv = settings.addXp(amount);
+    xpGain = GameXp(amount: amount, levelBefore: _levelAtStart, levelAfter: lv.after);
+    onGameFinished?.call(settings);
   }
 
   @override

@@ -34,10 +34,14 @@ class OnlineStrings {
   String get notConfiguredHint => _t('notConfiguredHint');
   String get defaultName => _t('defaultName');
   String get openTables => _t('openTables');
+  String get leaderboard => _t('leaderboard');
+  String get leaderboardEmpty => _t('leaderboardEmpty');
   String get quickMatch => _t('quickMatch');
   String get quickMatchHint => _t('quickMatchHint');
   String get noTables => _t('noTables');
   String get showInTables => _t('showInTables');
+  String get publicRoom => _t('publicRoom');
+  String get privateRoom => _t('privateRoom');
   String get searching => _t('searching');
   String get playVsBot => _t('playVsBot');
   String tableOf(String name) => _t('tableOf', <String, Object>{'name': name});
@@ -82,10 +86,14 @@ class OnlineStrings {
       'notConfiguredHint': 'The Firebase project is missing. See docs/ONLINE_KURULUM.md.',
       'defaultName': 'Player',
       'openTables': 'Open tables',
+      'leaderboard': 'Leaderboard',
+      'leaderboardEmpty': 'Nobody is on the leaderboard yet. Play a game!',
       'quickMatch': 'Quick match',
       'quickMatchHint': 'Join a 1v1 table or start one and wait',
       'noTables': 'No open tables right now. Create one and wait for players!',
       'showInTables': 'Show my room in open tables',
+      'publicRoom': 'Public',
+      'privateRoom': 'Private',
       'searching': 'Looking for an opponent…',
       'playVsBot': 'Play against the computer instead',
       'tableOf': "{name}'s table",
@@ -120,10 +128,14 @@ class OnlineStrings {
       'notConfiguredHint': 'Λείπει το έργο Firebase. Δες docs/ONLINE_KURULUM.md.',
       'defaultName': 'Παίκτης',
       'openTables': 'Ανοιχτά τραπέζια',
+      'leaderboard': 'Κατάταξη',
+      'leaderboardEmpty': 'Κανείς δεν είναι ακόμα στην κατάταξη. Παίξε ένα παιχνίδι!',
       'quickMatch': 'Γρήγορος αγώνας',
       'quickMatchHint': 'Μπες σε τραπέζι 1v1 ή φτιάξε ένα και περίμενε',
       'noTables': 'Δεν υπάρχουν ανοιχτά τραπέζια. Φτιάξε ένα και περίμενε παίκτες!',
       'showInTables': 'Εμφάνιση του δωματίου στα ανοιχτά τραπέζια',
+      'publicRoom': 'Δημόσιο',
+      'privateRoom': 'Ιδιωτικό',
       'searching': 'Αναζήτηση αντιπάλου…',
       'playVsBot': 'Παίξε με τον υπολογιστή',
       'tableOf': 'Τραπέζι: {name}',
@@ -158,10 +170,14 @@ class OnlineStrings {
       'notConfiguredHint': 'Firebase projesi eksik. docs/ONLINE_KURULUM.md dosyasına bak.',
       'defaultName': 'Oyuncu',
       'openTables': 'Açık masalar',
+      'leaderboard': 'Sıralama',
+      'leaderboardEmpty': 'Sıralamada henüz kimse yok. Bir oyun oyna!',
       'quickMatch': 'Hızlı eşleşme',
       'quickMatchHint': '1v1 masaya katıl ya da masa kurup bekle',
       'noTables': 'Şu an açık masa yok. Bir masa kur ve oyuncu bekle!',
       'showInTables': 'Odamı açık masalarda göster',
+      'publicRoom': 'Herkese açık',
+      'privateRoom': 'Özel',
       'searching': 'Rakip aranıyor…',
       'playVsBot': 'Bunun yerine bilgisayarla oyna',
       'tableOf': '{name} masası',

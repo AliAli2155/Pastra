@@ -4,6 +4,7 @@ import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
+import '../../online/leaderboard.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/level_badge.dart';
@@ -107,6 +108,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onChanged: (v) => settings.playerName = v,
+              ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                title: Text(s.leaderboardShow),
+                value: settings.showOnLeaderboard,
+                onChanged: (v) {
+                  settings.showOnLeaderboard = v;
+                  if (v) {
+                    Leaderboard.submit(settings, fallbackName: s.you);
+                  } else {
+                    Leaderboard.remove();
+                  }
+                },
               ),
               section(s.appearance),
               Padding(padding: const EdgeInsets.only(bottom: 4), child: LevelBadge(xp: settings.xp, width: 280)),

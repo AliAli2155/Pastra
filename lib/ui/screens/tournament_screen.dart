@@ -7,7 +7,9 @@ import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
 import '../../game/tournament.dart';
 import '../../l10n/strings.dart';
+import '../../online/leaderboard.dart';
 import '../theme.dart';
+import '../widgets/menu_tiles.dart';
 import 'game_screen.dart';
 
 /// The offline tournament: the bracket, and a button for the next match.
@@ -64,6 +66,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
       if (t.finished && !t.bonusPaid) {
         t.bonusPaid = true;
         settings.addXp(t.bonusXp);
+        Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
       }
     });
     _save();
@@ -110,7 +113,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
                     children: <Widget>[
                       Expanded(child: Center(child: bracket)),
                       const SizedBox(width: 16),
-                      SizedBox(width: 280, child: Center(child: SingleChildScrollView(child: panel))),
+                      SizedBox(width: 300, child: Center(child: SingleChildScrollView(child: panel))),
                     ],
                   ),
                 );
@@ -221,10 +224,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
         ));
       }
       children.add(const SizedBox(height: 12));
-      children.add(SizedBox(
-        width: double.infinity,
-        child: FilledButton(onPressed: _startNew, child: Text(s.newTournament)),
-      ));
+      children.add(BigButton(icon: Icons.refresh_rounded, label: s.newTournament, onPressed: _startNew));
     } else {
       children.add(Text(
         s.tournamentRound(t.round),
@@ -234,7 +234,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
       children.add(Text(
         '${_name(s, t.humanSlot)}  ${s.vsName(_name(s, t.opponentSlot))}',
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
       ));
       children.add(const SizedBox(height: 2));
       children.add(Text(
@@ -242,10 +242,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
         style: const TextStyle(color: Colors.white60, fontSize: 13),
       ));
       children.add(const SizedBox(height: 12));
-      children.add(SizedBox(
-        width: double.infinity,
-        child: FilledButton(onPressed: _playMatch, child: Text(s.playMatch)),
-      ));
+      children.add(BigButton(icon: Icons.play_arrow_rounded, label: s.playMatch, onPressed: _playMatch));
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),

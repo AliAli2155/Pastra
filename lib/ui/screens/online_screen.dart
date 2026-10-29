@@ -8,7 +8,9 @@ import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
+import '../widgets/menu_tiles.dart';
 import 'game_screen.dart';
+import 'leaderboard_screen.dart';
 import 'tables_screen.dart';
 
 /// Create a room or join one with its 4-digit code.
@@ -181,154 +183,285 @@ class _OnlineScreenState extends State<OnlineScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
+  void _openLeaderboard() =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LeaderboardScreen()));
+
   @override
   Widget build(BuildContext context) {
     final settings = SettingsScope.of(context);
     final t = OnlineStrings(settings.language);
     final s = Strings.of(context);
+    Widget nameInput({required bool compact}) => TextField(
+          controller: _name,
+          maxLength: 16,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+          decoration: (compact
+                  ? InputDecoration(
+                      hintText: t.yourName,
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      counterText: '',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      filled: true,
+                      fillColor: Colors.black.withValues(alpha: 0.25),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.white38),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: PastraColors.gold),
+                      ),
+                    )
+                  : _decoration(t.yourName))
+              .copyWith(
+            isDense: true,
+            prefixIcon: const Icon(Icons.person_outline, color: Colors.white70, size: 20),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 32),
+          ),
+        );
+    final Widget body;
+    if (_checking) {
+      body = Center(child: Text(t.connecting, style: const TextStyle(color: Colors.white70, fontSize: 18)));
+    } else if (!_configured) {
+      body = Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: _notConfigured(t)),
+        ),
+      );
+    } else {
+      body = LayoutBuilder(
+        builder: (context, box) {
+          final wide = box.maxWidth >= 640;
+          return wide ? _wide(t, s) : _narrow(t, s, nameInput(compact: false));
+        },
+      );
+    }
+    final showNameInBar = _configured && !_checking && MediaQuery.sizeOf(context).width >= 640;
     return Scaffold(
+      appBar: AppBar(
+        title: Text(t.online, style: const TextStyle(fontWeight: FontWeight.w900)),
+        actions: <Widget>[
+          if (showNameInBar)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+              child: Center(child: SizedBox(width: 220, child: nameInput(compact: true))),
+            ),
+        ],
+      ),
       body: Container(
         decoration: feltDecoration,
         child: SafeArea(
+          top: false,
           child: Stack(
             children: <Widget>[
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: _checking
-                        ? Text(t.connecting, style: const TextStyle(color: Colors.white70, fontSize: 16))
-                        : !_configured
-                            ? _notConfigured(t)
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  Text(
-                                    t.online,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 18),
-                                  TextField(
-                                    controller: _name,
-                                    maxLength: 16,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: _decoration(t.yourName),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  FilledButton.icon(
-                                    onPressed: _busy ? null : _quickMatch,
-                                    icon: const Icon(Icons.bolt),
-                                    label: Text(t.quickMatch),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    t.quickMatchHint,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  OutlinedButton.icon(
-                                    onPressed: _busy ? null : _openTables,
-                                    icon: const Icon(Icons.table_restaurant_outlined),
-                                    label: Text(t.openTables),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      side: const BorderSide(color: Colors.white38),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 22),
-                                  Text(
-                                    t.createRoom,
-                                    style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                        child: FilledButton(
-                                          onPressed: _busy ? null : () => _create(2),
-                                          child: Text(s.mode1v1),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: FilledButton(
-                                          onPressed: _busy ? null : () => _create(4),
-                                          child: Text(s.mode2v2),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SwitchListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    dense: true,
-                                    value: _public,
-                                    onChanged: _busy ? null : (v) => setState(() => _public = v),
-                                    title: Text(
-                                      t.showInTables,
-                                      style: const TextStyle(color: Colors.white70, fontSize: 14),
-                                    ),
-                                    activeThumbColor: PastraColors.gold,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    t.joinRoom,
-                                    style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _code,
-                                          keyboardType: TextInputType.number,
-                                          maxLength: 4,
-                                          inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                                          style: const TextStyle(color: Colors.white, fontSize: 22, letterSpacing: 6),
-                                          decoration: _decoration(t.codeHint),
-                                          onSubmitted: (_) => _busy ? null : _join(),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      FilledButton(
-                                        onPressed: _busy ? null : _join,
-                                        child: Text(t.join),
-                                      ),
-                                    ],
-                                  ),
-                                  if (_error != null) ...<Widget>[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _error!,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Color(0xFFFFB4A9), fontSize: 15),
-                                    ),
-                                  ],
-                                  if (_busy) ...<Widget>[
-                                    const SizedBox(height: 16),
-                                    const Center(child: CircularProgressIndicator()),
-                                  ],
-                                ],
-                              ),
+              Positioned.fill(child: body),
+              if (_busy)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickTile(OnlineStrings t) => MenuTile(
+        icon: Icons.bolt_rounded,
+        title: t.quickMatch,
+        subtitle: t.quickMatchHint,
+        colors: TileColors.blue,
+        onTap: _busy ? null : _quickMatch,
+      );
+
+  Widget _tablesTile(OnlineStrings t) => MenuTile(
+        icon: Icons.table_restaurant_rounded,
+        title: t.openTables,
+        colors: TileColors.teal,
+        onTap: _busy ? null : _openTables,
+      );
+
+  Widget _boardTile(OnlineStrings t) => MenuTile(
+        icon: Icons.leaderboard_rounded,
+        title: t.leaderboard,
+        colors: TileColors.purple,
+        onTap: _busy ? null : _openLeaderboard,
+      );
+
+  /// Public (listed in the open tables) or private (code only), as a small
+  /// pill in the title row of "Create a room".
+  Widget _visibilityPill(OnlineStrings t) {
+    final color = _public ? PastraColors.gold : Colors.white60;
+    return Tooltip(
+      message: t.showInTables,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _busy ? null : () => setState(() => _public = !_public),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color),
+            color: _public ? PastraColors.gold.withValues(alpha: 0.15) : Colors.transparent,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(_public ? Icons.public : Icons.lock_outline, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(
+                _public ? t.publicRoom : t.privateRoom,
+                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
               ),
-              Positioned(
-                left: 8,
-                top: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _createPanel(OnlineStrings t, Strings s) => MenuPanel(
+        title: t.createRoom,
+        trailing: _visibilityPill(t),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: BigButton(icon: Icons.person, label: s.mode1v1, onPressed: _busy ? null : () => _create(2)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: BigButton(icon: Icons.groups, label: s.mode2v2, onPressed: _busy ? null : () => _create(4)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _joinPanel(OnlineStrings t) => MenuPanel(
+        title: t.joinRoom,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: TextField(
+                controller: _code,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w800),
+                decoration: _decoration(t.codeHint).copyWith(isDense: true),
+                onSubmitted: (_) => _busy ? null : _join(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(width: 130, child: BigButton(label: t.join, icon: Icons.login_rounded, onPressed: _busy ? null : _join)),
+          ],
+        ),
+      );
+
+  Widget? _errorText() => _error == null
+      ? null
+      : Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            _error!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFFFFB4A9), fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+        );
+
+  /// Landscape (phones held sideways, tablets, desktop): three columns.
+  Widget _wide(OnlineStrings t, Strings s) {
+    final error = _errorText();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 460),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(child: _wideRow(t, s)),
+              if (error != null) error,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Three columns; the middle and right ones are split into two equal rows.
+  Widget _wideRow(OnlineStrings t, Strings s) => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(flex: 5, child: _quickTile(t)),
+              const SizedBox(width: 14),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(child: _tablesTile(t)),
+                    const SizedBox(height: 14),
+                    Expanded(child: _boardTile(t)),
+                  ],
                 ),
               ),
+              const SizedBox(width: 14),
+              Expanded(
+                flex: 6,
+                // Same rows as the middle column: the edges line up.
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(child: _createPanel(t, s)),
+                    const SizedBox(height: 14),
+                    Expanded(child: _joinPanel(t)),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+  /// Portrait: everything in one column.
+  Widget _narrow(OnlineStrings t, Strings s, Widget nameField) {
+    final error = _errorText();
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              nameField,
+              const SizedBox(height: 4),
+              SizedBox(height: 150, child: _quickTile(t)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(child: _tablesTile(t)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _boardTile(t)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _createPanel(t, s),
+              const SizedBox(height: 12),
+              _joinPanel(t),
+              if (error != null) error,
             ],
           ),
         ),
@@ -453,102 +586,138 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget build(BuildContext context) {
     final t = OnlineStrings(SettingsScope.of(context).language);
     final isHost = widget.host != null;
+    final quick = widget.host?.autoStart == true;
     return Scaffold(
+      appBar: AppBar(title: Text(quick ? t.quickMatch : t.online, style: const TextStyle(fontWeight: FontWeight.w900))),
       body: Container(
         decoration: feltDecoration,
         child: SafeArea(
-          child: Stack(
-            children: <Widget>[
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: AnimatedBuilder(
-                      animation: _watcher,
-                      builder: (context, _) {
-                        final info = _watcher.info;
-                        return Column(
+          top: false,
+          child: AnimatedBuilder(
+            animation: _watcher,
+            builder: (context, _) {
+              final info = _watcher.info;
+              final codeCard = MenuPanel(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(t.roomCode, style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                    GestureDetector(
+                      onTap: () => Clipboard.setData(ClipboardData(text: _code)),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _code,
+                          style: const TextStyle(
+                            fontSize: 64,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 12,
+                            color: PastraColors.gold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      t.shareCode,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  ],
+                ),
+              );
+              final actions = <Widget>[
+                if (isHost && quick) ...<Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: PastraColors.gold),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          t.searching,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  BigOutlineButton(
+                    icon: Icons.smart_toy_outlined,
+                    label: t.playVsBot,
+                    onPressed: _starting ? null : _start,
+                  ),
+                ] else if (isHost) ...<Widget>[
+                  Text(
+                    t.botFills,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white60, fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  BigButton(icon: Icons.play_arrow_rounded, label: t.start, onPressed: _starting ? null : _start),
+                ] else
+                  Text(
+                    t.waitForHost,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+              ];
+              final seats = <Widget>[for (var i = 0; i < info.players; i++) _seatRow(t, info, i)];
+              return LayoutBuilder(
+                builder: (context, box) {
+                  if (box.maxWidth >= 640) {
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1000),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(flex: 4, child: Center(child: codeCard)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 5,
+                                child: Center(
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: <Widget>[...seats, const SizedBox(height: 8), ...actions],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                            Text(
-                              t.roomCode,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
-                            ),
-                            GestureDetector(
-                              onTap: () => Clipboard.setData(ClipboardData(text: _code)),
-                              child: Text(
-                                _code,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 56,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 10,
-                                  color: PastraColors.gold,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              t.shareCode,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14),
-                            ),
-                            const SizedBox(height: 18),
-                            for (var i = 0; i < info.players; i++) _seatRow(t, info, i),
-                            const SizedBox(height: 14),
-                            if (isHost && widget.host!.autoStart) ...<Widget>[
-                              Text(
-                                t.searching,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 16),
-                              ),
-                              const SizedBox(height: 10),
-                              const Center(child: CircularProgressIndicator()),
-                              const SizedBox(height: 14),
-                              OutlinedButton(
-                                onPressed: _starting ? null : _start,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Colors.white38),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: Text(t.playVsBot),
-                              ),
-                            ] else if (isHost) ...<Widget>[
-                              Text(
-                                t.botFills,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white60, fontSize: 13),
-                              ),
-                              const SizedBox(height: 10),
-                              FilledButton(
-                                onPressed: _starting ? null : _start,
-                                child: Text(t.start),
-                              ),
-                            ] else
-                              Text(
-                                t.waitForHost,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 16),
-                              ),
+                            codeCard,
+                            const SizedBox(height: 16),
+                            ...seats,
+                            const SizedBox(height: 8),
+                            ...actions,
                           ],
-                        );
-                      },
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 8,
-                top: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-            ],
+                  );
+                },
+              );
+            },
           ),
         ),
       ),
@@ -564,8 +733,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       if (mine) t.you,
     ];
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: PastraColors.panel,
         borderRadius: BorderRadius.circular(12),
@@ -581,7 +750,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
           Expanded(
             child: Text(
               tags.isEmpty ? label : '$label  (${tags.join(', ')})',
-              style: TextStyle(color: seat.uid == null ? Colors.white54 : Colors.white, fontSize: 16),
+              style: TextStyle(
+                color: seat.uid == null ? Colors.white54 : Colors.white,
+                fontSize: 17,
+                fontWeight: seat.uid == null ? FontWeight.w500 : FontWeight.w700,
+              ),
             ),
           ),
           if (info.players == 4)

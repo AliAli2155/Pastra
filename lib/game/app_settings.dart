@@ -105,6 +105,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kSaved = 'savedGame';
   static const String _kXp = 'xp';
   static const String _kTournament = 'tournament';
+  static const String _kLeaderboard = 'showOnLeaderboard';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -123,6 +124,7 @@ class AppSettings extends ChangeNotifier {
   double _volume = 1.0;
   bool _tutorialDone = false;
   int _xp = 0;
+  bool _showOnLeaderboard = true;
 
   /// Unlocked achievement id → when (milliseconds since epoch).
   Map<String, int> _achievements = <String, int>{};
@@ -195,6 +197,7 @@ class AppSettings extends ChangeNotifier {
         ..games = _prefs.getInt(_kPlayed) ?? 0
         ..wins = _prefs.getInt(_kWon) ?? 0;
     }
+    _showOnLeaderboard = _prefs.getBool(_kLeaderboard) ?? true;
     final xp = _prefs.getInt(_kXp);
     if (xp != null) {
       _xp = xp < 0 ? 0 : xp;
@@ -222,6 +225,15 @@ class AppSettings extends ChangeNotifier {
   set tutorialDone(bool value) {
     _tutorialDone = value;
     _prefs.setBool(_kTutorial, value);
+    notifyListeners();
+  }
+
+  /// Whether the player's name and XP are published on the online leaderboard.
+  bool get showOnLeaderboard => _showOnLeaderboard;
+
+  set showOnLeaderboard(bool value) {
+    _showOnLeaderboard = value;
+    _prefs.setBool(_kLeaderboard, value);
     notifyListeners();
   }
 

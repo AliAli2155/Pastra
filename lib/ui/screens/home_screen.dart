@@ -9,6 +9,7 @@ import '../../game/game_controller.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
@@ -48,27 +49,51 @@ class _HomeScreenState extends State<HomeScreen> {
       context: ctx,
       builder: (sheet) {
         final s = Strings.of(sheet);
-        Widget option(IconData icon, String title, String hint, bool tournament) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              leading: CircleAvatar(
-                backgroundColor: PastraColors.gold,
-                foregroundColor: Colors.black,
-                child: Icon(icon),
+        Widget quick(double? h) => SizedBox(
+              height: h,
+              child: MenuTile(
+                icon: Icons.bolt_rounded,
+                title: s.quickGame,
+                subtitle: s.quickGameHint,
+                colors: TileColors.green,
+                onTap: () => Navigator.of(sheet).pop(false),
               ),
-              title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-              subtitle: Text(hint, style: const TextStyle(color: Colors.white60)),
-              onTap: () => Navigator.of(sheet).pop(tournament),
+            );
+        Widget cup(double? h) => SizedBox(
+              height: h,
+              child: MenuTile(
+                icon: Icons.emoji_events_rounded,
+                title: s.tournament,
+                subtitle: s.tournamentHint,
+                colors: TileColors.gold,
+                darkText: true,
+                onTap: () => Navigator.of(sheet).pop(true),
+              ),
             );
         return _CenteredDialog(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                option(Icons.bolt, s.quickGame, s.quickGameHint, false),
-                option(Icons.emoji_events, s.tournament, s.tournamentHint, true),
-              ],
-            ),
+          maxWidth: 640,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final screen = MediaQuery.sizeOf(context);
+              // Side by side when there is room, else one under the other.
+              final side = box.maxWidth >= 480;
+              final h = side ? min(220.0, screen.height * 0.62) : 96.0;
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: side
+                    ? Row(
+                        children: <Widget>[
+                          Expanded(child: quick(h)),
+                          const SizedBox(width: 14),
+                          Expanded(child: cup(h)),
+                        ],
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[quick(h), const SizedBox(height: 12), cup(h)],
+                      ),
+              );
+            },
           ),
         );
       },
@@ -368,56 +393,80 @@ class _NewGameSheetState extends State<NewGameSheet> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final rules = SettingsScope.of(context).rules;
-    const labelStyle = TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600);
+    const labelStyle = TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w700);
+    final players = Row(
+      children: <Widget>[
+        Expanded(
+          child: ChoiceCard(
+            icon: Icons.person,
+            label: s.mode1v1,
+            hint: s.mode1v1Hint,
+            selected: _players == 2,
+            onTap: () => setState(() => _players = 2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ChoiceCard(
+            icon: Icons.groups,
+            label: s.mode2v2,
+            hint: s.mode2v2Hint,
+            selected: _players == 4,
+            onTap: () => setState(() => _players = 4),
+          ),
+        ),
+      ],
+    );
+    final levels = Row(
+      children: <Widget>[
+        for (final l in AiLevel.values) ...<Widget>[
+          if (l != AiLevel.values.first) const SizedBox(width: 10),
+          Expanded(
+            child: ChoiceCard(
+              label: s.level(l),
+              selected: _level == l,
+              onTap: () => setState(() => _level = l),
+            ),
+          ),
+        ],
+      ],
+    );
+    // A phone held sideways is low: no title, less space between the rows.
+    final compact = MediaQuery.sizeOf(context).height < 430;
+    final gap = compact ? 8.0 : 14.0;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        padding: EdgeInsets.fromLTRB(20, compact ? 14 : 18, 20, compact ? 14 : 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              s.newGame,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
-            ),
-            const SizedBox(height: 18),
+            if (!compact) ...<Widget>[
+              Text(
+                s.newGame,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+              ),
+              SizedBox(height: gap),
+            ],
             Text(s.gameType, style: labelStyle),
-            const SizedBox(height: 8),
-            SegmentedButton<int>(
-              showSelectedIcon: false,
-              segments: <ButtonSegment<int>>[
-                ButtonSegment<int>(value: 2, label: Text(s.mode1v1), icon: const Icon(Icons.person_outline)),
-                ButtonSegment<int>(value: 4, label: Text(s.mode2v2), icon: const Icon(Icons.groups_outlined)),
-              ],
-              selected: <int>{_players},
-              onSelectionChanged: (v) => setState(() => _players = v.first),
-            ),
             const SizedBox(height: 6),
-            Text(
-              _players == 2 ? s.mode1v1Hint : s.mode2v2Hint,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            const SizedBox(height: 18),
+            players,
+            SizedBox(height: gap),
             Text(s.difficulty, style: labelStyle),
-            const SizedBox(height: 8),
-            SegmentedButton<AiLevel>(
-              showSelectedIcon: false,
-              segments: <ButtonSegment<AiLevel>>[
-                for (final l in AiLevel.values) ButtonSegment<AiLevel>(value: l, label: Text(s.level(l))),
-              ],
-              selected: <AiLevel>{_level},
-              onSelectionChanged: (v) => setState(() => _level = v.first),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 6),
+            levels,
+            SizedBox(height: gap),
             Text(
               s.targetInfo(rules.variant, rules.targetScore, rules.cardsPerDeal),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
-            const SizedBox(height: 12),
-            FilledButton(
+            SizedBox(height: gap),
+            BigButton(
+              icon: Icons.play_arrow_rounded,
+              label: s.start,
               onPressed: () => Navigator.of(context).pop(NewGameChoice(_players, _level)),
-              child: Text(s.start),
             ),
           ],
         ),
@@ -426,12 +475,12 @@ class _NewGameSheetState extends State<NewGameSheet> {
   }
 }
 
-
 /// A choice shown in the middle of the screen (not as a bottom sheet).
 class _CenteredDialog extends StatelessWidget {
-  const _CenteredDialog({required this.child});
+  const _CenteredDialog({required this.child, this.maxWidth = 560});
 
   final Widget child;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +489,7 @@ class _CenteredDialog extends StatelessWidget {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         child: child,
       ),
     );

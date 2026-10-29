@@ -35,4 +35,6 @@ Mac'te `flutter run -d chrome` → **Play online → 1v1** → kodu not al.
 - Eski odalar veritabanında kalır; Realtime Database konsolundan `rooms` düğümünü ara sıra silebilirsin.
 - Açık masalar listesi ve hızlı eşleşme `lobby` düğümünü kullanır. Kurallar dosyası güncellendi:
   `firebase deploy --only database` ile (ya da konsolda Rules sekmesine yapıştırarak) yeniden yayınla.
+- Sıralama tablosu `leaderboard` düğümünü kullanır (aynı `database.rules.json` dosyasında, `xp` alanı indeksli).
+  Herkes sadece kendi satırını yazabilir. Ayarlardan kapatılırsa satır silinir.
   Kurallar yayınlanmazsa odalar yine çalışır, sadece listede görünmez ve hızlı eşleşme masa açıp bekler.
