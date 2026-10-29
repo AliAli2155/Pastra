@@ -107,6 +107,7 @@
     window.pastraSfx = (function () {
       var ctx = null, buffers = {}, loading = {};
       function context() {
+        if (ctx && ctx.state === 'closed') { ctx = null; buffers = {}; loading = {}; }
         if (!ctx) {
           var C = window.AudioContext || window.webkitAudioContext;
           if (!C) return null;
@@ -114,7 +115,27 @@
         }
         return ctx;
       }
+      // iPhone: Web Audio is muted by the ring/silent switch unless the page
+      // says it plays "media". Newer Safari has audioSession for that; older
+      // ones switch to media when a (silent) <audio> element plays.
+      var mediaMode = false;
+      function playbackMode() {
+        if (mediaMode) return;
+        mediaMode = true;
+        try {
+          if (navigator.audioSession) { navigator.audioSession.type = 'playback'; return; }
+        } catch (e) {}
+        try {
+          var el = document.createElement('audio');
+          el.setAttribute('x-webkit-airplay', 'deny');
+          el.preload = 'auto';
+          el.loop = true;
+          el.src = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+          el.play().catch(function () { mediaMode = false; });
+        } catch (e) { mediaMode = false; }
+      }
       function wake() {
+        playbackMode();
         var c = context();
         if (!c) return;
         if (c.state !== 'running') { try { c.resume(); } catch (e) {} }

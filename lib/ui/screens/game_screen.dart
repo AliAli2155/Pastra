@@ -738,6 +738,9 @@ class _TopBar extends StatelessWidget {
     // Phones: the round / target text only when there is room next to the
     // scoreboard; the two buttons are big enough for a thumb.
     final roomForInfo = MediaQuery.sizeOf(context).width >= 760;
+    // Width of the buttons (and text) on the right; the left gets the same,
+    // so the board is centred. The full screen button is only on the web.
+    final sideRoom = (roomForInfo ? 150.0 : 0.0) + 48 + (kIsWeb ? 48 : 0);
     return Container(
       height: 48,
       decoration: BoxDecoration(
@@ -748,34 +751,43 @@ class _TopBar extends StatelessWidget {
         ),
         border: Border(bottom: BorderSide(color: PastraColors.gold.withValues(alpha: 0.18))),
       ),
-      child: Row(
+      // The scoreboard stays exactly in the middle: the buttons sit on both
+      // sides over it, and the board keeps clear of the wider (right) side.
+      child: Stack(
         children: <Widget>[
-          IconButton(
-            onPressed: onBack,
-            iconSize: 28,
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            tooltip: s.leave,
-          ),
-          Expanded(
-            child: Center(
-              child: FittedBox(fit: BoxFit.scaleDown, child: board),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: onBack,
+              iconSize: 28,
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              tooltip: s.leave,
             ),
           ),
-          if (roomForInfo)
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
-                style: const TextStyle(fontSize: 12, color: Colors.white54),
-              ),
-            ),
-          IconButton(
-            onPressed: onRules,
-            iconSize: 26,
-            icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
-            tooltip: s.rules,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: sideRoom),
+            child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: board)),
           ),
-          const FullscreenButton(),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (roomForInfo)
+                  Text(
+                    '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                IconButton(
+                  onPressed: onRules,
+                  iconSize: 26,
+                  icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
+                  tooltip: s.rules,
+                ),
+                const FullscreenButton(),
+              ],
+            ),
+          ),
         ],
       ),
     );
