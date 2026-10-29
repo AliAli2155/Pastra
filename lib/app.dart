@@ -27,12 +27,19 @@ class PastraApp extends StatelessWidget {
           locale: Locale(settings.language),
           supportedLocales: <Locale>[for (final code in AppSettings.languages) Locale(code)],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          builder: (context, child) => Stack(
-            textDirection: TextDirection.ltr,
-            children: <Widget>[
-              child ?? const SizedBox.shrink(),
-              if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
-            ],
+          // A large font setting on the phone may grow the text a little, but
+          // not so much that buttons and cards overflow.
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15),
+            ),
+            child: Stack(
+              textDirection: TextDirection.ltr,
+              children: <Widget>[
+                child ?? const SizedBox.shrink(),
+                if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
+              ],
+            ),
           ),
           home: const HomeScreen(),
         ),

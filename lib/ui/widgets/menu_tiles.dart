@@ -62,8 +62,11 @@ class MenuTile extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (context, box) {
-                // Icon above the text only in tiles that are high and not too wide.
-                final tall = box.maxHeight.isFinite && box.maxHeight >= 130 && box.maxWidth < box.maxHeight * 1.7;
+                // Icon above the text only in tiles that are high enough for it
+                // (more with a line under the title) and not too wide.
+                final scale = MediaQuery.textScalerOf(context).scale(1);
+                final needed = (subtitle == null ? 140.0 : 215.0) * scale;
+                final tall = box.maxHeight.isFinite && box.maxHeight >= needed && box.maxWidth < box.maxHeight * 1.7;
                 final iconSize = tall ? min(64.0, box.maxHeight * 0.3) : 30.0;
                 final badge = Container(
                   width: iconSize + 18,
@@ -88,15 +91,27 @@ class MenuTile extends StatelessWidget {
                     ? null
                     : Text(
                         subtitle!,
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         textAlign: tall ? TextAlign.center : TextAlign.start,
                         style: TextStyle(color: sub, fontSize: 14, height: 1.25),
                       );
-                if (tall) {
+                // Whatever happens, the content is scaled down to fit the tile
+                // instead of spilling over its edge.
+                Widget fit(Widget child, EdgeInsets pad) {
+                  if (!box.maxHeight.isFinite) return Padding(padding: pad, child: child);
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    child: Column(
+                    padding: pad,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(width: max(0.0, box.maxWidth - pad.horizontal), child: child),
+                    ),
+                  );
+                }
+                if (tall) {
+                  return fit(
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
                         badge,
@@ -105,11 +120,11 @@ class MenuTile extends StatelessWidget {
                         if (subText != null) ...<Widget>[const SizedBox(height: 4), subText],
                       ],
                     ),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   );
                 }
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
+                return fit(
+                  Row(
                     children: <Widget>[
                       badge,
                       const SizedBox(width: 14),
@@ -123,6 +138,7 @@ class MenuTile extends StatelessWidget {
                       Icon(Icons.chevron_right_rounded, color: sub, size: 30),
                     ],
                   ),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 );
               },
             ),
@@ -285,6 +301,32 @@ class MenuPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (title != null) ...<Widget>[
+          SizedBox(
+            height: 30,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    title!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                if (trailing != null) trailing!,
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        child,
+      ],
+    );
     return Container(
       padding: padding,
       decoration: BoxDecoration(
@@ -292,32 +334,19 @@ class MenuPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          if (title != null) ...<Widget>[
-            SizedBox(
-              height: 30,
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      title!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  if (trailing != null) trailing!,
-                ],
-              ),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // In a fixed-size cell (the online grid) the content is centred and,
+          // on a small screen, scaled down instead of overflowing.
+          // Only when the panel is given an exact height (a grid cell).
+          if (!box.hasTightHeight || !box.maxWidth.isFinite) return content;
+          return Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(width: box.maxWidth, child: content),
             ),
-            const SizedBox(height: 8),
-          ],
-          child,
-        ],
+          );
+        },
       ),
     );
   }

@@ -78,7 +78,7 @@ play=Play
 playOffline=Offline
 playOnline=Online
 playOfflineHint=Play against the computer
-playOnlineHint=Play with friends using a room code
+playOnlineHint=Quick match, tournaments and rooms with friends
 """
 
 P2['el'] = """
@@ -158,7 +158,7 @@ play=Παίξε
 playOffline=Εκτός σύνδεσης
 playOnline=Online
 playOfflineHint=Παίξε εναντίον του υπολογιστή
-playOnlineHint=Παίξε με φίλους με κωδικό δωματίου
+playOnlineHint=Γρήγορος αγώνας, τουρνουά και δωμάτια με φίλους
 """
 
 P2['tr'] = """
@@ -238,7 +238,7 @@ play=Oyna
 playOffline=Çevrimdışı
 playOnline=Çevrimiçi
 playOfflineHint=Bilgisayara karşı oyna
-playOnlineHint=Oda koduyla arkadaşlarınla oyna
+playOnlineHint=Hızlı eşleşme, turnuvalar ve arkadaş odaları
 """
 
 P2['de'] = """
@@ -318,7 +318,7 @@ play=Spielen
 playOffline=Offline
 playOnline=Online
 playOfflineHint=Gegen den Computer spielen
-playOnlineHint=Mit Freunden per Raumcode spielen
+playOnlineHint=Schnelles Spiel, Turniere und Räume mit Freunden
 """
 
 P2['fr'] = """
@@ -398,7 +398,7 @@ play=Jouer
 playOffline=Hors ligne
 playOnline=En ligne
 playOfflineHint=Jouer contre l'ordinateur
-playOnlineHint=Jouer entre amis avec un code de salle
+playOnlineHint=Partie rapide, tournois et salles entre amis
 """
 
 P2['es'] = """
@@ -478,5 +478,5 @@ play=Jugar
 playOffline=Sin conexión
 playOnline=En línea
 playOfflineHint=Juega contra el ordenador
-playOnlineHint=Juega con amigos con un código de sala
+playOnlineHint=Partida rápida, torneos y salas con amigos
 """

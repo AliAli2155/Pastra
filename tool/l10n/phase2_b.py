@@ -78,7 +78,7 @@ play=Gioca
 playOffline=Offline
 playOnline=Online
 playOfflineHint=Gioca contro il computer
-playOnlineHint=Gioca con gli amici con un codice stanza
+playOnlineHint=Partita veloce, tornei e stanze con gli amici
 """
 
 P2['pt'] = """
@@ -158,7 +158,7 @@ play=Jogar
 playOffline=Offline
 playOnline=Online
 playOfflineHint=Joga contra o computador
-playOnlineHint=Joga com amigos com um código de sala
+playOnlineHint=Jogo rápido, torneios e salas com amigos
 """
 
 P2['ru'] = """
@@ -238,7 +238,7 @@ play=Играть
 playOffline=Офлайн
 playOnline=Онлайн
 playOfflineHint=Игра против компьютера
-playOnlineHint=Играйте с друзьями по коду комнаты
+playOnlineHint=Быстрая игра, турниры и комнаты с друзьями
 """
 
 P2['bg'] = """
@@ -318,7 +318,7 @@ play=Играй
 playOffline=Офлайн
 playOnline=Онлайн
 playOfflineHint=Игра срещу компютъра
-playOnlineHint=Играй с приятели с код на стая
+playOnlineHint=Бърза игра, турнири и стаи с приятели
 """
 
 P2['ar'] = """
@@ -398,7 +398,7 @@ play=العب
 playOffline=بدون إنترنت
 playOnline=أونلاين
 playOfflineHint=العب ضد الكمبيوتر
-playOnlineHint=العب مع الأصدقاء برمز الغرفة
+playOnlineHint=مباراة سريعة وبطولات وغرف مع الأصدقاء
 """
 
 P2['zh'] = """
@@ -478,5 +478,5 @@ play=开始游戏
 playOffline=单机
 playOnline=在线
 playOfflineHint=对战电脑
-playOnlineHint=用房间码和朋友一起玩
+playOnlineHint=快速匹配、锦标赛和好友房间
 """
