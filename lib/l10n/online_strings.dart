@@ -34,6 +34,19 @@ class OnlineStrings {
   String get notConfiguredHint => _t('notConfiguredHint');
   String get defaultName => _t('defaultName');
   String get openTables => _t('openTables');
+  String get cup => _t('cup');
+  String get cupHint => _t('cupHint');
+  String nextCup(String time) => _t('nextCup', <String, Object>{'time': time});
+  String startsIn(String time) => _t('startsIn', <String, Object>{'time': time});
+  String get cupRegister => _t('cupRegister');
+  String get cupUnregister => _t('cupUnregister');
+  String get cupRegistered => _t('cupRegistered');
+  String cupPlayers(int n) => _t('cupPlayers', <String, Object>{'n': n});
+  String get cupWaiting => _t('cupWaiting');
+  String get cupStarting => _t('cupStarting');
+  String cupOpponentWait(String name) => _t('cupOpponentWait', <String, Object>{'name': name});
+  String get cupNext => _t('cupNext');
+  String get cupLive => _t('cupLive');
   String get leaderboard => _t('leaderboard');
   String get leaderboardEmpty => _t('leaderboardEmpty');
   String get quickMatch => _t('quickMatch');
@@ -86,6 +99,19 @@ class OnlineStrings {
       'notConfiguredHint': 'The Firebase project is missing. See docs/ONLINE_KURULUM.md.',
       'defaultName': 'Player',
       'openTables': 'Open tables',
+      'cup': 'Tournament',
+      'cupHint': 'Every 30 minutes · 8 players',
+      'nextCup': 'Next tournament: {time}',
+      'startsIn': 'Starts in {time}',
+      'cupRegister': 'Join the tournament',
+      'cupUnregister': 'Leave the tournament',
+      'cupRegistered': "You're in! Be on this screen when it starts.",
+      'cupPlayers': '{n} of 8 players · empty seats get bots · matches to 51',
+      'cupWaiting': 'Waiting for the other matches…',
+      'cupStarting': 'Your match is starting…',
+      'cupOpponentWait': 'Waiting for {name}…',
+      'cupNext': 'Next tournament',
+      'cupLive': 'Tournament in progress',
       'leaderboard': 'Leaderboard',
       'leaderboardEmpty': 'Nobody is on the leaderboard yet. Play a game!',
       'quickMatch': 'Quick match',
@@ -128,6 +154,19 @@ class OnlineStrings {
       'notConfiguredHint': 'Λείπει το έργο Firebase. Δες docs/ONLINE_KURULUM.md.',
       'defaultName': 'Παίκτης',
       'openTables': 'Ανοιχτά τραπέζια',
+      'cup': 'Τουρνουά',
+      'cupHint': 'Κάθε 30 λεπτά · 8 παίκτες',
+      'nextCup': 'Επόμενο τουρνουά: {time}',
+      'startsIn': 'Ξεκινά σε {time}',
+      'cupRegister': 'Δήλωσε συμμετοχή',
+      'cupUnregister': 'Αποχώρηση από το τουρνουά',
+      'cupRegistered': 'Είσαι μέσα! Να είσαι σε αυτή την οθόνη όταν ξεκινήσει.',
+      'cupPlayers': '{n} από 8 παίκτες · οι κενές θέσεις παίρνουν bot · αγώνες στους 51',
+      'cupWaiting': 'Αναμονή για τους άλλους αγώνες…',
+      'cupStarting': 'Ο αγώνας σου ξεκινά…',
+      'cupOpponentWait': 'Αναμονή για {name}…',
+      'cupNext': 'Επόμενο τουρνουά',
+      'cupLive': 'Το τουρνουά είναι σε εξέλιξη',
       'leaderboard': 'Κατάταξη',
       'leaderboardEmpty': 'Κανείς δεν είναι ακόμα στην κατάταξη. Παίξε ένα παιχνίδι!',
       'quickMatch': 'Γρήγορος αγώνας',
@@ -170,6 +209,19 @@ class OnlineStrings {
       'notConfiguredHint': 'Firebase projesi eksik. docs/ONLINE_KURULUM.md dosyasına bak.',
       'defaultName': 'Oyuncu',
       'openTables': 'Açık masalar',
+      'cup': 'Turnuva',
+      'cupHint': 'Her 30 dakikada · 8 oyuncu',
+      'nextCup': 'Sonraki turnuva: {time}',
+      'startsIn': '{time} sonra başlıyor',
+      'cupRegister': 'Turnuvaya katıl',
+      'cupUnregister': 'Kaydımı sil',
+      'cupRegistered': 'Kaydın alındı! Başlarken bu ekranda ol.',
+      'cupPlayers': '{n}/8 oyuncu · boş yerlere bot gelir · maçlar 51 puana',
+      'cupWaiting': 'Diğer maçlar bekleniyor…',
+      'cupStarting': 'Maçın başlıyor…',
+      'cupOpponentWait': '{name} bekleniyor…',
+      'cupNext': 'Sonraki turnuva',
+      'cupLive': 'Turnuva sürüyor',
       'leaderboard': 'Sıralama',
       'leaderboardEmpty': 'Sıralamada henüz kimse yok. Bir oyun oyna!',
       'quickMatch': 'Hızlı eşleşme',

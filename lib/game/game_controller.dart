@@ -9,6 +9,7 @@ import '../engine/cards.dart';
 import '../engine/game_state.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
+import '../engine/rules.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
 import 'online_link.dart';
@@ -120,9 +121,14 @@ class GameController extends ChangeNotifier {
   }
 
   /// One match of the offline tournament against a bot with this name.
-  factory GameController.tournamentMatch(AppSettings settings, {required AiLevel level, required int botIndex}) {
+  factory GameController.tournamentMatch(
+    AppSettings settings, {
+    required AiLevel level,
+    required int botIndex,
+    PastraRules? rules,
+  }) {
     final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
-    final state = PastraEngine.newGame(rules: settings.rules, numPlayers: 2, seed: seed);
+    final state = PastraEngine.newGame(rules: rules ?? settings.rules, numPlayers: 2, seed: seed);
     return GameController(
       settings: settings,
       seats: <SeatInfo>[const SeatInfo.human(), SeatInfo.bot(level, botIndex)],

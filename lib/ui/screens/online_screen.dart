@@ -9,6 +9,7 @@ import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
 import '../widgets/menu_tiles.dart';
+import 'cup_screen.dart';
 import 'game_screen.dart';
 import 'leaderboard_screen.dart';
 import 'tables_screen.dart';
@@ -278,6 +279,22 @@ class _OnlineScreenState extends State<OnlineScreen> {
         onTap: _busy ? null : _quickMatch,
       );
 
+  void _openCup(OnlineStrings t) {
+    final settings = SettingsScope.read(context);
+    settings.playerName = _name.text.trim();
+    final name = _playerName(t);
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CupScreen(name: name)));
+  }
+
+  Widget _cupTile(OnlineStrings t) => MenuTile(
+        icon: Icons.emoji_events_rounded,
+        title: t.cup,
+        subtitle: t.cupHint,
+        colors: TileColors.gold,
+        darkText: true,
+        onTap: _busy ? null : () => _openCup(t),
+      );
+
   Widget _tablesTile(OnlineStrings t) => MenuTile(
         icon: Icons.table_restaurant_rounded,
         title: t.openTables,
@@ -414,11 +431,21 @@ class _OnlineScreenState extends State<OnlineScreen> {
     );
   }
 
-  /// Three columns; the middle and right ones are split into two equal rows.
+  /// Three columns, each split into two equal rows: a tidy 3 × 2 grid.
   Widget _wideRow(OnlineStrings t, Strings s) => Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Expanded(flex: 5, child: _quickTile(t)),
+              Expanded(
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(child: _quickTile(t)),
+                    const SizedBox(height: 14),
+                    Expanded(child: _cupTile(t)),
+                  ],
+                ),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 flex: 4,
@@ -462,6 +489,8 @@ class _OnlineScreenState extends State<OnlineScreen> {
               nameField,
               const SizedBox(height: 4),
               SizedBox(height: 150, child: _quickTile(t)),
+              const SizedBox(height: 12),
+              SizedBox(height: 110, child: _cupTile(t)),
               const SizedBox(height: 12),
               SizedBox(
                 height: 140,
@@ -522,10 +551,15 @@ class _OnlineScreenState extends State<OnlineScreen> {
 
 /// Waiting room: shows the code and who has joined.
 class LobbyScreen extends StatefulWidget {
-  const LobbyScreen({super.key, this.host, this.guest}) : assert((host == null) != (guest == null));
+  const LobbyScreen({super.key, this.host, this.guest, this.cupOpponent})
+      : assert((host == null) != (guest == null));
 
   final HostRoom? host;
   final GuestRoom? guest;
+
+  /// A tournament match against this player: no "play against the computer"
+  /// (a match with a bot would count as a win).
+  final String? cupOpponent;
 
   @override
   State<LobbyScreen> createState() => _LobbyScreenState();
@@ -604,8 +638,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final t = OnlineStrings(SettingsScope.of(context).language);
     final isHost = widget.host != null;
     final quick = widget.host?.autoStart == true;
+    final cup = widget.cupOpponent != null;
     return Scaffold(
-      appBar: AppBar(title: Text(quick ? t.quickMatch : t.online, style: const TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(
+        title: Text(cup ? t.cup : (quick ? t.quickMatch : t.online), style: const TextStyle(fontWeight: FontWeight.w900)),
+      ),
       body: Container(
         decoration: feltDecoration,
         child: SafeArea(
@@ -614,7 +651,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
             animation: _watcher,
             builder: (context, _) {
               final info = _watcher.info;
-              final codeCard = MenuPanel(
+              final codeCard = cup
+                  ? MenuPanel(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const Icon(Icons.emoji_events_rounded, color: PastraColors.gold, size: 48),
+                          const SizedBox(height: 6),
+                          Text(
+                            Strings.of(context).vsName(widget.cupOpponent!),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                    )
+                  : MenuPanel(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
@@ -655,18 +707,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(width: 12),
                       Flexible(
                         child: Text(
-                          t.searching,
+                          cup ? t.cupOpponentWait(widget.cupOpponent!) : t.searching,
                           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  BigOutlineButton(
-                    icon: Icons.smart_toy_outlined,
-                    label: t.playVsBot,
-                    onPressed: _starting ? null : _start,
-                  ),
+                  if (!cup) ...<Widget>[
+                    const SizedBox(height: 12),
+                    BigOutlineButton(
+                      icon: Icons.smart_toy_outlined,
+                      label: t.playVsBot,
+                      onPressed: _starting ? null : _start,
+                    ),
+                  ],
                 ] else if (isHost) ...<Widget>[
                   Text(
                     t.botFills,

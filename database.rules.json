@@ -42,6 +42,28 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
       }
+    },
+    "cups": {
+      "$slot": {
+        ".read": "auth != null",
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['name', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('t').val() === now"
+          }
+        },
+        "online": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "results": {
+          "$match": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.hasChildren(['w', 't']) && newData.child('w').isNumber() && newData.child('t').val() === now"
+          }
+        }
+      }
     }
   }
 }

@@ -71,6 +71,9 @@ class Strings {
   String get them => _s('them');
   String get partner => _s('partner');
 
+  /// How many bot names there are (the same in every language).
+  static int get botNameCount => kBotNames['en']!.length;
+
   String botName(int index) {
     final names = kBotNames[lang] ?? kBotNames['en']!;
     return names[index < 0 ? 0 : index % names.length];

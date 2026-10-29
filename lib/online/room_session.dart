@@ -9,6 +9,7 @@ import '../engine/game_state.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
 import '../engine/perspective.dart';
+import '../engine/rules.dart';
 import '../game/app_settings.dart';
 import '../game/game_controller.dart';
 import '../game/online_link.dart';
@@ -153,6 +154,10 @@ class HostRoom implements OnlineLink {
 
   /// Starts by itself as soon as every seat is taken (quick match).
   final bool autoStart;
+
+  /// Rules for this room instead of the host's settings (tournament matches
+  /// are played to a fixed target).
+  PastraRules? rulesOverride;
   int _listedJoined = 1;
 
   final String code;
@@ -168,6 +173,42 @@ class HostRoom implements OnlineLink {
   int _published = -1;
   Future<void> _writes = Future<void>.value();
   bool _closed = false;
+
+  /// Opens the room with a fixed [code] (a tournament match): both players
+  /// know the code, the host creates it and the guest joins. Taking it over
+  /// again after a reconnect is allowed for the same host.
+  static Future<HostRoom> createWithCode(
+    AppSettings settings, {
+    required String code,
+    required String name,
+    required PastraRules rules,
+  }) async {
+    final uid = OnlineService.uid;
+    final tx = await OnlineService.ref('rooms/$code/meta').runTransaction((value) {
+      if (value is Map && value['host'] != uid) return Transaction.abort();
+      return Transaction.success(<String, Object?>{
+        'host': uid,
+        'players': 2,
+        'status': 'lobby',
+        'hostOnline': true,
+        'level': AiLevel.medium.name,
+        'turn': settings.turnSeconds,
+        'created': DateTime.now().millisecondsSinceEpoch,
+      });
+    });
+    if (!tx.committed) throw const OnlineException('started');
+    await OnlineService.ref('rooms/$code/seats/s0').set(<String, Object?>{
+      'uid': uid,
+      'name': name,
+      'online': true,
+    });
+    final presence = OnlineService.keepOnline(<String>[
+      'rooms/$code/meta/hostOnline',
+      'rooms/$code/seats/s0/online',
+    ]).listen((_) {});
+    return HostRoom._(code, 2, AiLevel.medium, settings, RoomWatcher(code), presence, autoStart: true)
+      ..rulesOverride = rules;
+  }
 
   static Future<HostRoom> create(
     AppSettings settings, {
@@ -252,7 +293,7 @@ class HostRoom implements OnlineLink {
       }
     }
     final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
-    final state = PastraEngine.newGame(rules: settings.rules, numPlayers: players, seed: seed);
+    final state = PastraEngine.newGame(rules: rulesOverride ?? settings.rules, numPlayers: players, seed: seed);
     final c = GameController(settings: settings, seats: seats, state: state, link: this);
     controller = c;
     for (var i = 1; i < players; i++) {

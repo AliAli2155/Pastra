@@ -18,12 +18,23 @@ class OnlineService {
       }
       final auth = FirebaseAuth.instance;
       if (auth.currentUser == null) await auth.signInAnonymously();
+      // The difference between this clock and the server's (scheduled
+      // tournaments must agree on the time).
+      FirebaseDatabase.instance.ref('.info/serverTimeOffset').onValue.listen((e) {
+        final v = e.snapshot.value;
+        if (v is num) _offset = v.toInt();
+      });
       _ready = true;
       return null;
     } catch (e) {
       return '$e';
     }
   }
+
+  static int _offset = 0;
+
+  /// The server's time in milliseconds since the epoch (estimated).
+  static int get serverNow => DateTime.now().millisecondsSinceEpoch + _offset;
 
   static String get uid => FirebaseAuth.instance.currentUser!.uid;
 

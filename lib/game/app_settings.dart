@@ -106,6 +106,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kXp = 'xp';
   static const String _kTournament = 'tournament';
   static const String _kLeaderboard = 'showOnLeaderboard';
+  static const String _kCupPaid = 'cupBonusPaid';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -227,6 +228,11 @@ class AppSettings extends ChangeNotifier {
     _prefs.setBool(_kTutorial, value);
     notifyListeners();
   }
+
+  /// The last online cup (its start time) whose XP bonus was given.
+  int get cupBonusPaid => _prefs.getInt(_kCupPaid) ?? 0;
+
+  set cupBonusPaid(int slot) => _prefs.setInt(_kCupPaid, slot);
 
   /// Whether the player's name and XP are published on the online leaderboard.
   bool get showOnLeaderboard => _showOnLeaderboard;

@@ -115,6 +115,12 @@ Rooms can be private (join with a 4-digit code) or listed in the lobby as **open
 anybody can join. **Quick match** joins an open 1v1 table, or opens one and starts as soon as an
 opponent sits down (or plays against the computer if you prefer).
 
+**Online tournaments** start every 30 minutes (on the hour and at half past). Players register
+for the next one; at the start the first 8 registrations play a knockout (matches to 51 points)
+and empty places get bots. There is no game server: every device computes the same bracket from
+the registrations and the results written by the players. A player who is not there when their
+match is ready loses after 90 seconds; a match that takes more than 20 minutes is decided.
+
 The **leaderboard** lists the players with the most XP (name, level, wins). Players can turn
 it off in the settings; it trusts the app, so it is for fun, not a secure ranking.
 
