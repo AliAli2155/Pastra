@@ -288,7 +288,9 @@ class _CupScreenState extends State<CupScreen> {
   }
 
   String _countdown(int ms) {
-    final left = Duration(milliseconds: (ms - OnlineService.serverNow).clamp(0, 1 << 40));
+    // (No `1 << 40` here: on the web shifts are 32-bit and that is 256.)
+    final diff = ms - OnlineService.serverNow;
+    final left = Duration(milliseconds: diff < 0 ? 0 : diff);
     final m = left.inMinutes;
     final sec = left.inSeconds % 60;
     return '$m:${sec.toString().padLeft(2, '0')}';

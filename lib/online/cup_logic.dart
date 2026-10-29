@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' show max;
 
 /// The scheduled online tournament ("cup"), without a server: every device
 /// computes the same bracket from the same data (the registrations and the
@@ -173,14 +173,13 @@ class CupBracket {
     final valid = signups.where((s) => s.time < slot).toList()
       ..sort((x, y) => x.time != y.time ? x.time.compareTo(y.time) : x.uid.compareTo(y.uid));
     final people = valid.take(CupRules.size).map((s) => CupEntrant.player(s.uid, s.name)).toList();
-    final rng = Random(_seed(slot, 'entrants'));
-    final names = List<int>.generate(botNames, (i) => i)..shuffle(rng);
+    final rng = CupRandom(_seed(slot, 'entrants'));
+    final names = rng.shuffled(List<int>.generate(botNames, (i) => i));
     final all = <CupEntrant>[
       ...people,
       for (var i = 0; people.length + i < CupRules.size; i++) CupEntrant.bot(names[i % names.length]),
     ];
-    all.shuffle(rng);
-    return all;
+    return rng.shuffled(all);
   }
 
   /// Works out every match from the entrants and the written results.
@@ -215,7 +214,7 @@ class CupBracket {
           winner = written.winner;
           doneAt = max(written.time, readyAt);
         } else if (entrants[a].isBot && entrants[b].isBot) {
-          winner = Random(_seed(slot, id)).nextBool() ? a : b;
+          winner = CupRandom(_seed(slot, id)).nextBool() ? a : b;
           doneAt = readyAt;
         }
         round.add(
@@ -260,7 +259,7 @@ class CupBracket {
               ? a
               : here(b) && !here(a)
                   ? b
-                  : (Random(_seed(slot, '${m.id}timeout')).nextBool() ? a : b);
+                  : (CupRandom(_seed(slot, '${m.id}timeout')).nextBool() ? a : b);
           out.add(CupClaim(m.id, winner));
         } else if (waited >= CupRules.noShow.inMilliseconds && here(a) != here(b)) {
           out.add(CupClaim(m.id, here(a) ? a : b));
@@ -276,5 +275,36 @@ class CupBracket {
       h = (h * 31 + c) & 0x7fffffff;
     }
     return h;
+  }
+}
+
+/// A tiny random generator that gives exactly the same numbers on every
+/// platform (phone and web must build the same bracket). `dart:math`'s
+/// Random does not promise that. Park–Miller: all values stay below 2^53,
+/// so JavaScript numbers are exact.
+class CupRandom {
+  CupRandom(int seed) : _state = seed % 2147483646 + 1;
+
+  int _state;
+
+  int _next() {
+    _state = (_state * 48271) % 2147483647;
+    return _state;
+  }
+
+  int nextInt(int n) => _next() % n;
+
+  bool nextBool() => _next() % 2 == 0;
+
+  /// A shuffled copy of [list] (Fisher–Yates).
+  List<T> shuffled<T>(List<T> list) {
+    final out = List<T>.of(list);
+    for (var i = out.length - 1; i > 0; i--) {
+      final j = nextInt(i + 1);
+      final tmp = out[i];
+      out[i] = out[j];
+      out[j] = tmp;
+    }
+    return out;
   }
 }

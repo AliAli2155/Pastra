@@ -94,4 +94,15 @@ void main() {
     final afterTimeout = br.claims(slot + CupRules.timeout.inMilliseconds, <String>{'ali', 'bob'});
     expect(afterTimeout.where((c) => c.matchId == m.id).single.winner, anyOf(ali, opp));
   });
+
+  test('the cup random numbers are fixed (same on phone and web)', () {
+    final r = CupRandom(12345);
+    expect(<int>[r.nextInt(1000), r.nextInt(1000), r.nextInt(1000)], <int>[
+      (12346 * 48271) % 2147483647 % 1000,
+      ((12346 * 48271) % 2147483647 * 48271) % 2147483647 % 1000,
+      (((12346 * 48271) % 2147483647 * 48271) % 2147483647 * 48271) % 2147483647 % 1000,
+    ]);
+    final list = CupRandom(7).shuffled(List<int>.generate(10, (i) => i));
+    expect(list.toSet(), Set<int>.from(List<int>.generate(10, (i) => i)));
+  });
 }
