@@ -93,7 +93,8 @@ class _CupHubScreenState extends State<CupHubScreen> {
                         children: <Widget>[Expanded(child: a), const SizedBox(height: 14), Expanded(child: b)],
                       ),
                     );
-                return Center(
+                return ScaleUp(
+                  child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 460),
                     child: Padding(
@@ -104,6 +105,7 @@ class _CupHubScreenState extends State<CupHubScreen> {
                       ),
                     ),
                   ),
+                ),
                 );
               }
               return ListView(

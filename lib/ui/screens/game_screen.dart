@@ -284,7 +284,9 @@ class _GameScreenState extends State<GameScreen> {
           ),
           for (final e in entries) _card(e.key, e.value, duration),
           if (state.deck.isNotEmpty)
-            _badge(layout.deckRect, '${state.deck.length}', Icons.layers_outlined),
+            // At the top right of the tilted deck: the face-up cards under it
+            // go to the bottom right, and a side hand may be below it.
+            _badge(layout.deckRect, '${state.deck.length}', Icons.layers_outlined, topRight: true),
           for (var t = 0; t < 2; t++)
             if (state.piles[t].isNotEmpty)
               _badge(
@@ -448,11 +450,11 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _badge(Rect anchor, String text, IconData icon) {
+  Widget _badge(Rect anchor, String text, IconData icon, {bool topRight = false}) {
     return Positioned(
-      left: anchor.left - 14,
+      left: topRight ? anchor.right - 4 : anchor.left - 14,
       width: anchor.width + 28,
-      top: anchor.bottom - 9,
+      top: topRight ? anchor.top - 4 : anchor.bottom - 9,
       child: IgnorePointer(
         child: Center(
           child: Container(
