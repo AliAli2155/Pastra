@@ -208,16 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
                     // Landscape (phones held sideways, tablets, computers):
-                    // the title on the left, the menu on the right. On big
-                    // screens the whole page is drawn larger (as on a phone,
-                    // only scaled up) instead of floating small in the middle.
-                    final k = (box.maxHeight / 430).clamp(1.0, 1.7).toDouble();
-                    return FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: box.maxWidth / k,
-                        height: box.maxHeight / k,
-                        child: Center(
+                    // the title on the left, the menu on the right.
+                    return Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1080),
                         child: Row(
@@ -245,8 +237,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
-                      ),
-                    ),
                       ),
                     );
                   },

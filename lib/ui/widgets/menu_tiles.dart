@@ -152,32 +152,6 @@ class MenuTile extends StatelessWidget {
   }
 }
 
-/// Big screens (tablets, computers): lays [child] out for a smaller,
-/// phone-like height and scales it up, so menus fill the screen like on a
-/// phone instead of floating small in the middle.
-class ScaleUp extends StatelessWidget {
-  const ScaleUp({super.key, required this.child, this.designHeight = 430, this.maxScale = 1.6});
-
-  final Widget child;
-  final double designHeight;
-  final double maxScale;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, box) {
-        if (!box.hasBoundedHeight || !box.hasBoundedWidth) return child;
-        final k = (box.maxHeight / designHeight).clamp(1.0, maxScale).toDouble();
-        if (k <= 1.0) return child;
-        return FittedBox(
-          fit: BoxFit.contain,
-          child: SizedBox(width: box.maxWidth / k, height: box.maxHeight / k, child: child),
-        );
-      },
-    );
-  }
-}
-
 /// On a computer: the widget grows a little under the mouse (and the
 /// pointer becomes a hand). Nothing changes on touch screens.
 class HoverLift extends StatefulWidget {

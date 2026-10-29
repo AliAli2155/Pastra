@@ -236,7 +236,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       body = LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth >= 640;
-          return wide ? ScaleUp(child: _wide(t, s)) : _narrow(t, s, nameInput(compact: false));
+          return wide ? _wide(t, s) : _narrow(t, s, nameInput(compact: false));
         },
       );
     }
