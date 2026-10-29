@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!wide) {
                 return Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 80),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: Column(
@@ -225,11 +225,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     children: <Widget>[
                       Expanded(
-                        child: Center(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(16),
-                            child: FittedBox(fit: BoxFit.scaleDown, child: title),
-                          ),
+                        // Bounded (no scrolling) so the title shrinks to fit; the
+                        // bottom is kept free for the About text in the corner.
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 64),
+                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: title)),
                         ),
                       ),
                       SizedBox(

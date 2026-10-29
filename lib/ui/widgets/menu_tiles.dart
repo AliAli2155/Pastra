@@ -74,12 +74,15 @@ class MenuTile extends StatelessWidget {
                   ),
                   child: Icon(icon, size: iconSize, color: fg),
                 );
-                final titleText = Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: tall ? TextAlign.center : TextAlign.start,
-                  style: TextStyle(color: fg, fontSize: tall ? 26 : 21, fontWeight: FontWeight.w900),
+                // Long words (e.g. "Açık masalar") shrink instead of being cut.
+                final titleText = FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: tall ? Alignment.center : Alignment.centerLeft,
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    style: TextStyle(color: fg, fontSize: tall ? 26 : 21, fontWeight: FontWeight.w900),
+                  ),
                 );
                 final subText = subtitle == null
                     ? null
@@ -142,13 +145,32 @@ class BigButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = FilledButton.styleFrom(
       minimumSize: const Size.fromHeight(56),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
-    final text = Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);
-    return icon == null
-        ? FilledButton(onPressed: onPressed, style: style, child: text)
-        : FilledButton.icon(onPressed: onPressed, style: style, icon: Icon(icon, size: 26), label: text);
+    return FilledButton(onPressed: onPressed, style: style, child: _ButtonLabel(label: label, icon: icon, iconSize: 26));
+  }
+}
+
+/// Icon and text of a big button; the text shrinks instead of being cut.
+class _ButtonLabel extends StatelessWidget {
+  const _ButtonLabel({required this.label, required this.icon, required this.iconSize});
+
+  final String label;
+  final IconData? icon;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        if (icon != null) ...<Widget>[Icon(icon, size: iconSize), const SizedBox(width: 8)],
+        Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1))),
+      ],
+    );
   }
 }
 
@@ -164,15 +186,13 @@ class BigOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = OutlinedButton.styleFrom(
       minimumSize: const Size.fromHeight(52),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       foregroundColor: Colors.white,
       side: const BorderSide(color: Colors.white54, width: 1.5),
       textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     );
-    final text = Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);
-    return icon == null
-        ? OutlinedButton(onPressed: onPressed, style: style, child: text)
-        : OutlinedButton.icon(onPressed: onPressed, style: style, icon: Icon(icon, size: 24), label: text);
+    return OutlinedButton(onPressed: onPressed, style: style, child: _ButtonLabel(label: label, icon: icon, iconSize: 24));
   }
 }
 
@@ -220,11 +240,13 @@ class ChoiceCard extends StatelessWidget {
                 children: <Widget>[
                   if (icon != null) ...<Widget>[Icon(icon, color: fg, size: 24), const SizedBox(width: 8)],
                   Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: fg, fontSize: 18, fontWeight: FontWeight.w800),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(color: fg, fontSize: 18, fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                 ],

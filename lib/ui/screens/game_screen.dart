@@ -697,41 +697,41 @@ class _TopBar extends StatelessWidget {
         ],
       ),
     );
+    // Phones: the round / target text only when there is room next to the
+    // scoreboard; the two buttons are big enough for a thumb.
+    final roomForInfo = MediaQuery.sizeOf(context).width >= 760;
     return Container(
-      height: 44,
+      height: 48,
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.25),
         border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
       ),
-      child: Stack(
+      child: Row(
         children: <Widget>[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              tooltip: s.leave,
-              visualDensity: VisualDensity.compact,
+          IconButton(
+            onPressed: onBack,
+            iconSize: 28,
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            tooltip: s.leave,
+          ),
+          Expanded(
+            child: Center(
+              child: FittedBox(fit: BoxFit.scaleDown, child: board),
             ),
           ),
-          Center(child: FittedBox(fit: BoxFit.scaleDown, child: board)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
-                ),
-                IconButton(
-                  onPressed: onRules,
-                  icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
-                  tooltip: s.rules,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+          if (roomForInfo)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Text(
+                '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
+                style: const TextStyle(fontSize: 12, color: Colors.white54),
+              ),
             ),
+          IconButton(
+            onPressed: onRules,
+            iconSize: 26,
+            icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
+            tooltip: s.rules,
           ),
         ],
       ),

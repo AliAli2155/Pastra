@@ -354,12 +354,29 @@ class _OnlineScreenState extends State<OnlineScreen> {
                 textAlign: TextAlign.center,
                 inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                 style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w800),
-                decoration: _decoration(t.codeHint).copyWith(isDense: true),
+                // A plain hint (not a label): it must not take the big spaced-out
+                // style of the code itself.
+                decoration: InputDecoration(
+                  hintText: t.codeHint,
+                  hintMaxLines: 1,
+                  hintStyle: const TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 0, fontWeight: FontWeight.w500),
+                  counterText: '',
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Colors.white38),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: PastraColors.gold, width: 2),
+                  ),
+                ),
                 onSubmitted: (_) => _busy ? null : _join(),
               ),
             ),
             const SizedBox(width: 10),
-            SizedBox(width: 130, child: BigButton(label: t.join, icon: Icons.login_rounded, onPressed: _busy ? null : _join)),
+            SizedBox(width: 120, child: BigButton(label: t.join, icon: Icons.login_rounded, onPressed: _busy ? null : _join)),
           ],
         ),
       );
