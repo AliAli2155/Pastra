@@ -166,19 +166,31 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _MenuButton(
-            icon: Icons.play_arrow_rounded,
-            label: s.play,
-            primary: true,
-            autofocus: true,
-            onTap: _openPlay,
+          _SlideIn(
+            order: 0,
+            child: _MenuButton(
+              icon: Icons.play_arrow_rounded,
+              label: s.play,
+              primary: true,
+              autofocus: true,
+              onTap: _openPlay,
+            ),
           ),
           const SizedBox(height: 12),
-          _MenuButton(icon: Icons.menu_book_rounded, label: s.rules, onTap: () => _open(const RulesScreen())),
+          _SlideIn(
+            order: 1,
+            child: _MenuButton(icon: Icons.menu_book_rounded, label: s.rules, onTap: () => _open(const RulesScreen())),
+          ),
           const SizedBox(height: 10),
-          _MenuButton(icon: Icons.insights_rounded, label: s.statistics, onTap: () => _open(const StatsScreen())),
+          _SlideIn(
+            order: 2,
+            child: _MenuButton(icon: Icons.insights_rounded, label: s.statistics, onTap: () => _open(const StatsScreen())),
+          ),
           const SizedBox(height: 10),
-          _MenuButton(icon: Icons.tune_rounded, label: s.settings, onTap: () => _open(const SettingsScreen())),
+          _SlideIn(
+            order: 3,
+            child: _MenuButton(icon: Icons.tune_rounded, label: s.settings, onTap: () => _open(const SettingsScreen())),
+          ),
         ],
       ),
     );
@@ -344,6 +356,33 @@ class _LogoState extends State<_Logo> with SingleTickerProviderStateMixin {
           );
         },
       ),
+    );
+  }
+}
+
+/// Slides in from the right and fades in once, a little after the ones
+/// above it ([order]).
+class _SlideIn extends StatelessWidget {
+  const _SlideIn({required this.order, required this.child});
+
+  final int order;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final delay = 0.12 * order;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: Duration(milliseconds: 520 + 90 * order),
+      builder: (context, t, child) {
+        // Each button waits its turn, then moves in.
+        final p = Curves.easeOutCubic.transform(((t - delay) / (1 - delay)).clamp(0.0, 1.0));
+        return Opacity(
+          opacity: p,
+          child: Transform.translate(offset: Offset(40 * (1 - p), 0), child: child),
+        );
+      },
+      child: child,
     );
   }
 }

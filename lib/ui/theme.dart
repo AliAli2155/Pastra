@@ -34,16 +34,17 @@ ThemeData buildPastraTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: PastraColors.feltDark,
-    // The same smooth zoom between screens on every platform (also iOS,
-    // Windows, macOS and the web).
+    // The same light fade-and-grow between screens on every platform. It is
+    // cheap (no snapshots, no shadows), so it stays smooth on phones and on
+    // the web.
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
-        TargetPlatform.android: ZoomPageTransitionsBuilder(),
-        TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
-        TargetPlatform.macOS: ZoomPageTransitionsBuilder(),
-        TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-        TargetPlatform.linux: ZoomPageTransitionsBuilder(),
-        TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+        TargetPlatform.android: _FadeScaleTransitions(),
+        TargetPlatform.iOS: _FadeScaleTransitions(),
+        TargetPlatform.macOS: _FadeScaleTransitions(),
+        TargetPlatform.windows: _FadeScaleTransitions(),
+        TargetPlatform.linux: _FadeScaleTransitions(),
+        TargetPlatform.fuchsia: _FadeScaleTransitions(),
       },
     ),
     appBarTheme: const AppBarTheme(
@@ -152,6 +153,28 @@ ThemeData buildPastraTheme() {
       radius: const Radius.circular(8),
     ),
   );
+}
+
+class _FadeScaleTransitions extends PageTransitionsBuilder {
+  const _FadeScaleTransitions();
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 260);
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    return FadeTransition(
+      opacity: curved,
+      child: ScaleTransition(scale: Tween<double>(begin: 0.97, end: 1).animate(curved), child: child),
+    );
+  }
 }
 
 /// Table cloth colours (light centre → dark edge).

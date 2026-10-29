@@ -169,7 +169,16 @@ class RoundSummaryPanel extends StatelessWidget {
       ],
     );
 
-    return Container(
+    // The sheet fades and grows in when the round ends.
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0.0, 1.0),
+        child: Transform.scale(scale: 0.92 + 0.08 * t, child: child),
+      ),
+      child: Container(
       color: Colors.black.withValues(alpha: 0.45),
       alignment: Alignment.center,
       padding: const EdgeInsets.all(12),
@@ -229,6 +238,7 @@ class RoundSummaryPanel extends StatelessWidget {
           );
         },
       ),
+    ),
     );
   }
 }

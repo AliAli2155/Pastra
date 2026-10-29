@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 /// Sound effects. Card sounds are real recordings from Kenney's "Casino
 /// Audio", the others from "Interface Sounds" and "Music Jingles" (all CC0,
@@ -23,8 +25,14 @@ enum Sfx {
   final int variants;
 }
 
-/// Plays [Sfx] through a few reusable players so quick sounds can overlap.
-/// Sound problems are never allowed to disturb the game.
+/// Plays [Sfx] with as little delay as possible.
+///
+/// Every recording is loaded once, up front ([preload]), into a few players
+/// of its own. Playing a sound then only rewinds and starts an already
+/// loaded player — before, each sound loaded its file again when it was
+/// played, which made sounds come late or not at all (a new sound cancelled
+/// one that was still loading). On Android the players use the low-latency
+/// mode (SoundPool). Sound problems never disturb the game.
 class SoundFx {
   SoundFx._();
 
@@ -33,27 +41,70 @@ class SoundFx {
   /// Mirrors the "Sound effects" volume setting (0 = silent, 1 = full).
   double master = 1.0;
 
-  static const int _voices = 5;
-  final List<AudioPlayer> _players = <AudioPlayer>[];
+  /// Players per recording, so the same sound can overlap itself.
+  static const int _voices = 2;
+
+  final Map<String, List<AudioPlayer>> _pool = <String, List<AudioPlayer>>{};
+  final Map<String, int> _next = <String, int>{};
   final Random _rng = Random();
-  int _next = 0;
+  Future<void>? _loading;
+
+  static bool get _lowLatency => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Loads every recording. Call once at start; safe to call again.
+  Future<void> preload() => _loading ??= _load();
+
+  Future<void> _load() async {
+    for (final sfx in Sfx.values) {
+      for (var n = 1; n <= sfx.variants; n++) {
+        final file = 'sounds/${sfx.name}_$n.mp3';
+        final players = <AudioPlayer>[];
+        for (var v = 0; v < _voices; v++) {
+          try {
+            final p = AudioPlayer();
+            if (_lowLatency) await p.setPlayerMode(PlayerMode.lowLatency);
+            await p.setReleaseMode(ReleaseMode.stop);
+            await p.setSource(AssetSource(file));
+            players.add(p);
+          } catch (_) {
+            // No audio on this device / in tests.
+          }
+        }
+        if (players.isNotEmpty) _pool[file] = players;
+      }
+    }
+  }
 
   void play(Sfx sfx, {double volume = 1.0}) {
     if (master <= 0) return;
     try {
-      if (_players.isEmpty) {
-        for (var i = 0; i < _voices; i++) {
-          final p = AudioPlayer();
-          p.setReleaseMode(ReleaseMode.stop).catchError((Object _) {});
-          _players.add(p);
-        }
-      }
-      final player = _players[_next];
-      _next = (_next + 1) % _voices;
+      // First sound before anything was loaded: start loading now.
+      preload();
       final n = sfx.variants > 1 ? _rng.nextInt(sfx.variants) + 1 : 1;
-      player.play(AssetSource('sounds/${sfx.name}_$n.mp3'), volume: (volume * master).clamp(0.0, 1.0).toDouble()).catchError((Object _) {});
+      final file = 'sounds/${sfx.name}_$n.mp3';
+      final players = _pool[file];
+      final v = (volume * master).clamp(0.0, 1.0).toDouble();
+      if (players == null || players.isEmpty) {
+        // Not loaded yet (the very first sounds): play it directly once.
+        final p = AudioPlayer();
+        p.play(AssetSource(file), volume: v).catchError((Object _) {});
+        return;
+      }
+      final i = _next[file] ?? 0;
+      _next[file] = (i + 1) % players.length;
+      final p = players[i];
+      unawaited(_restart(p, v));
     } catch (_) {
       // No audio on this device / in tests: stay silent.
     }
+  }
+
+  Future<void> _restart(AudioPlayer p, double volume) async {
+    try {
+      await p.setVolume(volume);
+      // (Stop instead of seek: the low-latency mode cannot seek.)
+      if (p.state == PlayerState.playing) await p.stop();
+      await p.resume();
+    } catch (_) {}
   }
 }

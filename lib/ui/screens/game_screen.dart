@@ -693,14 +693,20 @@ class _TopBar extends StatelessWidget {
             color: ours ? null : Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Text(
-            '$value',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 20,
-              height: 1.2,
-              fontWeight: FontWeight.w900,
-              color: ours ? Colors.black : Colors.white,
+          // The score counts up to its new value.
+          child: TweenAnimationBuilder<int>(
+            tween: IntTween(end: value),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => Text(
+              '$v',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                height: 1.2,
+                fontWeight: FontWeight.w900,
+                color: ours ? Colors.black : Colors.white,
+              ),
             ),
           ),
         );

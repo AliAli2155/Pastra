@@ -63,11 +63,17 @@ class LevelBadge extends StatelessWidget {
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: fraction,
-                    minHeight: 7,
-                    backgroundColor: Colors.black.withValues(alpha: 0.35),
-                    valueColor: const AlwaysStoppedAnimation<Color>(PastraColors.gold),
+                  // The bar fills up smoothly to the new XP.
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: fraction),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, v, _) => LinearProgressIndicator(
+                      value: v,
+                      minHeight: 7,
+                      backgroundColor: Colors.black.withValues(alpha: 0.35),
+                      valueColor: const AlwaysStoppedAnimation<Color>(PastraColors.gold),
+                    ),
                   ),
                 ),
               ],
