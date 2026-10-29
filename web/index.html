@@ -98,6 +98,71 @@
       } catch (e) {}
     })();
   </script>
+  <script>
+    // Sound effects on the web with the Web Audio API: every sound is decoded
+    // once into memory and played from there, with no delay. iPhone/iPad
+    // Safari only allows sound after a touch and stops it after the screen
+    // was locked, a call or a switch to another app, so the audio is
+    // (re)started on every touch and when the page becomes visible again.
+    window.pastraSfx = (function () {
+      var ctx = null, buffers = {}, loading = {};
+      function context() {
+        if (!ctx) {
+          var C = window.AudioContext || window.webkitAudioContext;
+          if (!C) return null;
+          ctx = new C();
+        }
+        return ctx;
+      }
+      function wake() {
+        var c = context();
+        if (!c) return;
+        if (c.state !== 'running') { try { c.resume(); } catch (e) {} }
+        try { // iOS: a silent sound inside the touch unlocks the audio
+          var s = c.createBufferSource();
+          s.buffer = c.createBuffer(1, 1, 22050);
+          s.connect(c.destination);
+          s.start(0);
+        } catch (e) {}
+      }
+      ['touchend', 'pointerdown', 'mousedown', 'keydown'].forEach(function (name) {
+        window.addEventListener(name, wake, { capture: true, passive: true });
+      });
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} }
+      });
+      function load(file) {
+        var c = context();
+        if (!c || buffers[file] || loading[file]) return;
+        loading[file] = fetch('assets/assets/' + file)
+          .then(function (r) { return r.arrayBuffer(); })
+          .then(function (data) {
+            return new Promise(function (ok, fail) { c.decodeAudioData(data, ok, fail); });
+          })
+          .then(function (buffer) { buffers[file] = buffer; })
+          .catch(function () { delete loading[file]; });
+      }
+      return {
+        load: function (files) { files.split(',').forEach(load); },
+        play: function (file, volume) {
+          var c = context();
+          if (!c) return;
+          if (c.state !== 'running') { try { c.resume(); } catch (e) {} }
+          var buffer = buffers[file];
+          if (!buffer) { load(file); return; }
+          try {
+            var src = c.createBufferSource();
+            var gain = c.createGain();
+            gain.gain.value = volume;
+            src.buffer = buffer;
+            src.connect(gain);
+            gain.connect(c.destination);
+            src.start(0);
+          } catch (e) {}
+        }
+      };
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'sound_stub.dart' if (dart.library.js_interop) 'sound_web.dart' as web;
+
 /// Sound effects. Card sounds are real recordings from Kenney's "Casino
 /// Audio", the others from "Interface Sounds" and "Music Jingles" (all CC0,
 /// kenney.nl), trimmed by tool/make_sounds.py into assets/sounds.
@@ -51,10 +53,24 @@ class SoundFx {
 
   static bool get _lowLatency => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
+  /// On the web the sounds go through the Web Audio engine of index.html
+  /// (reliable on iPhone Safari, where audio players stop after a while).
+  bool _web = false;
+
+  static List<String> get _files => <String>[
+        for (final sfx in Sfx.values)
+          for (var n = 1; n <= sfx.variants; n++) 'sounds/${sfx.name}_$n.mp3',
+      ];
+
   /// Loads every recording. Call once at start; safe to call again.
   Future<void> preload() => _loading ??= _load();
 
   Future<void> _load() async {
+    if (kIsWeb && web.webSoundAvailable()) {
+      _web = true;
+      web.webSoundLoad(_files);
+      return;
+    }
     for (final sfx in Sfx.values) {
       for (var n = 1; n <= sfx.variants; n++) {
         final file = 'sounds/${sfx.name}_$n.mp3';
@@ -82,8 +98,12 @@ class SoundFx {
       preload();
       final n = sfx.variants > 1 ? _rng.nextInt(sfx.variants) + 1 : 1;
       final file = 'sounds/${sfx.name}_$n.mp3';
-      final players = _pool[file];
       final v = (volume * master).clamp(0.0, 1.0).toDouble();
+      if (_web) {
+        web.webSoundPlay(file, v);
+        return;
+      }
+      final players = _pool[file];
       if (players == null || players.isEmpty) {
         // Not loaded yet (the very first sounds): play it directly once.
         final p = AudioPlayer();
