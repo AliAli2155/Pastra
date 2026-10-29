@@ -97,11 +97,14 @@ class RoundSummaryPanel extends StatelessWidget {
             color: PastraColors.gold,
             size: 40,
           ),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
-        ),
+        if (over && weWon)
+          FittedBox(fit: BoxFit.scaleDown, child: GoldText(title, size: 30, letterSpacing: 0.5))
+        else
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+          ),
       ],
     );
     final table = Table(
@@ -205,9 +208,13 @@ class RoundSummaryPanel extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
                 decoration: BoxDecoration(
-                  color: PastraColors.panel,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: PastraColors.gold.withValues(alpha: 0.45), width: 1.2),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0xF2163A2B), Color(0xF20B2219)],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: PastraColors.gold.withValues(alpha: 0.55), width: 1.4),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.5),

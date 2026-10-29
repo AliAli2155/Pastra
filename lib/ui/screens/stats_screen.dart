@@ -135,8 +135,7 @@ class StatsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: Container(
-          decoration: feltDecoration,
+        body: Felt(
           child: SafeArea(
             top: false,
             child: TabBarView(children: <Widget>[statsBody, achievementsBody]),

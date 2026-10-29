@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'game/app_settings.dart';
@@ -14,6 +15,9 @@ class PastraApp extends StatelessWidget {
 
   static final ThemeData _theme = buildPastraTheme();
 
+  /// For the keyboard: Esc goes back on computers.
+  static final GlobalKey<NavigatorState> _navigator = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return SettingsScope(
@@ -23,6 +27,7 @@ class PastraApp extends StatelessWidget {
         builder: (context, _) => MaterialApp(
           title: Strings(settings.language).appTitle,
           debugShowCheckedModeBanner: false,
+          navigatorKey: _navigator,
           theme: _theme,
           locale: Locale(settings.language),
           supportedLocales: <Locale>[for (final code in AppSettings.languages) Locale(code)],
@@ -33,12 +38,17 @@ class PastraApp extends StatelessWidget {
             data: MediaQuery.of(context).copyWith(
               textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15),
             ),
-            child: Stack(
-              textDirection: TextDirection.ltr,
-              children: <Widget>[
-                child ?? const SizedBox.shrink(),
-                if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
-              ],
+            child: CallbackShortcuts(
+              bindings: <ShortcutActivator, VoidCallback>{
+                const SingleActivator(LogicalKeyboardKey.escape): () => _navigator.currentState?.maybePop(),
+              },
+              child: Stack(
+                textDirection: TextDirection.ltr,
+                children: <Widget>[
+                  child ?? const SizedBox.shrink(),
+                  if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
+                ],
+              ),
             ),
           ),
           home: const HomeScreen(),

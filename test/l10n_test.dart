@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/engine/rules.dart';
 import 'package:pastra/game/app_settings.dart';
+import 'package:pastra/l10n/online_strings.dart';
 import 'package:pastra/l10n/strings.dart';
 import 'package:pastra/l10n/translations.dart';
 
@@ -29,5 +30,13 @@ void main() {
     expect(Strings('en').stats(3, 5), 'Won 3 of 5');
     expect(Strings('tr').takes(4), '4 kart alırsın');
     expect(Strings('de').round(2), 'Runde 2');
+  });
+
+  test('online texts exist in every language with the same placeholders', () {
+    final en = OnlineStrings.keysOf('en');
+    expect(en, isNotEmpty);
+    for (final lang in AppSettings.languages) {
+      expect(OnlineStrings.keysOf(lang), en, reason: lang);
+    }
   });
 }

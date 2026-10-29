@@ -215,8 +215,7 @@ class _GameScreenState extends State<GameScreen> {
         if (!didPop) _requestLeave();
       },
       child: Scaffold(
-        body: Container(
-          decoration: feltDecoration,
+        body: Felt(
           child: SafeArea(
             child: AnimatedBuilder(
               animation: c,
@@ -280,16 +279,7 @@ class _GameScreenState extends State<GameScreen> {
           Positioned.fromRect(
             rect: layout.tableRect.inflate(6),
             child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: _overTable ? PastraColors.gold.withValues(alpha: 0.08) : null,
-                  border: Border.all(
-                    color: _overTable ? PastraColors.gold : Colors.white.withValues(alpha: 0.07),
-                    width: _overTable ? 2 : 1.5,
-                  ),
-                ),
-              ),
+              child: CustomPaint(painter: _TableZonePainter(highlight: _overTable)),
             ),
           ),
           for (final e in entries) _card(e.key, e.value, duration),
@@ -466,17 +456,19 @@ class _GameScreenState extends State<GameScreen> {
       child: IgnorePointer(
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: const Color(0xE6101814),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: PastraColors.gold.withValues(alpha: 0.45)),
+              boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 6)],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(icon, size: 11, color: Colors.white70),
+                Icon(icon, size: 12, color: PastraColors.gold),
                 const SizedBox(width: 3),
-                Text(text, style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                Text(text, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -490,32 +482,60 @@ class _GameScreenState extends State<GameScreen> {
     final active = state.phase == GamePhase.playing && state.current == seat;
     final thinking = active && c.botThinking;
     final isPartner = c.isTeamGame && seat == 2;
-    final tag = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    final info = c.seats[seat];
+    final name = _seatName(s, seat);
+    // Name plate: a small round "avatar" (robot for the computer, the
+    // initial for a person), the name, and a gold glow on the player's turn.
+    final avatar = Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? PastraColors.gold.withValues(alpha: 0.22) : Colors.black.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: active ? PastraColors.gold : Colors.transparent, width: 1.2),
+        shape: BoxShape.circle,
+        color: active ? PastraColors.gold : (isPartner ? const Color(0xFF2E7D5B) : const Color(0xFF3A3F47)),
+      ),
+      child: info.isBot
+          ? Icon(Icons.smart_toy_rounded, size: 13, color: active ? Colors.black : Colors.white)
+          : Text(
+              name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: active ? Colors.black : Colors.white),
+            ),
+    );
+    final tag = AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.fromLTRB(3, 3, 9, 3),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xE6261E08) : Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: active ? PastraColors.gold : (isPartner ? const Color(0x802E7D5B) : Colors.white12),
+          width: active ? 1.6 : 1,
+        ),
+        boxShadow: <BoxShadow>[
+          if (active) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.45), blurRadius: 14),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (isPartner) ...<Widget>[
-            const Icon(Icons.people_outline, size: 13, color: PastraColors.gold),
-            const SizedBox(width: 4),
-          ],
+          avatar,
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
-              _seatName(s, seat),
+              name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+                color: active ? PastraColors.gold : Colors.white,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
+          if (isPartner) ...<Widget>[
+            const SizedBox(width: 4),
+            const Icon(Icons.handshake_outlined, size: 13, color: Color(0xFF7FD3A8)),
+          ],
           if (thinking) ...<Widget>[
             const SizedBox(width: 6),
             if (c.turnLimit != null)
@@ -594,10 +614,11 @@ class _GameScreenState extends State<GameScreen> {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(11),
+            color: Colors.black.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: gold ? PastraColors.gold.withValues(alpha: 0.6) : Colors.white12),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -657,11 +678,18 @@ class _TopBar extends StatelessWidget {
           ),
         );
     Widget score(int value, bool ours) => Container(
-          constraints: const BoxConstraints(minWidth: 46),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          constraints: const BoxConstraints(minWidth: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 1),
           decoration: BoxDecoration(
-            color: ours ? PastraColors.gold : Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
+            gradient: ours
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0xFFFFD873), Color(0xFFD09A2C)],
+                  )
+                : null,
+            color: ours ? null : Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
             '$value',
@@ -677,9 +705,10 @@ class _TopBar extends StatelessWidget {
     final board = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
+        color: const Color(0xD9101814),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
+        boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -703,8 +732,12 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Colors.black.withValues(alpha: 0.45), Colors.black.withValues(alpha: 0.12)],
+        ),
+        border: Border(bottom: BorderSide(color: PastraColors.gold.withValues(alpha: 0.18))),
       ),
       child: Row(
         children: <Widget>[
@@ -1332,4 +1365,56 @@ class _OnlineClosedOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The playing area in the middle: a slightly lighter cloth with a gold
+/// stitched edge (gold and brighter while a card is dragged over it).
+class _TableZonePainter extends CustomPainter {
+  _TableZonePainter({required this.highlight});
+
+  final bool highlight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(26));
+    // Lighter cloth in the middle.
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: <Color>[
+            Colors.white.withValues(alpha: highlight ? 0.10 : 0.06),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(rect),
+    );
+    // A soft dark rim inside the edge.
+    canvas.drawRRect(
+      rrect.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..color = Colors.black.withValues(alpha: 0.12)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    // Stitched gold line.
+    final stitch = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = highlight ? 2.2 : 1.4
+      ..strokeCap = StrokeCap.round
+      ..color = PastraColors.gold.withValues(alpha: highlight ? 0.95 : 0.32);
+    final path = Path()..addRRect(rrect.deflate(5));
+    for (final metric in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < metric.length) {
+        canvas.drawPath(metric.extractPath(d, d + 7), stitch);
+        d += 12;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TableZonePainter old) => old.highlight != highlight;
 }

@@ -887,6 +887,14 @@ class GameController extends ChangeNotifier {
         SoundFx.instance.play(Sfx.pastra);
         if (settings.haptics) HapticFeedback.heavyImpact();
         _clearEventLater(event.id);
+        // An online guest earns pastra XP like the host does.
+        if (isGuest && event.seat == humanSeat) {
+          final card = mv is Map ? mv['card'] : null;
+          final jack = card is num && Cards.isJack(card.toInt());
+          final xp = Progression.roundXp(pastras: 1, jackPastras: jack ? 1 : 0);
+          _gameXp += xp;
+          settings.addXp(xp);
+        }
       }
     }
     final qd = ev?['quad'];
@@ -932,7 +940,8 @@ class GameController extends ChangeNotifier {
     settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium);
     final amount = Progression.gameXp(won: won, level: AiLevel.medium);
     final lv = settings.addXp(amount);
-    xpGain = GameXp(amount: amount, levelBefore: _levelAtStart, levelAfter: lv.after);
+    _gameXp += amount;
+    xpGain = GameXp(amount: _gameXp, levelBefore: _levelAtStart, levelAfter: lv.after);
     onGameFinished?.call(settings);
   }
 

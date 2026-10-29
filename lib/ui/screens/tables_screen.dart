@@ -17,8 +17,7 @@ class TablesScreen extends StatelessWidget {
     final s = Strings.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(t.openTables)),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: StreamBuilder<List<OpenTable>>(

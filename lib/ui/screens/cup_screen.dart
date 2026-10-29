@@ -468,8 +468,7 @@ class _CupScreenState extends State<CupScreen> {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(top: false, child: body),
       ),
     );

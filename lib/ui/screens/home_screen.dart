@@ -125,130 +125,124 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller)));
   }
 
+  void _openPlay() => _open(
+        PlayScreen(
+          onOffline: _offline,
+          onContinue: _continue,
+          onOnline: (ctx) => Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const OnlineScreen())),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final settings = SettingsScope.of(context);
-    final title = Column(
+    final name = settings.playerName.isEmpty ? s.you : settings.playerName;
+
+    final hero = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         const _Logo(),
-        const SizedBox(height: 14),
-        Text(
-          s.appTitle,
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 1.5,
-          ),
-        ),
+        const SizedBox(height: 10),
+        GoldText(s.appTitle, size: 64, letterSpacing: 2),
+        const SizedBox(height: 4),
         Text(
           s.appSubtitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 15, color: Colors.white70),
+          style: const TextStyle(fontSize: 16, color: Colors.white70, letterSpacing: 0.4),
         ),
-        const SizedBox(height: 14),
-        LevelBadge(xp: settings.xp),
-        if (settings.gamesPlayed > 0) ...<Widget>[
-          const SizedBox(height: 12),
-          Text(
-            s.stats(settings.gamesWon, settings.gamesPlayed),
-            style: const TextStyle(color: Colors.white60, fontSize: 13),
-          ),
-        ],
-      ],
-    );
-    final menu = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        _MenuButton(
-          icon: Icons.sports_esports_rounded,
-          label: s.play,
-          primary: true,
-          onTap: () => _open(
-            PlayScreen(
-              onOffline: _offline,
-              onContinue: _continue,
-              onOnline: (ctx) => Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const OnlineScreen())),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        _MenuButton(
-          icon: Icons.menu_book_outlined,
-          label: s.rules,
-          onTap: () => _open(const RulesScreen()),
-        ),
-        const SizedBox(height: 10),
-        _MenuButton(
-          icon: Icons.bar_chart_rounded,
-          label: s.statistics,
+        const SizedBox(height: 18),
+        _PlayerCard(
+          name: name,
+          xp: settings.xp,
+          stats: settings.gamesPlayed > 0 ? s.stats(settings.gamesWon, settings.gamesPlayed) : null,
           onTap: () => _open(const StatsScreen()),
         ),
-        const SizedBox(height: 10),
-        _MenuButton(
-          icon: Icons.settings_outlined,
-          label: s.settings,
-          onTap: () => _open(const SettingsScreen()),
-        ),
       ],
     );
+
+    final menu = FocusTraversalGroup(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _MenuButton(
+            icon: Icons.play_arrow_rounded,
+            label: s.play,
+            primary: true,
+            autofocus: true,
+            onTap: _openPlay,
+          ),
+          const SizedBox(height: 12),
+          _MenuButton(icon: Icons.menu_book_rounded, label: s.rules, onTap: () => _open(const RulesScreen())),
+          const SizedBox(height: 10),
+          _MenuButton(icon: Icons.insights_rounded, label: s.statistics, onTap: () => _open(const StatsScreen())),
+          const SizedBox(height: 10),
+          _MenuButton(icon: Icons.tune_rounded, label: s.settings, onTap: () => _open(const SettingsScreen())),
+        ],
+      ),
+    );
+
     return Scaffold(
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: Stack(
           children: <Widget>[
+            const Positioned.fill(child: IgnorePointer(child: _SuitWatermark())),
             Positioned.fill(
               child: SafeArea(
                 child: LayoutBuilder(
-            builder: (context, box) {
-              final wide = box.maxWidth > box.maxHeight;
-              if (!wide) {
-                return Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 80),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[title, const SizedBox(height: 28), menu],
-                      ),
-                    ),
-                  ),
-                );
-              }
-              // Landscape: title on the left, menu on the right.
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        // Bounded (no scrolling) so the title shrinks to fit; the
-                        // bottom is kept free for the About text in the corner.
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 64),
-                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: title)),
-                        ),
-                      ),
-                      SizedBox(
-                        width: min(380.0, box.maxWidth * 0.45),
-                        child: Center(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(8, 16, 24, 16),
-                            child: menu,
+                  builder: (context, box) {
+                    final wide = box.maxWidth > box.maxHeight;
+                    if (!wide) {
+                      return Center(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 440),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[hero, const SizedBox(height: 28), menu],
+                            ),
                           ),
                         ),
+                      );
+                    }
+                    // Landscape (phones held sideways, tablets, computers):
+                    // the title on the left, the menu on the right.
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1080),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              flex: 11,
+                              // Bounded (no scrolling) so the hero shrinks to
+                              // fit; the bottom stays free for the About text.
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 60),
+                                child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: hero)),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 9,
+                              child: Center(
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(8, 16, 28, 16),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 420),
+                                    child: menu,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-      ),
+              ),
+            ),
             // About: plain text in the bottom-left corner (home screen only).
             Positioned.fill(
               child: IgnorePointer(
@@ -256,17 +250,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Align(
                     alignment: Alignment.bottomLeft,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
                             s.about,
-                            style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
+                            style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 2),
-                          Text(s.aboutBody, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                          Text(s.aboutBody, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -281,8 +275,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _Logo extends StatelessWidget {
+/// Three cards that fan out when the home screen opens (a single short
+/// animation, not an endless one).
+class _Logo extends StatefulWidget {
   const _Logo();
+
+  @override
+  State<_Logo> createState() => _LogoState();
+}
+
+class _LogoState extends State<_Logo> with SingleTickerProviderStateMixin {
+  late final AnimationController _float = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    ..forward();
+
+  @override
+  void dispose() {
+    _float.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,66 +302,230 @@ class _Logo extends StatelessWidget {
       Cards.tenOfDiamonds,
     ];
     return SizedBox(
-      width: 230,
-      height: 150,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          for (var i = 0; i < cards.length; i++)
-            Positioned(
-              left: 75 + (i - 1) * 52.0,
-              top: i == 1 ? 12.0 : 22.0,
-              width: 80,
-              height: 114,
-              child: Transform.rotate(
-                angle: (i - 1) * 0.26,
-                child: PlayingCardView(card: cards[i], faceUp: true),
+      width: 250,
+      height: 160,
+      child: AnimatedBuilder(
+        animation: _float,
+        builder: (context, _) {
+          final t = Curves.easeOutBack.transform(_float.value);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              // Soft gold glow behind the cards.
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: <Color>[PastraColors.gold.withValues(alpha: 0.22), Colors.transparent],
+                    ),
+                  ),
+                ),
               ),
-            ),
-        ],
+              for (var i = 0; i < cards.length; i++)
+                Positioned(
+                  left: 85 + (i - 1) * 56.0 * t,
+                  top: i == 1 ? 6.0 : 6.0 + 12 * t,
+                  width: 82,
+                  height: 117,
+                  child: Transform.rotate(
+                    angle: (i - 1) * 0.27 * t,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 8)),
+                        ],
+                      ),
+                      child: PlayingCardView(card: cards[i], faceUp: true),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _MenuButton extends StatelessWidget {
-  const _MenuButton({required this.icon, required this.label, required this.onTap, this.primary = false});
+/// Large, very faint card suits in the corners of the home screen.
+class _SuitWatermark extends StatelessWidget {
+  const _SuitWatermark();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Colors.white.withValues(alpha: 0.035);
+    Widget suit(String text, double size, double angle) => Transform.rotate(
+          angle: angle,
+          child: Text(text, style: TextStyle(fontSize: size, color: c, height: 1)),
+        );
+    return Stack(
+      children: <Widget>[
+        Positioned(left: -40, top: -50, child: suit('♠', 260, -0.3)),
+        Positioned(right: -30, top: -40, child: suit('♥', 200, 0.25)),
+        Positioned(right: 40, bottom: -70, child: suit('♦', 240, -0.15)),
+        Positioned(left: 120, bottom: -90, child: suit('♣', 220, 0.2)),
+      ],
+    );
+  }
+}
+
+/// The player's card on the home screen: initial, name, level and stats.
+class _PlayerCard extends StatelessWidget {
+  const _PlayerCard({required this.name, required this.xp, required this.onTap, this.stats});
+
+  final String name;
+  final int xp;
+  final String? stats;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? '?' : name.trim().characters.first.toUpperCase();
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Ink(
+          width: 360,
+          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.black.withValues(alpha: 0.32),
+            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: <Color>[Color(0xFF2E7D5B), Color(0xFF0A4A30)],
+                  ),
+                ),
+                child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 6),
+                    LevelBadge(xp: xp, width: 250),
+                    if (stats != null) ...<Widget>[
+                      const SizedBox(height: 6),
+                      Text(stats!, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A big home-screen button. The main one is gold with a soft glow; on a
+/// computer the buttons lift a little under the mouse.
+class _MenuButton extends StatefulWidget {
+  const _MenuButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.primary = false,
+    this.autofocus = false,
+  });
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
   final bool primary;
+  final bool autofocus;
+
+  @override
+  State<_MenuButton> createState() => _MenuButtonState();
+}
+
+class _MenuButtonState extends State<_MenuButton> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final bg = primary
-        ? PastraColors.gold
-        : Colors.black.withValues(alpha: enabled ? 0.28 : 0.15);
-    final fg = primary ? Colors.black : (enabled ? Colors.white : Colors.white38);
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Row(
-              children: <Widget>[
-                Icon(icon, color: fg),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: fg),
-                  ),
+    final primary = widget.primary;
+    final fg = primary ? Colors.black : Colors.white;
+    final radius = BorderRadius.circular(18);
+    return AnimatedScale(
+      scale: _hover ? 1.025 : 1,
+      duration: const Duration(milliseconds: 140),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        height: primary ? 66 : 56,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          gradient: primary
+              ? const LinearGradient(colors: <Color>[Color(0xFFFFD873), Color(0xFFF2C14E), Color(0xFFD09A2C)])
+              : LinearGradient(
+                  colors: <Color>[
+                    Colors.white.withValues(alpha: _hover ? 0.14 : 0.09),
+                    Colors.white.withValues(alpha: _hover ? 0.07 : 0.03),
+                  ],
                 ),
-                if (enabled) Icon(Icons.chevron_right, color: fg.withValues(alpha: 0.7)),
-              ],
+          border: Border.all(
+            color: primary ? const Color(0xFFFFE9A8) : Colors.white.withValues(alpha: _hover ? 0.35 : 0.16),
+            width: 1.2,
+          ),
+          boxShadow: <BoxShadow>[
+            if (primary)
+              BoxShadow(color: PastraColors.gold.withValues(alpha: _hover ? 0.55 : 0.35), blurRadius: _hover ? 26 : 18),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            autofocus: widget.autofocus,
+            onTap: widget.onTap,
+            onHover: (v) => setState(() => _hover = v),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: <Widget>[
+                  Icon(widget.icon, color: fg, size: primary ? 34 : 26),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        widget.label,
+                        style: TextStyle(
+                          fontSize: primary ? 24 : 19,
+                          fontWeight: primary ? FontWeight.w900 : FontWeight.w700,
+                          color: fg,
+                          letterSpacing: primary ? 0.6 : 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: fg.withValues(alpha: 0.7), size: 28),
+                ],
+              ),
             ),
           ),
         ),
@@ -360,7 +534,6 @@ class _MenuButton extends StatelessWidget {
   }
 }
 
-/// What the player picked in the new-game sheet.
 class NewGameChoice {
   final int players;
   final AiLevel level;

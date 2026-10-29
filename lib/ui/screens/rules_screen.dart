@@ -44,8 +44,7 @@ class RulesScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: ListView(

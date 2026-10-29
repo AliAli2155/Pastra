@@ -69,8 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(s.settings)),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: ListView(

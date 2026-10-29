@@ -99,8 +99,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
     final panel = _statusPanel(s);
     return Scaffold(
       appBar: AppBar(title: Text(s.tournament)),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: LayoutBuilder(

@@ -252,8 +252,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
             ),
         ],
       ),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: Stack(
@@ -665,8 +664,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       appBar: AppBar(
         title: Text(cup ? t.cup : (quick ? t.quickMatch : t.online), style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: AnimatedBuilder(

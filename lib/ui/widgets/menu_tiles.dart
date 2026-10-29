@@ -44,7 +44,9 @@ class MenuTile extends StatelessWidget {
     final fg = darkText ? Colors.black87 : Colors.white;
     final sub = darkText ? Colors.black54 : Colors.white70;
     final enabled = onTap != null;
-    return Opacity(
+    return HoverLift(
+      enabled: enabled,
+      child: Opacity(
       opacity: enabled ? 1 : 0.5,
       child: Material(
         color: Colors.transparent,
@@ -144,6 +146,39 @@ class MenuTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    ),
+    );
+  }
+}
+
+/// On a computer: the widget grows a little under the mouse (and the
+/// pointer becomes a hand). Nothing changes on touch screens.
+class HoverLift extends StatefulWidget {
+  const HoverLift({super.key, required this.child, this.enabled = true, this.scale = 1.02});
+
+  final Widget child;
+  final bool enabled;
+  final double scale;
+
+  @override
+  State<HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<HoverLift> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: _hover && widget.enabled ? widget.scale : 1,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }

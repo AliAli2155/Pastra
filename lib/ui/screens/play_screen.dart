@@ -6,6 +6,7 @@ import '../../engine/cards.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
 
 /// "Play": big tiles. Offline (with "Continue" under it when a game is
@@ -64,8 +65,7 @@ class _PlayScreenState extends State<PlayScreen> {
     );
     return Scaffold(
       appBar: AppBar(title: Text(s.play)),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: LayoutBuilder(
@@ -188,7 +188,8 @@ class _ModeTile extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.3),
     );
-    return Material(
+    return HoverLift(
+      child: Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
@@ -258,6 +259,7 @@ class _ModeTile extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

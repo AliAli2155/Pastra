@@ -80,8 +80,7 @@ class _CupHubScreenState extends State<CupHubScreen> {
     );
     return Scaffold(
       appBar: AppBar(title: Text(t.cup, style: const TextStyle(fontWeight: FontWeight.w900))),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: LayoutBuilder(

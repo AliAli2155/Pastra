@@ -42,8 +42,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         title: Text(t.leaderboard),
         actions: <Widget>[IconButton(icon: const Icon(Icons.refresh), onPressed: _reload)],
       ),
-      body: Container(
-        decoration: feltDecoration,
+      body: Felt(
         child: SafeArea(
           top: false,
           child: FutureBuilder<List<LeaderEntry>>(
