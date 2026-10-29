@@ -163,6 +163,41 @@
       };
     })();
   </script>
+  <script>
+    // Full screen (the button in the corner, like on YouTube). iPhone Safari
+    // has no full screen for pages: there "Add to Home Screen" is the way.
+    window.pastraFullscreen = {
+      supported: function () {
+        var d = document.documentElement;
+        return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) &&
+          !!(d.requestFullscreen || d.webkitRequestFullscreen);
+      },
+      isOn: function () {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement);
+      },
+      isIos: function () {
+        return /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      },
+      standalone: function () {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      },
+      toggle: function () {
+        try {
+          if (window.pastraFullscreen.isOn()) {
+            (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+          } else {
+            var d = document.documentElement;
+            var p = (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' });
+            // Phones: keep it sideways while in full screen (where allowed).
+            if (p && p.then && screen.orientation && screen.orientation.lock) {
+              p.then(function () { screen.orientation.lock('landscape').catch(function () {}); }).catch(function () {});
+            }
+          }
+        } catch (e) {}
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

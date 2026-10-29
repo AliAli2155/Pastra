@@ -8,6 +8,7 @@ import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/fullscreen_button.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
@@ -254,6 +255,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
+            ),
+            // Full screen button in the top-right corner (web version).
+            const Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(child: Padding(padding: EdgeInsets.all(6), child: FullscreenButton(size: 30))),
             ),
             // About: plain text in the bottom-left corner (home screen only).
             Positioned.fill(

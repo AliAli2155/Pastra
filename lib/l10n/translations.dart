@@ -249,6 +249,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Νέο τουρνουά',
     'tournamentBonus': 'Μπόνους τουρνουά: +{n} XP',
     'leaveMatchBody': 'Το τουρνουά αποθηκεύεται. Ο αγώνας ξεκινά από την αρχή όταν συνεχίσεις.',
+    'fullscreen': 'Πλήρης οθόνη',
+    'exitFullscreen': 'Έξοδος από πλήρη οθόνη',
+    'fullscreenIos': 'Στο iPhone: πάτα Κοινοποίηση και μετά «Προσθήκη στην οθόνη Αφετηρίας». Από εκεί η Πάστρα ανοίγει σε όλη την οθόνη.',
     'leaderboardShow': 'Εμφάνισέ με στον διαδικτυακό πίνακα κατάταξης',
   },
   'en': <String, String>{
@@ -465,6 +468,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'New tournament',
     'tournamentBonus': 'Tournament bonus: +{n} XP',
     'leaveMatchBody': 'The tournament is saved. The match starts over when you continue.',
+    'fullscreen': 'Full screen',
+    'exitFullscreen': 'Exit full screen',
+    'fullscreenIos': 'On iPhone: tap Share, then “Add to Home Screen”. Opened from there, Pastra fills the whole screen.',
     'leaderboardShow': 'Show me on the online leaderboard',
   },
   'tr': <String, String>{
@@ -681,6 +687,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Yeni turnuva',
     'tournamentBonus': 'Turnuva bonusu: +{n} XP',
     'leaveMatchBody': 'Turnuva kaydedilir. Devam ettiğinde maç baştan başlar.',
+    'fullscreen': 'Tam ekran',
+    'exitFullscreen': 'Tam ekrandan çık',
+    'fullscreenIos': 'iPhone\'da: Paylaş\'a, sonra “Ana Ekrana Ekle”ye dokun. Oradan açılınca Pastra tüm ekranı kaplar.',
     'leaderboardShow': 'Beni online sıralamada göster',
   },
   'de': <String, String>{
@@ -897,6 +906,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Neues Turnier',
     'tournamentBonus': 'Turnierbonus: +{n} XP',
     'leaveMatchBody': 'Das Turnier ist gespeichert. Das Spiel beginnt neu, wenn du fortfährst.',
+    'fullscreen': 'Vollbild',
+    'exitFullscreen': 'Vollbild beenden',
+    'fullscreenIos': 'Auf dem iPhone: Teilen und dann „Zum Home-Bildschirm“. Von dort geöffnet füllt Pastra den ganzen Bildschirm.',
     'leaderboardShow': 'Mich in der Online-Rangliste anzeigen',
   },
   'fr': <String, String>{
@@ -1113,6 +1125,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Nouveau tournoi',
     'tournamentBonus': 'Bonus de tournoi : +{n} XP',
     'leaveMatchBody': 'Le tournoi est sauvegardé. Le match recommence quand tu reprends.',
+    'fullscreen': 'Plein écran',
+    'exitFullscreen': 'Quitter le plein écran',
+    'fullscreenIos': 'Sur iPhone : touche Partager puis « Sur l’écran d’accueil ». Ouvert depuis là, Pastra occupe tout l’écran.',
     'leaderboardShow': 'M\'afficher au classement en ligne',
   },
   'es': <String, String>{
@@ -1329,6 +1344,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Nuevo torneo',
     'tournamentBonus': 'Bonus de torneo: +{n} XP',
     'leaveMatchBody': 'El torneo se guarda. El partido empieza de nuevo cuando continúes.',
+    'fullscreen': 'Pantalla completa',
+    'exitFullscreen': 'Salir de pantalla completa',
+    'fullscreenIos': 'En iPhone: toca Compartir y luego «Añadir a pantalla de inicio». Abierto desde ahí, Pastra ocupa toda la pantalla.',
     'leaderboardShow': 'Mostrarme en la clasificación en línea',
   },
   'it': <String, String>{
@@ -1545,6 +1563,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Nuovo torneo',
     'tournamentBonus': 'Bonus torneo: +{n} XP',
     'leaveMatchBody': 'Il torneo è salvato. La partita ricomincia quando continui.',
+    'fullscreen': 'Schermo intero',
+    'exitFullscreen': 'Esci da schermo intero',
+    'fullscreenIos': 'Su iPhone: tocca Condividi e poi «Aggiungi alla schermata Home». Aperto da lì, Pastra occupa tutto lo schermo.',
     'leaderboardShow': 'Mostrami nella classifica online',
   },
   'pt': <String, String>{
@@ -1761,6 +1782,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Novo torneio',
     'tournamentBonus': 'Bónus de torneio: +{n} XP',
     'leaveMatchBody': 'O torneio fica guardado. A partida recomeça quando continuares.',
+    'fullscreen': 'Ecrã inteiro',
+    'exitFullscreen': 'Sair do ecrã inteiro',
+    'fullscreenIos': 'No iPhone: toca em Partilhar e depois «Adicionar ao ecrã principal». Aberto daí, o Pastra ocupa o ecrã todo.',
     'leaderboardShow': 'Mostrar-me na classificação online',
   },
   'ru': <String, String>{
@@ -1977,6 +2001,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Новый турнир',
     'tournamentBonus': 'Бонус турнира: +{n} XP',
     'leaveMatchBody': 'Турнир сохранён. Матч начнётся заново, когда продолжишь.',
+    'fullscreen': 'Во весь экран',
+    'exitFullscreen': 'Выйти из полноэкранного режима',
+    'fullscreenIos': 'На iPhone: нажми «Поделиться», затем «На экран «Домой»». Открытая оттуда, Пастра занимает весь экран.',
     'leaderboardShow': 'Показывать меня в онлайн-рейтинге',
   },
   'bg': <String, String>{
@@ -2193,6 +2220,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'Нов турнир',
     'tournamentBonus': 'Бонус за турнир: +{n} XP',
     'leaveMatchBody': 'Турнирът е запазен. Мачът започва отначало, когато продължиш.',
+    'fullscreen': 'Цял екран',
+    'exitFullscreen': 'Изход от цял екран',
+    'fullscreenIos': 'На iPhone: натисни Сподели, после „Към началния екран“. Отворена оттам, Пастра заема целия екран.',
     'leaderboardShow': 'Покажи ме в онлайн класацията',
   },
   'ar': <String, String>{
@@ -2409,6 +2439,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': 'بطولة جديدة',
     'tournamentBonus': 'مكافأة البطولة: +{n} XP',
     'leaveMatchBody': 'تم حفظ البطولة. تبدأ المباراة من جديد عند المتابعة.',
+    'fullscreen': 'ملء الشاشة',
+    'exitFullscreen': 'الخروج من ملء الشاشة',
+    'fullscreenIos': 'على iPhone: اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية». عند فتحها من هناك تملأ باسترا الشاشة كلها.',
     'leaderboardShow': 'أظهرني في لوحة المتصدرين عبر الإنترنت',
   },
   'zh': <String, String>{
@@ -2625,6 +2658,9 @@ const Map<String, Map<String, String>> kTranslations = <String, Map<String, Stri
     'newTournament': '新锦标赛',
     'tournamentBonus': '锦标赛奖励：+{n} XP',
     'leaveMatchBody': '锦标赛已保存。继续时本场比赛将重新开始。',
+    'fullscreen': '全屏',
+    'exitFullscreen': '退出全屏',
+    'fullscreenIos': '在 iPhone 上：点“分享”，再点“添加到主屏幕”。从那里打开，Pastra 会占满整个屏幕。',
     'leaderboardShow': '在在线排行榜中显示我',
   },
 };

@@ -119,6 +119,9 @@ class Strings {
   String tournamentBonus(int n) => _s('tournamentBonus', <String, Object>{'n': n});
   String get leaveMatchBody => _s('leaveMatchBody');
   String get leaderboardShow => _s('leaderboardShow');
+  String get fullscreen => _s('fullscreen');
+  String get exitFullscreen => _s('exitFullscreen');
+  String get fullscreenIos => _s('fullscreenIos');
   String get levelUp => _s('levelUp');
   String unlocksAt(int n) => _s('unlocksAt', <String, Object>{'n': n});
   String get newColors => _s('newColors');

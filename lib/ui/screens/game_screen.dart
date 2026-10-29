@@ -12,6 +12,7 @@ import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../table_layout.dart';
 import '../theme.dart';
+import '../widgets/fullscreen_button.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/round_summary.dart';
 import 'rules_screen.dart';
@@ -774,6 +775,7 @@ class _TopBar extends StatelessWidget {
             icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
             tooltip: s.rules,
           ),
+          const FullscreenButton(),
         ],
       ),
     );
