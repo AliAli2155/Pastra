@@ -41,7 +41,8 @@ class OnlineStrings {
   String get cupRegister => _t('cupRegister');
   String get cupUnregister => _t('cupUnregister');
   String get cupRegistered => _t('cupRegistered');
-  String cupPlayers(int n, int groups) => _t('cupPlayers', <String, Object>{'n': n, 'g': groups});
+  String cupPlayers(int n, int groups, int target) =>
+      _t('cupPlayers', <String, Object>{'n': n, 'g': groups, 't': target});
   String cupGroup(int n) => _t('cupGroup', <String, Object>{'n': n});
   String get cupFull => _t('cupFull');
   String get cupWaiting => _t('cupWaiting');
@@ -49,6 +50,24 @@ class OnlineStrings {
   String cupOpponentWait(String name) => _t('cupOpponentWait', <String, Object>{'name': name});
   String get cupNext => _t('cupNext');
   String get cupLive => _t('cupLive');
+  String get cupQuick => _t('cupQuick');
+  String get cupQuickHint => _t('cupQuickHint');
+  String get cupClassic => _t('cupClassic');
+  String get cupClassicHint => _t('cupClassicHint');
+  String get cupTeam => _t('cupTeam');
+  String get cupTeamHint => _t('cupTeamHint');
+  String get cupFriends => _t('cupFriends');
+  String get cupFriendsHint => _t('cupFriendsHint');
+  String get cupCreate => _t('cupCreate');
+  String get cupJoinCode => _t('cupJoinCode');
+  String get cupStart => _t('cupStart');
+  String get cupWaitCreator => _t('cupWaitCreator');
+  String get cupAlreadyStarted => _t('cupAlreadyStarted');
+  String get cupNoSuchCode => _t('cupNoSuchCode');
+  String get cupFriendsFull => _t('cupFriendsFull');
+  String cupFriendPlayers(int n, String mode, int target) =>
+      _t('cupFriendPlayers', <String, Object>{'n': n, 'mode': mode, 't': target});
+  String cupAt(String time) => _t('cupAt', <String, Object>{'time': time});
   String get leaderboard => _t('leaderboard');
   String get leaderboardEmpty => _t('leaderboardEmpty');
   String get quickMatch => _t('quickMatch');
@@ -102,13 +121,13 @@ class OnlineStrings {
       'defaultName': 'Player',
       'openTables': 'Open tables',
       'cup': 'Tournament',
-      'cupHint': 'Every 30 minutes · 8 players',
+      'cupHint': 'Every 15 min · 1v1, 2v2 and with friends',
       'nextCup': 'Next tournament: {time}',
       'startsIn': 'Starts in {time}',
       'cupRegister': 'Join the tournament',
       'cupUnregister': 'Leave the tournament',
       'cupRegistered': "You're in! Be on this screen when it starts.",
-      'cupPlayers': '{n} players · {g} × 8 brackets · empty seats get bots · matches to 51',
+      'cupPlayers': '{n} players · {g} × 8 brackets · empty seats get bots · matches to {t}',
       'cupGroup': 'Group {n}',
       'cupFull': 'Full: try the next one',
       'cupWaiting': 'Waiting for the other matches…',
@@ -133,6 +152,23 @@ class OnlineStrings {
       'errStarted': 'That game has already started.',
       'errFull': 'The room is full.',
       'errNetwork': 'Could not connect. Check your internet.',
+      'cupQuick': 'Quick cup',
+      'cupQuickHint': 'Every 15 min · 1v1 · to 51',
+      'cupClassic': 'Classic cup',
+      'cupClassicHint': 'Every 30 min · 1v1 · to 101',
+      'cupTeam': 'Team cup',
+      'cupTeamHint': 'Every 30 min (:15, :45) · 2v2 · to 51',
+      'cupFriends': 'Friends cup',
+      'cupFriendsHint': 'With a code · 1v1 or 2v2 · you pick the points',
+      'cupCreate': 'Create a tournament',
+      'cupJoinCode': 'Join with a code',
+      'cupStart': 'Start the tournament',
+      'cupWaitCreator': 'Waiting for the creator to start…',
+      'cupAlreadyStarted': 'This tournament has already started.',
+      'cupNoSuchCode': 'No tournament with this code.',
+      'cupFriendsFull': 'The tournament is full (8 players).',
+      'cupFriendPlayers': '{n}/8 players · {mode} · to {t} points · empty seats get bots',
+      'cupAt': 'Next: {time}',
     },
     'el': <String, String>{
       'online': 'Παίξε online',
@@ -159,13 +195,13 @@ class OnlineStrings {
       'defaultName': 'Παίκτης',
       'openTables': 'Ανοιχτά τραπέζια',
       'cup': 'Τουρνουά',
-      'cupHint': 'Κάθε 30 λεπτά · 8 παίκτες',
+      'cupHint': 'Κάθε 15 λεπτά · 1v1, 2v2 και με φίλους',
       'nextCup': 'Επόμενο τουρνουά: {time}',
       'startsIn': 'Ξεκινά σε {time}',
       'cupRegister': 'Δήλωσε συμμετοχή',
       'cupUnregister': 'Αποχώρηση από το τουρνουά',
       'cupRegistered': 'Είσαι μέσα! Να είσαι σε αυτή την οθόνη όταν ξεκινήσει.',
-      'cupPlayers': '{n} παίκτες · {g} × 8 ταμπλό · οι κενές θέσεις παίρνουν bot · αγώνες στους 51',
+      'cupPlayers': '{n} παίκτες · {g} × 8 ταμπλό · οι κενές θέσεις παίρνουν bot · αγώνες στους {t}',
       'cupGroup': 'Όμιλος {n}',
       'cupFull': 'Γεμάτο: δοκίμασε το επόμενο',
       'cupWaiting': 'Αναμονή για τους άλλους αγώνες…',
@@ -190,6 +226,23 @@ class OnlineStrings {
       'errStarted': 'Το παιχνίδι έχει ήδη ξεκινήσει.',
       'errFull': 'Το δωμάτιο είναι γεμάτο.',
       'errNetwork': 'Αδυναμία σύνδεσης. Έλεγξε το internet.',
+      'cupQuick': 'Γρήγορο τουρνουά',
+      'cupQuickHint': 'Κάθε 15 λεπτά · 1v1 · στους 51',
+      'cupClassic': 'Κλασικό τουρνουά',
+      'cupClassicHint': 'Κάθε 30 λεπτά · 1v1 · στους 101',
+      'cupTeam': 'Ομαδικό τουρνουά',
+      'cupTeamHint': 'Κάθε 30 λεπτά (:15, :45) · 2v2 · στους 51',
+      'cupFriends': 'Τουρνουά φίλων',
+      'cupFriendsHint': 'Με κωδικό · 1v1 ή 2v2 · διαλέγεις τους πόντους',
+      'cupCreate': 'Δημιουργία τουρνουά',
+      'cupJoinCode': 'Είσοδος με κωδικό',
+      'cupStart': 'Έναρξη τουρνουά',
+      'cupWaitCreator': 'Αναμονή για την έναρξη από τον δημιουργό…',
+      'cupAlreadyStarted': 'Αυτό το τουρνουά έχει ήδη ξεκινήσει.',
+      'cupNoSuchCode': 'Δεν υπάρχει τουρνουά με αυτόν τον κωδικό.',
+      'cupFriendsFull': 'Το τουρνουά είναι γεμάτο (8 παίκτες).',
+      'cupFriendPlayers': '{n}/8 παίκτες · {mode} · στους {t} πόντους · οι κενές θέσεις παίρνουν bot',
+      'cupAt': 'Επόμενο: {time}',
     },
     'tr': <String, String>{
       'online': 'Online oyna',
@@ -216,13 +269,13 @@ class OnlineStrings {
       'defaultName': 'Oyuncu',
       'openTables': 'Açık masalar',
       'cup': 'Turnuva',
-      'cupHint': 'Her 30 dakikada · 8 oyuncu',
+      'cupHint': 'Her 15 dakikada · 1v1, 2v2 ve arkadaşlarla',
       'nextCup': 'Sonraki turnuva: {time}',
       'startsIn': '{time} sonra başlıyor',
       'cupRegister': 'Turnuvaya katıl',
       'cupUnregister': 'Kaydımı sil',
       'cupRegistered': 'Kaydın alındı! Başlarken bu ekranda ol.',
-      'cupPlayers': '{n} oyuncu · {g} × 8 kişilik tablo · boş yerlere bot gelir · maçlar 51 puana',
+      'cupPlayers': '{n} oyuncu · {g} × 8 kişilik tablo · boş yerlere bot gelir · maçlar {t} puana',
       'cupGroup': 'Grup {n}',
       'cupFull': 'Dolu: sonrakine katıl',
       'cupWaiting': 'Diğer maçlar bekleniyor…',
@@ -247,6 +300,23 @@ class OnlineStrings {
       'errStarted': 'Bu oyun zaten başladı.',
       'errFull': 'Oda dolu.',
       'errNetwork': 'Bağlanılamadı. İnternetini kontrol et.',
+      'cupQuick': 'Hızlı turnuva',
+      'cupQuickHint': 'Her 15 dk · 1v1 · 51 puana',
+      'cupClassic': 'Klasik turnuva',
+      'cupClassicHint': 'Her 30 dk · 1v1 · 101 puana',
+      'cupTeam': 'Takım turnuvası',
+      'cupTeamHint': 'Her 30 dk (:15, :45) · 2v2 · 51 puana',
+      'cupFriends': 'Arkadaş turnuvası',
+      'cupFriendsHint': 'Kodla · 1v1 ya da 2v2 · puanı sen seç',
+      'cupCreate': 'Turnuva oluştur',
+      'cupJoinCode': 'Kodla katıl',
+      'cupStart': 'Turnuvayı başlat',
+      'cupWaitCreator': 'Kurucunun başlatması bekleniyor…',
+      'cupAlreadyStarted': 'Bu turnuva çoktan başladı.',
+      'cupNoSuchCode': 'Bu kodla bir turnuva yok.',
+      'cupFriendsFull': 'Turnuva dolu (8 oyuncu).',
+      'cupFriendPlayers': '{n}/8 oyuncu · {mode} · {t} puana · boş yerlere bot gelir',
+      'cupAt': 'Sonraki: {time}',
     },
   };
 }

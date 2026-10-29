@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,7 +11,7 @@ import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
 import '../widgets/menu_tiles.dart';
-import 'cup_screen.dart';
+import 'cup_hub_screen.dart';
 import 'game_screen.dart';
 import 'leaderboard_screen.dart';
 import 'tables_screen.dart';
@@ -283,7 +285,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
     final settings = SettingsScope.read(context);
     settings.playerName = _name.text.trim();
     final name = _playerName(t);
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CupScreen(name: name)));
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CupHubScreen(name: name)));
   }
 
   Widget _cupTile(OnlineStrings t) => MenuTile(
@@ -579,14 +581,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     widget.guest?.controller.addListener(_guestGameReady);
     widget.guest?.closed.addListener(_guestClosed);
     if (widget.host?.autoStart == true) widget.host!.watcher.addListener(_autoStart);
+    // A tournament match starts at the latest at this time, with bots for
+    // whoever did not come.
+    final by = widget.host?.startBy;
+    if (by != null) {
+      final wait = by.difference(DateTime.now());
+      _startTimer = Timer(wait.isNegative ? Duration.zero : wait, () {
+        if (mounted && !_starting) _start();
+      });
+    }
   }
+
+  Timer? _startTimer;
 
   /// Quick match: the game starts by itself once every seat is taken.
   void _autoStart() {
     final host = widget.host;
     if (host == null || _starting || !mounted) return;
     final info = host.watcher.info;
-    if (info.exists && info.joined >= info.players) _start();
+    if (info.exists && info.joined >= (host.expectedPeople ?? info.players)) _start();
   }
 
   void _guestGameReady() {
@@ -626,6 +639,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     widget.guest?.controller.removeListener(_guestGameReady);
     widget.guest?.closed.removeListener(_guestClosed);
     widget.host?.watcher.removeListener(_autoStart);
+    _startTimer?.cancel();
     if (!_handedOver) {
       widget.host?.close();
       widget.guest?.close();

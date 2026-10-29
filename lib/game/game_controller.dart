@@ -137,6 +137,14 @@ class GameController extends ChangeNotifier {
     );
   }
 
+  /// A match of an online cup played on this device (only bots besides the
+  /// local player, who sits on seat 0).
+  factory GameController.cupLocal(AppSettings settings, {required List<SeatInfo> seats, required PastraRules rules}) {
+    final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
+    final state = PastraEngine.newGame(rules: rules, numPlayers: seats.length, seed: seed);
+    return GameController(settings: settings, seats: seats, state: state, tournament: true);
+  }
+
   /// Restores the saved game, or returns null if there is none / it is broken.
   static GameController? fromSaved(AppSettings settings) {
     final raw = settings.savedGame;

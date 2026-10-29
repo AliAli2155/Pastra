@@ -158,6 +158,14 @@ class HostRoom implements OnlineLink {
   /// Rules for this room instead of the host's settings (tournament matches
   /// are played to a fixed target).
   PastraRules? rulesOverride;
+
+  /// Tournament match: the bot (name index) for each seat that no person
+  /// takes, their level, how many people are expected and when to start
+  /// anyway (with bots for whoever did not come).
+  Map<int, int> seatBots = const <int, int>{};
+  AiLevel? botLevel;
+  int? expectedPeople;
+  DateTime? startBy;
   int _listedJoined = 1;
 
   final String code;
@@ -182,16 +190,21 @@ class HostRoom implements OnlineLink {
     required String code,
     required String name,
     required PastraRules rules,
+    int players = 2,
+    Map<int, int> seatBots = const <int, int>{},
+    AiLevel botLevel = AiLevel.medium,
+    int? expectedPeople,
+    DateTime? startBy,
   }) async {
     final uid = OnlineService.uid;
     final tx = await OnlineService.ref('rooms/$code/meta').runTransaction((value) {
       if (value is Map && value['host'] != uid) return Transaction.abort();
       return Transaction.success(<String, Object?>{
         'host': uid,
-        'players': 2,
+        'players': players,
         'status': 'lobby',
         'hostOnline': true,
-        'level': AiLevel.medium.name,
+        'level': botLevel.name,
         'turn': settings.turnSeconds,
         'created': DateTime.now().millisecondsSinceEpoch,
       });
@@ -206,8 +219,12 @@ class HostRoom implements OnlineLink {
       'rooms/$code/meta/hostOnline',
       'rooms/$code/seats/s0/online',
     ]).listen((_) {});
-    return HostRoom._(code, 2, AiLevel.medium, settings, RoomWatcher(code), presence, autoStart: true)
-      ..rulesOverride = rules;
+    return HostRoom._(code, players, botLevel, settings, RoomWatcher(code), presence, autoStart: true)
+      ..rulesOverride = rules
+      ..seatBots = seatBots
+      ..botLevel = botLevel
+      ..expectedPeople = expectedPeople
+      ..startBy = startBy;
   }
 
   static Future<HostRoom> create(
@@ -282,13 +299,14 @@ class HostRoom implements OnlineLink {
       if (rs.uid != null) {
         seats.add(SeatInfo.remote(rs.name));
       } else {
-        final botLevel = (i == 2 && level == AiLevel.easy) ? AiLevel.medium : level;
-        seats.add(SeatInfo.bot(botLevel, botNames[i]));
+        final botLevel = this.botLevel ?? ((i == 2 && level == AiLevel.easy) ? AiLevel.medium : level);
+        final botIndex = seatBots[i] ?? botNames[i];
+        seats.add(SeatInfo.bot(botLevel, botIndex));
         await OnlineService.ref('rooms/$code/seats/s$i').set(<String, Object?>{
           'bot': true,
           'name': '',
           'online': true,
-          'botIndex': botNames[i],
+          'botIndex': botIndex,
         });
       }
     }
@@ -410,7 +428,8 @@ class GuestRoom implements OnlineLink {
 
   int get players => watcher.info.players;
 
-  static Future<GuestRoom> join(String code, AppSettings settings, String name) async {
+  /// Joins the room; [seat] takes exactly that seat (tournament matches).
+  static Future<GuestRoom> join(String code, AppSettings settings, String name, {int? seat}) async {
     final uid = OnlineService.uid;
     final DataSnapshot metaSnap;
     final DataSnapshot seatsSnap;
@@ -430,7 +449,7 @@ class GuestRoom implements OnlineLink {
     }
     if (mine == null) {
       if (meta['status'] != 'lobby') throw const OnlineException('started');
-      for (var i = 1; i < players && mine == null; i++) {
+      for (var i = seat ?? 1; i < (seat == null ? players : seat + 1) && mine == null; i++) {
         final tx = await OnlineService.ref('rooms/$code/seats/s$i').runTransaction((value) {
           if (value != null) return Transaction.abort();
           return Transaction.success(<String, Object?>{'uid': uid, 'name': name, 'online': true});
