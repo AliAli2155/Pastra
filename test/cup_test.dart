@@ -105,4 +105,36 @@ void main() {
     final list = CupRandom(7).shuffled(List<int>.generate(10, (i) => i));
     expect(list.toSet(), Set<int>.from(List<int>.generate(10, (i) => i)));
   });
+
+  test('players 9 and up play a second bracket at the same time', () {
+    final many = <CupSignup>[
+      for (var i = 0; i < 10; i++) CupSignup('p$i', 'P$i', slot - 100000 + i),
+    ];
+    expect(CupBracket.groupCount(slot, many), 2);
+    expect(CupBracket.groupOf(slot, many, 'p0'), 0);
+    expect(CupBracket.groupOf(slot, many, 'p7'), 0);
+    expect(CupBracket.groupOf(slot, many, 'p8'), 1);
+    expect(CupBracket.groupOf(slot, many, 'p9'), 1);
+    expect(CupBracket.groupOf(slot, many, 'nobody'), -1);
+    final g1 = CupBracket.entrantsFor(slot, many, group: 1, botNames: 40);
+    expect(g1.where((e) => !e.isBot).map((e) => e.uid).toSet(), <String>{'p8', 'p9'});
+    final br = CupBracket.compute(slot: slot, group: 1, entrants: g1, results: const <String, CupResult>{});
+    expect(br.matches.expand((r) => r).every((m) => m.id.startsWith('g1')), isTrue);
+    // Group 0 is full of players: nothing is decided without them.
+    final g0 = CupBracket.compute(
+      slot: slot,
+      entrants: CupBracket.entrantsFor(slot, many, botNames: 40),
+      results: const <String, CupResult>{},
+    );
+    expect(g0.matches[0].every((m) => m.status == CupMatchStatus.ready), isTrue);
+  });
+
+  test('there is a last group', () {
+    final crowd = <CupSignup>[
+      for (var i = 0; i < CupRules.size * CupRules.maxGroups + 3; i++) CupSignup('u$i', '', slot - 1000000 + i),
+    ];
+    expect(CupBracket.groupCount(slot, crowd), CupRules.maxGroups);
+    expect(CupBracket.groupOf(slot, crowd, 'u${CupRules.size * CupRules.maxGroups - 1}'), CupRules.maxGroups - 1);
+    expect(CupBracket.groupOf(slot, crowd, 'u${CupRules.size * CupRules.maxGroups}'), -1);
+  });
 }

@@ -21,10 +21,8 @@ class CupData {
   /// uids of the players that have the cup screen open.
   final Set<String> present;
 
-  bool isRegistered(String uid) => signups.any((s) => s.uid == uid && s.time < slot);
-
-  /// Registrations that count (made before the start).
-  int get count => signups.where((s) => s.time < slot).length;
+  /// Plays in this cup (registered in time and not beyond the last group).
+  bool isRegistered(String uid) => CupBracket.groupOf(slot, signups, uid) >= 0;
 
   static CupData parse(int slot, Object? value) {
     if (value is! Map) return CupData(slot: slot);

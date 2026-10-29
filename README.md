@@ -116,8 +116,9 @@ anybody can join. **Quick match** joins an open 1v1 table, or opens one and star
 opponent sits down (or plays against the computer if you prefer).
 
 **Online tournaments** start every 30 minutes (on the hour and at half past). Players register
-for the next one; at the start the first 8 registrations play a knockout (matches to 51 points)
-and empty places get bots. There is no game server: every device computes the same bracket from
+for the next one; at the start they play knockouts of 8 (matches to 51 points): players 1–8 in
+the first bracket, 9–16 in a second one at the same time, and so on (up to 12 brackets, as the
+free Firebase plan allows about 100 connections at once). Empty places get bots. There is no game server: every device computes the same bracket from
 the registrations and the results written by the players. A player who is not there when their
 match is ready loses after 90 seconds; a match that takes more than 20 minutes is decided.
 

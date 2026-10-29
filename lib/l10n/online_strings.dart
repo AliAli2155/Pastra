@@ -41,7 +41,9 @@ class OnlineStrings {
   String get cupRegister => _t('cupRegister');
   String get cupUnregister => _t('cupUnregister');
   String get cupRegistered => _t('cupRegistered');
-  String cupPlayers(int n) => _t('cupPlayers', <String, Object>{'n': n});
+  String cupPlayers(int n, int groups) => _t('cupPlayers', <String, Object>{'n': n, 'g': groups});
+  String cupGroup(int n) => _t('cupGroup', <String, Object>{'n': n});
+  String get cupFull => _t('cupFull');
   String get cupWaiting => _t('cupWaiting');
   String get cupStarting => _t('cupStarting');
   String cupOpponentWait(String name) => _t('cupOpponentWait', <String, Object>{'name': name});
@@ -106,7 +108,9 @@ class OnlineStrings {
       'cupRegister': 'Join the tournament',
       'cupUnregister': 'Leave the tournament',
       'cupRegistered': "You're in! Be on this screen when it starts.",
-      'cupPlayers': '{n} of 8 players · empty seats get bots · matches to 51',
+      'cupPlayers': '{n} players · {g} × 8 brackets · empty seats get bots · matches to 51',
+      'cupGroup': 'Group {n}',
+      'cupFull': 'Full: try the next one',
       'cupWaiting': 'Waiting for the other matches…',
       'cupStarting': 'Your match is starting…',
       'cupOpponentWait': 'Waiting for {name}…',
@@ -161,7 +165,9 @@ class OnlineStrings {
       'cupRegister': 'Δήλωσε συμμετοχή',
       'cupUnregister': 'Αποχώρηση από το τουρνουά',
       'cupRegistered': 'Είσαι μέσα! Να είσαι σε αυτή την οθόνη όταν ξεκινήσει.',
-      'cupPlayers': '{n} από 8 παίκτες · οι κενές θέσεις παίρνουν bot · αγώνες στους 51',
+      'cupPlayers': '{n} παίκτες · {g} × 8 ταμπλό · οι κενές θέσεις παίρνουν bot · αγώνες στους 51',
+      'cupGroup': 'Όμιλος {n}',
+      'cupFull': 'Γεμάτο: δοκίμασε το επόμενο',
       'cupWaiting': 'Αναμονή για τους άλλους αγώνες…',
       'cupStarting': 'Ο αγώνας σου ξεκινά…',
       'cupOpponentWait': 'Αναμονή για {name}…',
@@ -216,7 +222,9 @@ class OnlineStrings {
       'cupRegister': 'Turnuvaya katıl',
       'cupUnregister': 'Kaydımı sil',
       'cupRegistered': 'Kaydın alındı! Başlarken bu ekranda ol.',
-      'cupPlayers': '{n}/8 oyuncu · boş yerlere bot gelir · maçlar 51 puana',
+      'cupPlayers': '{n} oyuncu · {g} × 8 kişilik tablo · boş yerlere bot gelir · maçlar 51 puana',
+      'cupGroup': 'Grup {n}',
+      'cupFull': 'Dolu: sonrakine katıl',
       'cupWaiting': 'Diğer maçlar bekleniyor…',
       'cupStarting': 'Maçın başlıyor…',
       'cupOpponentWait': '{name} bekleniyor…',

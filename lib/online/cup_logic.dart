@@ -5,8 +5,9 @@ import 'dart:math' show max;
 /// results written so far), so nobody has to organise it.
 ///
 /// * A cup starts every [slotMinutes] minutes; its id is its start time.
-/// * The first [size] players who registered before the start take part;
-///   the empty places get bots.
+/// * Everybody who registered before the start takes part, in groups of
+///   [size] by registration order (players 9–16 play a second cup at the
+///   same time, and so on, up to [maxGroups]); empty places get bots.
 /// * Matches are 1v1 to [targetScore]. A match whose players are known is
 ///   "ready"; its result is written by the players. Bot against bot is
 ///   decided by a seeded coin, the same on every device.
@@ -18,6 +19,10 @@ class CupRules {
   static const int slotMinutes = 30;
   static const int slotMs = slotMinutes * 60 * 1000;
   static const int size = 8;
+
+  /// At most this many parallel groups (the free Firebase plan allows about
+  /// 100 connections at a time).
+  static const int maxGroups = 12;
   static const int rounds = 3;
   static const int targetScore = 51;
   static const Duration noShow = Duration(seconds: 90);
@@ -82,6 +87,7 @@ enum CupMatchStatus {
 
 class CupMatch {
   const CupMatch({
+    this.group = 0,
     required this.round,
     required this.index,
     required this.a,
@@ -92,6 +98,8 @@ class CupMatch {
     this.doneAt,
   });
 
+  /// Parallel group (0 = the first 8 players).
+  final int group;
   final int round;
   final int index;
 
@@ -105,7 +113,9 @@ class CupMatch {
   final int? winner;
   final int? doneAt;
 
-  String get id => 'r${round}m$index';
+  String get id => matchId(group, round, index);
+
+  static String matchId(int group, int round, int index) => 'g${group}r${round}m$index';
 
   bool involves(int position) => a == position || b == position;
 }
@@ -120,9 +130,12 @@ class CupClaim {
 }
 
 class CupBracket {
-  CupBracket._(this.slot, this.entrants, this.matches);
+  CupBracket._(this.slot, this.group, this.entrants, this.matches);
 
   final int slot;
+
+  /// Parallel group of this bracket.
+  final int group;
   final List<CupEntrant> entrants;
 
   /// `matches[round][index]`.
@@ -166,14 +179,38 @@ class CupBracket {
     return -1;
   }
 
-  /// The players of the cup: the first [CupRules.size] registrations before
-  /// the start (by time, then uid), the rest bots, all placed by a shuffle
-  /// seeded with the slot — the same on every device.
-  static List<CupEntrant> entrantsFor(int slot, List<CupSignup> signups, {required int botNames}) {
-    final valid = signups.where((s) => s.time < slot).toList()
+  /// The registrations that count (made before the start), in order: by
+  /// time, then uid.
+  static List<CupSignup> ordered(int slot, List<CupSignup> signups) {
+    return signups.where((s) => s.time < slot).toList()
       ..sort((x, y) => x.time != y.time ? x.time.compareTo(y.time) : x.uid.compareTo(y.uid));
-    final people = valid.take(CupRules.size).map((s) => CupEntrant.player(s.uid, s.name)).toList();
-    final rng = CupRandom(_seed(slot, 'entrants'));
+  }
+
+  /// The group [uid] plays in, or -1 (not registered in time, or every group
+  /// is full).
+  static int groupOf(int slot, List<CupSignup> signups, String uid) {
+    final i = ordered(slot, signups).indexWhere((s) => s.uid == uid);
+    if (i < 0) return -1;
+    final g = i ~/ CupRules.size;
+    return g < CupRules.maxGroups ? g : -1;
+  }
+
+  /// How many groups the registrations make (at least one).
+  static int groupCount(int slot, List<CupSignup> signups) {
+    final n = ordered(slot, signups).length;
+    final g = (n + CupRules.size - 1) ~/ CupRules.size;
+    return g < 1 ? 1 : (g > CupRules.maxGroups ? CupRules.maxGroups : g);
+  }
+
+  /// The players of one group: its registrations, the rest bots, all placed
+  /// by a shuffle seeded with the slot and group — the same on every device.
+  static List<CupEntrant> entrantsFor(int slot, List<CupSignup> signups, {int group = 0, required int botNames}) {
+    final people = ordered(slot, signups)
+        .skip(group * CupRules.size)
+        .take(CupRules.size)
+        .map((s) => CupEntrant.player(s.uid, s.name))
+        .toList();
+    final rng = CupRandom(_seed(slot, 'entrants$group'));
     final names = rng.shuffled(List<int>.generate(botNames, (i) => i));
     final all = <CupEntrant>[
       ...people,
@@ -185,6 +222,7 @@ class CupBracket {
   /// Works out every match from the entrants and the written results.
   static CupBracket compute({
     required int slot,
+    int group = 0,
     required List<CupEntrant> entrants,
     required Map<String, CupResult> results,
   }) {
@@ -199,9 +237,9 @@ class CupBracket {
       for (var i = 0; i < players.length ~/ 2; i++) {
         final a = players[2 * i];
         final b = players[2 * i + 1];
-        final id = 'r${r}m$i';
+        final id = CupMatch.matchId(group, r, i);
         if (a == null || b == null) {
-          round.add(CupMatch(round: r, index: i, a: a, b: b, status: CupMatchStatus.waiting));
+          round.add(CupMatch(group: group, round: r, index: i, a: a, b: b, status: CupMatchStatus.waiting));
           nextPlayers.add(null);
           nextKnown.add(null);
           continue;
@@ -219,6 +257,7 @@ class CupBracket {
         }
         round.add(
           CupMatch(
+            group: group,
             round: r,
             index: i,
             a: a,
@@ -236,7 +275,7 @@ class CupBracket {
       players = nextPlayers;
       known = nextKnown;
     }
-    return CupBracket._(slot, entrants, rounds);
+    return CupBracket._(slot, group, entrants, rounds);
   }
 
   /// Results the rules decide, for ready matches without a result:

@@ -93,10 +93,13 @@ class _CupScreenState extends State<CupScreen> {
 
   bool get _inNext => _nextData?.signups.any((x) => x.uid == _uid) ?? false;
 
+  /// The bracket of our group (null when we do not play in [data]).
   CupBracket? _bracket(CupData? data) {
     if (data == null) return null;
-    final entrants = CupBracket.entrantsFor(data.slot, data.signups, botNames: Strings.botNameCount);
-    return CupBracket.compute(slot: data.slot, entrants: entrants, results: data.results);
+    final group = CupBracket.groupOf(data.slot, data.signups, _uid);
+    if (group < 0) return null;
+    final entrants = CupBracket.entrantsFor(data.slot, data.signups, group: group, botNames: Strings.botNameCount);
+    return CupBracket.compute(slot: data.slot, group: group, entrants: entrants, results: data.results);
   }
 
   void _onTick() {
@@ -358,7 +361,11 @@ class _CupScreenState extends State<CupScreen> {
   Widget _signupView(OnlineStrings t, Strings s) {
     final data = _nextData!;
     final counted = data.signups.toList()..sort((a, b) => a.time.compareTo(b.time));
-    final names = counted.take(CupRules.size).map((x) => x.uid == _uid ? widget.name : (x.name.isEmpty ? t.defaultName : x.name));
+    final full = counted.length >= CupRules.size * CupRules.maxGroups;
+    final groups = (counted.length + CupRules.size - 1) ~/ CupRules.size;
+    // At most 16 names; the rest is a "+n" chip.
+    const shown = 16;
+    final names = counted.take(shown).map((x) => x.uid == _uid ? widget.name : (x.name.isEmpty ? t.defaultName : x.name));
     final left = MenuPanel(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -379,7 +386,7 @@ class _CupScreenState extends State<CupScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            t.cupPlayers(counted.length > CupRules.size ? CupRules.size : counted.length),
+            t.cupPlayers(counted.length, groups < 1 ? 1 : groups),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
@@ -393,6 +400,11 @@ class _CupScreenState extends State<CupScreen> {
                 Chip(
                   label: Text(n, style: const TextStyle(fontWeight: FontWeight.w700)),
                   avatar: const Icon(Icons.person, size: 18),
+                  backgroundColor: Colors.black.withValues(alpha: 0.3),
+                ),
+              if (counted.length > shown)
+                Chip(
+                  label: Text('+${counted.length - shown}', style: const TextStyle(fontWeight: FontWeight.w700)),
                   backgroundColor: Colors.black.withValues(alpha: 0.3),
                 ),
             ],
@@ -413,7 +425,11 @@ class _CupScreenState extends State<CupScreen> {
           const SizedBox(height: 12),
           BigOutlineButton(icon: Icons.logout_rounded, label: t.cupUnregister, onPressed: _busy ? null : _toggleRegistration),
         ] else
-          BigButton(icon: Icons.how_to_reg_rounded, label: t.cupRegister, onPressed: _busy ? null : _toggleRegistration),
+          BigButton(
+            icon: full ? Icons.block : Icons.how_to_reg_rounded,
+            label: full ? t.cupFull : t.cupRegister,
+            onPressed: _busy || full ? null : _toggleRegistration,
+          ),
         if (_showNext && _inCurrent) ...<Widget>[
           const SizedBox(height: 12),
           BigOutlineButton(
@@ -451,6 +467,12 @@ class _CupScreenState extends State<CupScreen> {
     );
     final lost = me >= 0 ? bracket.lostIn(me) : -1;
     final children = <Widget>[];
+    if (CupBracket.groupCount(bracket.slot, _currentData!.signups) > 1) {
+      children.add(Text(
+        t.cupGroup(bracket.group + 1),
+        style: const TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.w700),
+      ));
+    }
     if (bracket.champion == me || lost >= 0) {
       final won = bracket.champion == me;
       final wins = bracket.winsOf(me);
