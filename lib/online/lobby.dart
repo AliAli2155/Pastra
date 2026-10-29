@@ -108,8 +108,12 @@ class Lobby {
   static Future<bool> publish(String code, Map<String, Object?> data) async {
     try {
       final ref = OnlineService.ref('lobby/$code');
-      await ref.onDisconnect().remove();
+      // First the entry, then "remove it when I disconnect": the database
+      // checks that rule when it is registered, and removing an entry that
+      // does not exist yet (whose host is not known) is refused. In the other
+      // order nothing was ever listed.
       await ref.set(data);
+      await ref.onDisconnect().remove();
       return true;
     } catch (_) {
       return false;
