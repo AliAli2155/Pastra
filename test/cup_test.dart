@@ -29,6 +29,21 @@ void main() {
     expect(CupType.friends.maxGroups, 1);
   });
 
+  test('scheduled cups: the choice of mode and points makes a separate cup', () {
+    final q = CupType.quick.withOptions(teamSize: 2, targetScore: 101);
+    expect(q.teamSize, 2);
+    expect(q.targetScore, 101);
+    expect(q.nextStart(start), CupType.quick.nextStart(start), reason: 'same schedule');
+    expect(q.keyFor(start), 'q2x101_$start');
+    expect(CupType.quick.keyFor(start), 'q1x51_$start');
+    expect(q.keyFor(start), isNot(CupType.quick.withOptions(teamSize: 1, targetScore: 101).keyFor(start)));
+    // The team cup stays 2v2; only its points change.
+    final t = CupType.team.withOptions(teamSize: 1, targetScore: 151);
+    expect(t.teamSize, 2);
+    expect(t.targetScore, 151);
+    expect(t.fixedTeams, isTrue);
+  });
+
   test('a friends cup can be 2v2 and to any target', () {
     final f = CupType.friendsWith(teamSize: 2, targetScore: 151);
     expect(f.teamSize, 2);

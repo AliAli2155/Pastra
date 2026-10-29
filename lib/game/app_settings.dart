@@ -229,6 +229,11 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The last 1v1/2v2 and target choice for a kind of online cup ("2:101").
+  String? cupChoice(String kind) => _prefs.getString('cupChoice_$kind');
+
+  void setCupChoice(String kind, String value) => _prefs.setString('cupChoice_$kind', value);
+
   /// Online cups (their keys) whose XP bonus was given (the last few).
   bool cupBonusPaid(String key) => (_prefs.getStringList(_kCupPaid) ?? const <String>[]).contains(key);
 

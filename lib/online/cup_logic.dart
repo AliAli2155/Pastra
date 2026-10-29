@@ -30,10 +30,21 @@ class CupRules {
 
 /// A kind of cup.
 class CupType {
-  const CupType._(this.id, this.everyMinutes, this.offsetMinutes, this.targetScore, this.teamSize, this.timeout);
+  const CupType._(
+    this.id,
+    this.everyMinutes,
+    this.offsetMinutes,
+    this.targetScore,
+    this.teamSize,
+    this.timeout, {
+    this.fixedTeams = false,
+  });
 
-  /// Prefix of the database key.
+  /// Kind (q, c, t, f); with the options it makes the database key.
   final String id;
+
+  /// The team cup is always 2v2 (only its points can be chosen).
+  final bool fixedTeams;
 
   /// 0 for a friends cup (no schedule).
   final int everyMinutes;
@@ -47,22 +58,32 @@ class CupType {
   final Duration timeout;
 
   static const CupType quick = CupType._('q', 15, 0, 51, 1, Duration(minutes: 20));
-  static const CupType classic = CupType._('c', 30, 0, 101, 1, Duration(minutes: 35));
-  static const CupType team = CupType._('t', 30, 15, 51, 2, Duration(minutes: 25));
+  static const CupType classic = CupType._('c', 30, 0, 101, 1, Duration(minutes: 30));
+  static const CupType team = CupType._('t', 30, 15, 51, 2, Duration(minutes: 20), fixedTeams: true);
   static const CupType friends = CupType._('f', 0, 0, 51, 1, Duration(minutes: 20));
+
+  /// The same kind and schedule with the player's choice of 1v1 / 2v2 and
+  /// target score. Players who chose differently play in different cups.
+  CupType withOptions({int? teamSize, int? targetScore}) {
+    final teams = fixedTeams ? this.teamSize : ((teamSize ?? this.teamSize) == 2 ? 2 : 1);
+    final target = targetScore ?? this.targetScore;
+    return CupType._(
+      id,
+      everyMinutes,
+      offsetMinutes,
+      target,
+      teams,
+      // Longer games may take longer before a match is decided.
+      Duration(minutes: 10 + target ~/ 5),
+      fixedTeams: fixedTeams,
+    );
+  }
 
   static const List<CupType> scheduled = <CupType>[quick, classic, team];
 
   /// A friends cup as its creator set it up (1v1 or 2v2, target score).
-  factory CupType.friendsWith({required int teamSize, required int targetScore}) => CupType._(
-        friends.id,
-        0,
-        0,
-        targetScore,
-        teamSize == 2 ? 2 : 1,
-        // Longer games may take longer before a match is decided.
-        Duration(minutes: 10 + targetScore ~/ 5),
-      );
+  factory CupType.friendsWith({required int teamSize, required int targetScore}) =>
+      friends.withOptions(teamSize: teamSize, targetScore: targetScore);
 
   bool get isScheduled => everyMinutes > 0;
 
@@ -75,8 +96,9 @@ class CupType {
   /// Start of the cup that began last (it may still be running).
   int currentStart(int now) => (now - _offset) ~/ _every * _every + _offset;
 
-  /// Database key of the scheduled cup starting at [start].
-  String keyFor(int start) => '$id$start';
+  /// Database key of the scheduled cup starting at [start] (kind and
+  /// options, e.g. `q2x101_1761822000000`).
+  String keyFor(int start) => '$id${teamSize}x${targetScore}_$start';
 
   /// Places in a bracket (players or teams).
   int get entrants => CupRules.size ~/ teamSize;

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../engine/game_state.dart';
 import '../../engine/pastra_ai.dart';
+import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
 import '../../game/seats.dart';
@@ -48,8 +49,15 @@ class CupScreen extends StatefulWidget {
 }
 
 class _CupScreenState extends State<CupScreen> {
-  /// A friends cup takes its mode and target from its creator's choice.
-  CupType get type => _friends ? (_currentData?.friendsType ?? widget.type) : widget.type;
+  /// A friends cup takes its mode and target from its creator's choice; a
+  /// scheduled one from the player's choice on this screen.
+  CupType get type => _friends
+      ? (_currentData?.friendsType ?? widget.type)
+      : widget.type.withOptions(teamSize: _teams, targetScore: _target);
+
+  /// The player's choice for a scheduled cup (remembered per kind).
+  late int _teams;
+  late int _target;
   bool get _friends => widget.friendsCode != null;
 
   late int _current = type.isScheduled ? type.currentStart(OnlineService.serverNow) : 0;
@@ -86,6 +94,13 @@ class _CupScreenState extends State<CupScreen> {
   @override
   void initState() {
     super.initState();
+    _teams = widget.type.teamSize;
+    _target = widget.type.targetScore;
+    final saved = SettingsScope.read(context).cupChoice(widget.type.id)?.split(':');
+    if (saved != null && saved.length == 2) {
+      _teams = int.tryParse(saved[0]) ?? _teams;
+      _target = int.tryParse(saved[1]) ?? _target;
+    }
     _subscribe();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
   }
@@ -347,6 +362,61 @@ class _CupScreenState extends State<CupScreen> {
 
   Future<void> _toggleNext() => _run(() => _inNext ? CupService.unregister(_nextKey) : CupService.register(_nextKey, widget.name));
 
+  /// Another 1v1/2v2 or target: another cup (other players, other key).
+  void _choose({int? teams, int? target}) {
+    setState(() {
+      _teams = teams ?? _teams;
+      _target = target ?? _target;
+      _showNext = false;
+    });
+    SettingsScope.read(context).setCupChoice(widget.type.id, '$_teams:$_target');
+    _subscribe();
+  }
+
+  /// 1v1 / 2v2 (not for the team cup) and the target score.
+  Widget _options(Strings s, {required bool enabled}) {
+    const label = TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w700);
+    void Function() pick({int? teams, int? target}) => () {
+          if (enabled) _choose(teams: teams, target: target);
+        };
+    return Opacity(
+      opacity: enabled ? 1 : 0.6,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (!widget.type.fixedTeams) ...<Widget>[
+            Text(s.gameType, style: label),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: ChoiceCard(icon: Icons.person, label: s.mode1v1, selected: type.teamSize == 1, onTap: pick(teams: 1)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceCard(icon: Icons.groups, label: s.mode2v2, selected: type.teamSize == 2, onTap: pick(teams: 2)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+          Text(s.targetScore, style: label),
+          const SizedBox(height: 6),
+          Row(
+            children: <Widget>[
+              for (final p in PastraRules.targetOptions) ...<Widget>[
+                if (p != PastraRules.targetOptions.first) const SizedBox(width: 6),
+                Expanded(child: ChoiceCard(label: '$p', selected: type.targetScore == p, onTap: pick(target: p))),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+
   Future<void> _leaveFriends() async {
     await _run(() => CupService.unregister(_currentKey));
     if (mounted) Navigator.of(context).pop();
@@ -502,6 +572,8 @@ class _CupScreenState extends State<CupScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        // While registered (or playing) the choice is fixed.
+        _options(s, enabled: !_inNext && !_inCurrent && !_busy),
         if (_inNext) ...<Widget>[
           Text(
             t.cupRegistered,
