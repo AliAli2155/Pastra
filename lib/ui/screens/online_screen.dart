@@ -146,7 +146,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
     });
     try {
       GuestRoom? guest;
-      final tables = (await Lobby.list()).where((x) => x.players == 2);
+      final tables = Lobby.forQuickMatch(await Lobby.list());
       for (final table in tables) {
         try {
           guest = await GuestRoom.join(table.code, settings, name);
@@ -311,30 +311,38 @@ class _OnlineScreenState extends State<OnlineScreen> {
         onTap: _busy ? null : _openLeaderboard,
       );
 
-  /// Public (listed in the open tables) or private (code only), as a small
-  /// pill in the title row of "Create a room".
+  /// Public (listed in the open tables) or private (code only): a switch in
+  /// the title row of "Create a room".
   Widget _visibilityPill(OnlineStrings t) {
-    final color = _public ? PastraColors.gold : Colors.white60;
     return Tooltip(
       message: t.showInTables,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: _busy ? null : () => setState(() => _public = !_public),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color),
-            color: _public ? PastraColors.gold.withValues(alpha: 0.15) : Colors.transparent,
-          ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(_public ? Icons.public : Icons.lock_outline, size: 16, color: color),
+              Icon(_public ? Icons.public : Icons.lock_outline, size: 18, color: _public ? PastraColors.gold : Colors.white60),
               const SizedBox(width: 6),
               Text(
                 _public ? t.publicRoom : t.privateRoom,
-                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: _public ? PastraColors.gold : Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(
+                height: 30,
+                child: FittedBox(
+                  child: Switch(
+                    value: _public,
+                    onChanged: _busy ? null : (v) => setState(() => _public = v),
+                    activeThumbColor: PastraColors.gold,
+                  ),
+                ),
               ),
             ],
           ),

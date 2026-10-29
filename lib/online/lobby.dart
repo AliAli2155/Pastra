@@ -78,12 +78,28 @@ class Lobby {
   /// then opens a table itself).
   static Future<List<OpenTable>> list() async {
     try {
-      final snap = await _ref.get();
-      return OpenTable.parseAll(snap.value, now: DateTime.now().millisecondsSinceEpoch, exceptHost: OnlineService.uid);
+      // `once()` (a listener that stops after the first value) rather than
+      // `get()`: on the web `get()` can fail right after connecting ("client
+      // is offline"), and quick match then never found the open tables.
+      final event = await _ref.once().timeout(const Duration(seconds: 8));
+      return OpenTable.parseAll(
+        event.snapshot.value,
+        now: DateTime.now().millisecondsSinceEpoch,
+        exceptHost: OnlineService.uid,
+      );
     } catch (_) {
       return const <OpenTable>[];
     }
   }
+
+  /// The best table for a quick match: 1v1 before 2v2, then the one with
+  /// the fewest free seats (it starts soonest), then the newest.
+  static List<OpenTable> forQuickMatch(List<OpenTable> tables) => tables.toList()
+    ..sort((a, b) {
+      if (a.players != b.players) return a.players.compareTo(b.players);
+      if (a.free != b.free) return a.free.compareTo(b.free);
+      return b.created.compareTo(a.created);
+    });
 
   /// Writes (or replaces) the entry of a table. Never throws: a table that
   /// cannot be listed can still be joined with its code.

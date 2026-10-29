@@ -60,4 +60,17 @@ void main() {
     expect(OpenTable.parseAll(null, now: now), isEmpty);
     expect(OpenTable.parseAll('x', now: now), isEmpty);
   });
+
+  test('quick match prefers 1v1, then the table that starts soonest', () {
+    final tables = OpenTable.parseAll(
+      <String, Object?>{
+        'a': entry(players: 4, joined: 3, created: now - 10),
+        'b': entry(created: now - 500),
+        'c': entry(players: 4, joined: 1, created: now - 5),
+        'd': entry(created: now - 100),
+      },
+      now: now,
+    );
+    expect(Lobby.forQuickMatch(tables).map((t) => t.code).toList(), <String>['d', 'b', 'a', 'c']);
+  });
 }

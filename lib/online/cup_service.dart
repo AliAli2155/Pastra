@@ -101,7 +101,8 @@ class CupService {
   static Stream<CupData> watch(String key, {int? scheduledStart}) =>
       _ref(key).onValue.map((e) => CupData.parse(key, e.snapshot.value, scheduledStart: scheduledStart));
 
-  static Future<CupData> read(String key) async => CupData.parse(key, (await _ref(key).get()).value);
+  static Future<CupData> read(String key) async =>
+      CupData.parse(key, (await _ref(key).once().timeout(const Duration(seconds: 8))).snapshot.value);
 
   static Future<void> register(String key, String name) => _ref(key).child('players/${OnlineService.uid}').set(
         <String, Object?>{'name': name, 't': ServerValue.timestamp},

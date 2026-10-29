@@ -434,8 +434,10 @@ class GuestRoom implements OnlineLink {
     final DataSnapshot metaSnap;
     final DataSnapshot seatsSnap;
     try {
-      metaSnap = await OnlineService.ref('rooms/$code/meta').get();
-      seatsSnap = await OnlineService.ref('rooms/$code/seats').get();
+      // `once()` instead of `get()`: on the web `get()` can fail just after
+      // connecting.
+      metaSnap = (await OnlineService.ref('rooms/$code/meta').once().timeout(const Duration(seconds: 8))).snapshot;
+      seatsSnap = (await OnlineService.ref('rooms/$code/seats').once().timeout(const Duration(seconds: 8))).snapshot;
     } catch (_) {
       throw const OnlineException('network');
     }

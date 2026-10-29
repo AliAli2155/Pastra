@@ -1,5 +1,3 @@
-import 'package:firebase_database/firebase_database.dart';
-
 import '../game/app_settings.dart';
 import '../game/progression.dart';
 import 'online_service.dart';
@@ -90,7 +88,8 @@ class Leaderboard {
   static Future<List<LeaderEntry>> top({int limit = 50}) async {
     final problem = await OnlineService.ensureReady();
     if (problem != null) throw StateError(problem);
-    final DataSnapshot snap = await OnlineService.ref('leaderboard').orderByChild('xp').limitToLast(limit).get();
+    final event = await OnlineService.ref('leaderboard').orderByChild('xp').limitToLast(limit).once().timeout(const Duration(seconds: 10));
+    final snap = event.snapshot;
     return LeaderEntry.parseAll(snap.value).take(limit).toList();
   }
 }
