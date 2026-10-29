@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_database/firebase_database.dart';
 
 import '../engine/pastra_ai.dart';
@@ -112,6 +114,18 @@ class Lobby {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Keeps the table listed while the subscription lives. The entry is
+  /// removed by the server when the connection drops (a host that vanished)
+  /// and written again on every reconnect — a phone or a background browser
+  /// tab loses its connection now and then, and the table must come back.
+  static StreamSubscription<void> keepListed(String code, Map<String, Object?> Function() entry) {
+    final connected = FirebaseDatabase.instance.ref('.info/connected');
+    return connected.onValue.asyncMap((event) async {
+      if (event.snapshot.value != true) return;
+      await publish(code, entry());
+    }).listen((_) {});
   }
 
   static Future<void> setJoined(String code, int joined) async {

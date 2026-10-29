@@ -168,6 +168,22 @@ class HostRoom implements OnlineLink {
   DateTime? startBy;
   int _listedJoined = 1;
 
+  /// The lobby entry (public tables) and the subscription that keeps it
+  /// there across reconnects.
+  Map<String, Object?> _lobbyEntry = const <String, Object?>{};
+  StreamSubscription<void>? _lobbySub;
+
+  void _listInLobby(Map<String, Object?> entry) {
+    _lobbyEntry = entry;
+    _lobbySub = Lobby.keepListed(code, () => <String, Object?>{..._lobbyEntry, 'joined': _listedJoined});
+  }
+
+  void _unlist() {
+    _lobbySub?.cancel();
+    _lobbySub = null;
+    Lobby.remove(code);
+  }
+
   final String code;
   final int players;
   final AiLevel level;
@@ -261,8 +277,9 @@ class HostRoom implements OnlineLink {
         'rooms/$code/meta/hostOnline',
         'rooms/$code/seats/s0/online',
       ]).listen((_) {});
+      final room = HostRoom._(code, players, level, settings, RoomWatcher(code), presence, isPublic: public, autoStart: autoStart);
       if (public) {
-        await Lobby.publish(code, <String, Object?>{
+        room._listInLobby(<String, Object?>{
           'host': uid,
           'name': name,
           'players': players,
@@ -271,7 +288,7 @@ class HostRoom implements OnlineLink {
           'created': DateTime.now().millisecondsSinceEpoch,
         });
       }
-      return HostRoom._(code, players, level, settings, RoomWatcher(code), presence, isPublic: public, autoStart: autoStart);
+      return room;
     }
     throw const OnlineException('network');
   }
@@ -291,7 +308,7 @@ class HostRoom implements OnlineLink {
   Future<GameController> start() async {
     final info = watcher.info;
     _started = true;
-    if (isPublic) Lobby.remove(code);
+    if (isPublic) _unlist();
     final seats = <SeatInfo>[const SeatInfo.human()];
     final botNames = SeatInfo.randomBotNames(players);
     for (var i = 1; i < players; i++) {
@@ -384,7 +401,7 @@ class HostRoom implements OnlineLink {
     _closed = true;
     if (isPublic) {
       watcher.removeListener(_syncLobby);
-      Lobby.remove(code);
+      _unlist();
     }
     controller?.removeListener(_onChange);
     for (final s in _moveSubs) {
