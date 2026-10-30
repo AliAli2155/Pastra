@@ -90,9 +90,87 @@ class Progression {
   static int levelFor(TableTheme t) => tableLevel[t] ?? 1;
   static int levelForBack(CardBackStyle b) => backLevel[b] ?? 1;
 
-  /// Whether anything unlocks at a level in (from, to].
+  /// Avatar frames around the player's initial.
+  static const Map<AvatarFrame, int> frameLevel = <AvatarFrame, int>{
+    AvatarFrame.none: 1,
+    AvatarFrame.bronze: 3,
+    AvatarFrame.silver: 6,
+    AvatarFrame.gold: 9,
+    AvatarFrame.jade: 13,
+    AvatarFrame.ruby: 16,
+    AvatarFrame.sapphire: 20,
+    AvatarFrame.diamond: 24,
+    AvatarFrame.legend: 30,
+  };
+
+  /// Titles shown under the player's name.
+  static const Map<PlayerTitle, int> titleLevel = <PlayerTitle, int>{
+    PlayerTitle.novice: 1,
+    PlayerTitle.player: 5,
+    PlayerTitle.expert: 10,
+    PlayerTitle.master: 15,
+    PlayerTitle.grandmaster: 20,
+    PlayerTitle.legend: 25,
+    PlayerTitle.king: 30,
+  };
+
+  static int levelForFrame(AvatarFrame f) => frameLevel[f] ?? 1;
+
+  /// The best title reached at [level].
+  static PlayerTitle titleFor(int level) {
+    var best = PlayerTitle.novice;
+    titleLevel.forEach((t, l) {
+      if (l <= level && l >= titleLevel[best]!) best = t;
+    });
+    return best;
+  }
+
+  /// The best frame reached at [level].
+  static AvatarFrame bestFrame(int level) {
+    var best = AvatarFrame.none;
+    frameLevel.forEach((f, l) {
+      if (l <= level && l >= frameLevel[best]!) best = f;
+    });
+    return best;
+  }
+
+  /// Everything that unlocks exactly at [level] (the level path).
+  static LevelRewards rewardsAt(int level) => LevelRewards(
+        level: level,
+        tables: <TableTheme>[for (final e in tableLevel.entries) if (e.value == level && level > 1) e.key],
+        backs: <CardBackStyle>[for (final e in backLevel.entries) if (e.value == level && level > 1) e.key],
+        frames: <AvatarFrame>[for (final e in frameLevel.entries) if (e.value == level && level > 1) e.key],
+        titles: <PlayerTitle>[for (final e in titleLevel.entries) if (e.value == level && level > 1) e.key],
+      );
+
+  /// Whether a table or card-back colour unlocks at a level in (from, to].
   static bool unlocksBetween(int from, int to) =>
       tableLevel.values.any((l) => l > from && l <= to) || backLevel.values.any((l) => l > from && l <= to);
+}
+
+/// Ring around the player's initial (unlocked with the level).
+enum AvatarFrame { none, bronze, silver, gold, jade, ruby, sapphire, diamond, legend }
+
+/// Title under the player's name (follows the level).
+enum PlayerTitle { novice, player, expert, master, grandmaster, legend, king }
+
+/// What a level gives (one stop of the level path).
+class LevelRewards {
+  const LevelRewards({
+    required this.level,
+    required this.tables,
+    required this.backs,
+    required this.frames,
+    required this.titles,
+  });
+
+  final int level;
+  final List<TableTheme> tables;
+  final List<CardBackStyle> backs;
+  final List<AvatarFrame> frames;
+  final List<PlayerTitle> titles;
+
+  bool get isEmpty => tables.isEmpty && backs.isEmpty && frames.isEmpty && titles.isEmpty;
 }
 
 /// What one game gave the local player.

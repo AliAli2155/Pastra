@@ -29,7 +29,10 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
   The main *Settings* keep only general options (language, name, colours, sound).
 - **Statistics and achievements**, table and card-back colors, real card sounds.
 - **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
-- **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. New table and card-back colors unlock at certain levels.
+- **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. The *level path* shows what each level unlocks: table colors, card backs, avatar frames (bronze → legend) and titles (Novice → Pastra king).
+- **Daily quests:** three new quests every day (easy, medium, hard), different for every player. Collect XP for each one and a bonus for all three; one unstarted quest per day can be swapped.
+- **Achievements:** 30 badges, including win streaks, online wins, days in a row and collected quests.
+- **Monthly seasons:** the XP earned in a month makes the season ranking (Leaderboard → this month). When the season ends the player gets a badge (Champion, Top 3, Top 10, Top 100 or Participant) and bonus XP.
 - **Chips, diamonds and a store** (like Okey and Pişti apps): online tables are grouped in
   salons with an entry fee (Friendly 0, Rookie 100 … VIP 50,000 chips, higher salons need a
   level). Everybody pays the entry when the game starts and each winner gets two entries minus a
@@ -162,7 +165,9 @@ lib/
     game_controller.dart  game flow: turns, bot moves, dealing, saving, online host/guest
     app_settings.dart     settings, statistics and the saved game (shared_preferences)
     seats.dart            seats (human / bot / remote player)
-    progression.dart     XP, levels and the colors that unlock at each level
+    progression.dart     XP, levels and what unlocks at each level (colors, frames, titles)
+    quests.dart          daily quests: the pool, the daily pick per player, progress
+    seasons.dart         monthly seasons: ids, end, badge tiers and rewards
     tournament.dart      the offline knockout tournament (bracket, rounds, results)
     economy.dart         chips and diamonds: salons, pot, daily bonus, cup fees, store items
   online/            Firebase: sign-in, rooms, host and guest sessions
@@ -182,7 +187,8 @@ docs/                design notes and research
 All texts live in the tables in `tool/l10n/`. After changing them, run
 `python tool/l10n/gen.py` to regenerate `lib/l10n/translations.dart`.
 The store texts are in `tool/l10n/shop.py` (`python tool/l10n/shop.py` writes
-`lib/l10n/shop_strings.dart`).
+`lib/l10n/shop_strings.dart`). Quests, level path and seasons are in
+`tool/l10n/progress.py` (writes `lib/l10n/progress_strings.dart`).
 
 ## Contributing and commits
 

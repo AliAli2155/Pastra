@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,8 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/rules.dart';
 import '../ui/theme.dart';
+import 'achievements.dart';
 import 'economy.dart';
 import 'progression.dart';
+import 'quests.dart';
+import 'seasons.dart';
 import 'sound.dart';
 
 /// Lifetime statistics of the local player.
@@ -24,6 +28,18 @@ class GameStats {
   int wins1v1 = 0;
   int games2v2 = 0;
   int wins2v2 = 0;
+  int onlineGames = 0;
+  int onlineWins = 0;
+
+  /// Daily quests collected, days with all quests collected.
+  int questsDone = 0;
+  int perfectDays = 0;
+
+  /// Most days in a row the game was opened.
+  int loginBest = 0;
+
+  /// Seasons finished in the top 10.
+  int seasonTop10 = 0;
 
   /// Indexed by [AiLevel.index].
   List<int> gamesByLevel = <int>[0, 0, 0];
@@ -46,6 +62,12 @@ class GameStats {
         'wins1v1': wins1v1,
         'games2v2': games2v2,
         'wins2v2': wins2v2,
+        'onlineGames': onlineGames,
+        'onlineWins': onlineWins,
+        'questsDone': questsDone,
+        'perfectDays': perfectDays,
+        'loginBest': loginBest,
+        'seasonTop10': seasonTop10,
         'gamesByLevel': gamesByLevel,
         'winsByLevel': winsByLevel,
       };
@@ -71,6 +93,12 @@ class GameStats {
       ..wins1v1 = i('wins1v1')
       ..games2v2 = i('games2v2')
       ..wins2v2 = i('wins2v2')
+      ..onlineGames = i('onlineGames')
+      ..onlineWins = i('onlineWins')
+      ..questsDone = i('questsDone')
+      ..perfectDays = i('perfectDays')
+      ..loginBest = i('loginBest')
+      ..seasonTop10 = i('seasonTop10')
       ..gamesByLevel = l('gamesByLevel')
       ..winsByLevel = l('winsByLevel');
   }
@@ -116,6 +144,22 @@ class AppSettings extends ChangeNotifier {
   static const String _kOwned = 'ownedItems';
   static const String _kSalon = 'salon';
   static const String _kCupFees = 'cupFeeKeys';
+  static const String _kSeed = 'playerSeed';
+  static const String _kQuestDay = 'questDay';
+  static const String _kQuestIds = 'questIds';
+  static const String _kQuestProgress = 'questProgress';
+  static const String _kQuestClaimed = 'questClaimed';
+  static const String _kQuestReroll = 'questRerolled';
+  static const String _kQuestBonus = 'questBonus';
+  static const String _kLoginDay = 'loginDay';
+  static const String _kLoginStreak = 'loginStreak';
+  static const String _kFrame = 'avatarFrame';
+  static const String _kSeason = 'season';
+  static const String _kSeasonXp = 'seasonXp';
+  static const String _kSeasonWins = 'seasonWins';
+  static const String _kSeasonGames = 'seasonGames';
+  static const String _kSeasonPending = 'seasonPending';
+  static const String _kSeasonBadges = 'seasonBadges';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -291,11 +335,15 @@ class AppSettings extends ChangeNotifier {
   /// Adds experience points; returns the level before and after. Every new
   /// level also gives chips and diamonds. Does not notify (called during
   /// games; screens read the value when they build).
-  ({int before, int after}) addXp(int amount) {
+  ({int before, int after}) addXp(int amount, {bool season = true}) {
     final before = playerLevel;
     if (amount > 0) {
       _xp += amount;
       _prefs.setInt(_kXp, _xp);
+      if (season) {
+        _rollSeason();
+        _prefs.setInt(_kSeasonXp, seasonXp + amount);
+      }
     }
     final after = playerLevel;
     for (var l = before + 1; Economy.enabled && l <= after; l++) {
@@ -524,9 +572,16 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordGame({required bool won, required int players, required AiLevel level}) {
+  void recordGame({required bool won, required int players, required AiLevel level, bool online = false}) {
     final st = _stats;
     st.games++;
+    if (online) {
+      st.onlineGames++;
+      if (won) st.onlineWins++;
+    }
+    _rollSeason();
+    _prefs.setInt(_kSeasonGames, seasonGames + 1);
+    if (won) _prefs.setInt(_kSeasonWins, seasonWins + 1);
     st.gamesByLevel[level.index]++;
     if (players == 4) {
       st.games2v2++;
@@ -547,6 +602,238 @@ class AppSettings extends ChangeNotifier {
       st.streak = 0;
     }
     _saveStats();
+  }
+
+  // ---- daily quests (see Quests)
+
+  /// A random number of this player (installation): their quests differ
+  /// from everybody else's.
+  int get _playerSeed {
+    var seed = _prefs.getInt(_kSeed);
+    if (seed == null) {
+      seed = Random().nextInt(0x7fffffff);
+      _prefs.setInt(_kSeed, seed);
+    }
+    return seed;
+  }
+
+  int get _today => Economy.dayNumber(DateTime.now());
+
+  /// Starts the day's quests when the day changed.
+  void _ensureQuests() {
+    final today = _today;
+    if (_prefs.getInt(_kQuestDay) == today && (_prefs.getStringList(_kQuestIds)?.length ?? 0) == 3) return;
+    _prefs.setInt(_kQuestDay, today);
+    _prefs.setStringList(_kQuestIds, Quests.pick(Quests.seed(_playerSeed, today)));
+    _prefs.setString(_kQuestProgress, '{}');
+    _prefs.setStringList(_kQuestClaimed, const <String>[]);
+    _prefs.setBool(_kQuestReroll, false);
+    _prefs.setBool(_kQuestBonus, false);
+  }
+
+  Map<String, int> get _questProgress {
+    try {
+      return (jsonDecode(_prefs.getString(_kQuestProgress) ?? '{}') as Map<String, dynamic>)
+          .map((k, v) => MapEntry<String, int>(k, (v as num).toInt()));
+    } catch (_) {
+      return <String, int>{};
+    }
+  }
+
+  /// Today's three quests.
+  List<QuestState> get quests {
+    _ensureQuests();
+    final progress = _questProgress;
+    final claimed = _prefs.getStringList(_kQuestClaimed) ?? const <String>[];
+    return <QuestState>[
+      for (final id in _prefs.getStringList(_kQuestIds)!)
+        if (Quests.byId(id) case final def?) QuestState(def, progress[id] ?? 0, claimed.contains(id)),
+    ];
+  }
+
+  /// Quests (and the bonus) waiting to be collected.
+  int get questsReady {
+    final list = quests;
+    var n = list.where((q) => q.done && !q.claimed).length;
+    if (questBonusReady) n++;
+    return n;
+  }
+
+  bool get questBonusReady => quests.every((q) => q.claimed) && !(_prefs.getBool(_kQuestBonus) ?? false);
+  bool get questBonusClaimed => _prefs.getBool(_kQuestBonus) ?? false;
+
+  /// One quest a day can be swapped for another of the same difficulty.
+  bool get canRerollQuest => !(_prefs.getBool(_kQuestReroll) ?? false);
+
+  /// Something happened in a game; returns the quests completed by it.
+  List<String> questEvent(QuestEvent e) {
+    final list = quests;
+    final progress = _questProgress;
+    final done = <String>[];
+    for (final q in list) {
+      final before = progress[q.def.id] ?? 0;
+      final after = Quests.advance(q.def, before, e);
+      if (after == before) continue;
+      progress[q.def.id] = after;
+      if (before < q.def.goal && after >= q.def.goal) done.add(q.def.id);
+    }
+    _prefs.setString(_kQuestProgress, jsonEncode(progress));
+    return done;
+  }
+
+  /// Collects a finished quest: XP (and chips). Returns the XP, or null.
+  int? claimQuest(String id) {
+    final q = quests.where((x) => x.def.id == id).firstOrNull;
+    if (q == null || !q.done || q.claimed) return null;
+    _prefs.setStringList(_kQuestClaimed, <String>[...(_prefs.getStringList(_kQuestClaimed) ?? const <String>[]), id]);
+    _stats.questsDone++;
+    _saveStats();
+    addXp(q.def.xp);
+    if (Economy.enabled) addWallet(chips: Quests.chipsFor(q.def), notify: false);
+    notifyListeners();
+    return q.def.xp;
+  }
+
+  /// Collects the bonus for all three quests of the day.
+  bool claimQuestBonus() {
+    if (!questBonusReady) return false;
+    _prefs.setBool(_kQuestBonus, true);
+    _stats.perfectDays++;
+    _saveStats();
+    addXp(Quests.allBonusXp);
+    if (Economy.enabled) addWallet(chips: Quests.allBonusChips, diamonds: Quests.allBonusDiamonds, notify: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Swaps an unfinished quest for another one of the same difficulty.
+  bool rerollQuest(String id) {
+    if (!canRerollQuest) return false;
+    final ids = <String>[...(_prefs.getStringList(_kQuestIds) ?? const <String>[])];
+    final i = ids.indexOf(id);
+    if (i < 0 || (_questProgress[id] ?? 0) > 0) return false;
+    final next = Quests.reroll(ids, id, Quests.seed(_playerSeed, _today) + 1);
+    if (next == null) return false;
+    ids[i] = next;
+    _prefs.setStringList(_kQuestIds, ids);
+    _prefs.setBool(_kQuestReroll, true);
+    notifyListeners();
+    return true;
+  }
+
+  // ---- days in a row
+
+  int get loginStreak => _prefs.getInt(_kLoginStreak) ?? 0;
+
+  /// Counts the days in a row the game was opened; returns new achievements.
+  List<String> touchDay() {
+    final today = _today;
+    final last = _prefs.getInt(_kLoginDay);
+    if (last == today) return const <String>[];
+    final streak = last == today - 1 ? loginStreak + 1 : 1;
+    _prefs.setInt(_kLoginDay, today);
+    _prefs.setInt(_kLoginStreak, streak);
+    if (streak > _stats.loginBest) {
+      _stats.loginBest = streak;
+      _saveStats();
+    }
+    return unlockEarned();
+  }
+
+  /// Unlocks the counter achievements reached outside a game.
+  List<String> unlockEarned() => unlockAchievements(earnedAchievements(_stats));
+
+  // ---- avatar frame and title
+
+  bool isFrameUnlocked(AvatarFrame f) => Progression.levelForFrame(f) <= playerLevel;
+
+  /// The chosen frame; without a choice the best one unlocked.
+  AvatarFrame get avatarFrame {
+    final name = _prefs.getString(_kFrame);
+    final chosen = AvatarFrame.values.where((f) => f.name == name).firstOrNull;
+    if (chosen != null && isFrameUnlocked(chosen)) return chosen;
+    return Progression.bestFrame(playerLevel);
+  }
+
+  set avatarFrame(AvatarFrame f) {
+    if (!isFrameUnlocked(f)) return;
+    _prefs.setString(_kFrame, f.name);
+    notifyListeners();
+  }
+
+  PlayerTitle get title => Progression.titleFor(playerLevel);
+
+  // ---- seasons (see Seasons)
+
+  /// Starts a new season's counters when the month changed; the old season
+  /// waits for its final ranking.
+  void _rollSeason() {
+    final now = Seasons.current();
+    final stored = _prefs.getString(_kSeason);
+    if (stored == now) return;
+    if (stored != null && (_prefs.getInt(_kSeasonGames) ?? 0) > 0) {
+      _prefs.setStringList(_kSeasonPending, <String>[...seasonsPending, stored]);
+    }
+    _prefs.setString(_kSeason, now);
+    _prefs.setInt(_kSeasonXp, 0);
+    _prefs.setInt(_kSeasonWins, 0);
+    _prefs.setInt(_kSeasonGames, 0);
+  }
+
+  String get season {
+    _rollSeason();
+    return _prefs.getString(_kSeason)!;
+  }
+
+  int get seasonXp {
+    _rollSeason();
+    return _prefs.getInt(_kSeasonXp) ?? 0;
+  }
+
+  int get seasonWins {
+    _rollSeason();
+    return _prefs.getInt(_kSeasonWins) ?? 0;
+  }
+
+  int get seasonGames {
+    _rollSeason();
+    return _prefs.getInt(_kSeasonGames) ?? 0;
+  }
+
+  /// Finished seasons whose final place is not known yet.
+  List<String> get seasonsPending {
+    final list = _prefs.getStringList(_kSeasonPending) ?? const <String>[];
+    return <String>[for (final s in list) if (Seasons.isValid(s)) s];
+  }
+
+  List<SeasonBadge> get seasonBadges {
+    try {
+      final raw = jsonDecode(_prefs.getString(_kSeasonBadges) ?? '[]') as List<dynamic>;
+      return <SeasonBadge>[
+        for (final j in raw)
+          if (SeasonBadge.fromJson(j) case final b?) b,
+      ];
+    } catch (_) {
+      return <SeasonBadge>[];
+    }
+  }
+
+  /// The final place of a finished season: badge, XP reward, achievements.
+  /// Returns the badge (null when [season] was not waiting).
+  SeasonBadge? finishSeason(String season, int rank) {
+    if (!seasonsPending.contains(season)) return null;
+    _prefs.setStringList(_kSeasonPending, <String>[for (final s in seasonsPending) if (s != season) s]);
+    final badge = SeasonBadge(season: season, rank: rank, tier: Seasons.tierFor(rank));
+    final badges = <SeasonBadge>[...seasonBadges, badge];
+    _prefs.setString(_kSeasonBadges, jsonEncode(<Object>[for (final b in badges) b.toJson()]));
+    if (rank >= 1 && rank <= 10) {
+      _stats.seasonTop10++;
+      _saveStats();
+    }
+    addXp(Seasons.rewardXp(badge.tier), season: false);
+    unlockEarned();
+    notifyListeners();
+    return badge;
   }
 
   /// The running offline tournament (JSON), if any.

@@ -43,6 +43,18 @@
         ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
       }
     },
+    "seasons": {
+      "$season": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "xp"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && $season.matches(/^[0-9]{6}$/)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
+        }
+      }
+    },
     "cups": {
       "$slot": {
         ".read": "auth != null",

@@ -4,7 +4,9 @@ import '../../engine/pastra_ai.dart';
 import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
+import '../../l10n/progress_strings.dart';
 import '../theme.dart';
+import 'progress_views.dart';
 
 /// Lifetime statistics and achievements of the local player.
 class StatsScreen extends StatelessWidget {
@@ -112,8 +114,9 @@ class StatsScreen extends StatelessWidget {
       ),
     );
 
+    final p = ProgressStrings(settings.language);
     return DefaultTabController(
-      length: 2,
+      length: 4,
       initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
@@ -129,16 +132,20 @@ class StatsScreen extends StatelessWidget {
             indicatorColor: PastraColors.gold,
             labelColor: PastraColors.gold,
             unselectedLabelColor: Colors.white70,
+            isScrollable: MediaQuery.sizeOf(context).width < 520,
+            tabAlignment: MediaQuery.sizeOf(context).width < 520 ? TabAlignment.start : null,
             tabs: <Widget>[
               Tab(text: s.statistics),
               Tab(text: s.achievements),
+              Tab(text: p.levelPath),
+              Tab(text: p.season),
             ],
           ),
         ),
         body: Felt(
           child: SafeArea(
             top: false,
-            child: TabBarView(children: <Widget>[statsBody, achievementsBody]),
+            child: TabBarView(children: <Widget>[statsBody, achievementsBody, const LevelPathView(), const SeasonView()]),
           ),
         ),
       ),

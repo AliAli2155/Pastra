@@ -8,8 +8,10 @@ import '../../game/economy.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
 import '../../online/leaderboard.dart';
+import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 
@@ -180,6 +182,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         width: 44,
                         height: 62,
                         child: PlayingCardView(card: 0, faceUp: false, backStyle: b),
+                      ),
+                    ),
+                ],
+              ),
+              label(ProgressStrings(settings.language).avatarFrame),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: <Widget>[
+                  for (final f in AvatarFrame.values)
+                    Tooltip(
+                      message: ProgressStrings(settings.language).frame(f),
+                      child: _Swatch(
+                        selected: settings.avatarFrame == f,
+                        lockedLevel: settings.isFrameUnlocked(f) ? null : Progression.levelForFrame(f),
+                        onTap: () => settings.avatarFrame = f,
+                        child: PlayerAvatar(
+                          name: settings.playerName.isEmpty ? s.you : settings.playerName,
+                          frame: f,
+                          size: 46,
+                        ),
                       ),
                     ),
                 ],

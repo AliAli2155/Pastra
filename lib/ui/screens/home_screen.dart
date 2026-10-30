@@ -7,9 +7,13 @@ import '../../engine/pastra_ai.dart';
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../game/game_controller.dart';
+import '../../online/leaderboard.dart';
+import '../../game/progression.dart';
+import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/fullscreen_button.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/menu_tiles.dart';
@@ -19,6 +23,8 @@ import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
 import 'play_screen.dart';
+import 'progress_views.dart';
+import 'quests_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
@@ -36,12 +42,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // The daily bonus greets the player once a day.
-    if (Economy.enabled) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showDailyBonusIfReady(context);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final settings = SettingsScope.read(context);
+      // Days in a row (achievements).
+      final fresh = settings.touchDay();
+      if (fresh.isNotEmpty) {
+        final s = Strings.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${s.achUnlocked}: ${fresh.map(s.achTitle).join(', ')}')),
+        );
+      }
+      // The daily bonus greets the player once a day.
+      if (Economy.enabled) await showDailyBonusIfReady(context);
+      // A season that ended: the final place and the badge.
+      final badge = await Leaderboard.finishPendingSeason(settings);
+      if (badge != null && mounted) await showSeasonResult(context, badge);
+    });
   }
 
   void _openStore() => _open(const StoreScreen());
@@ -174,9 +191,13 @@ class _HomeScreenState extends State<HomeScreen> {
         _PlayerCard(
           name: name,
           xp: settings.xp,
+          frame: settings.avatarFrame,
+          title: ProgressStrings(settings.language).title(settings.title),
           stats: settings.gamesPlayed > 0 ? s.stats(settings.gamesWon, settings.gamesPlayed) : null,
           onTap: () => _open(const StatsScreen()),
         ),
+        const SizedBox(height: 10),
+        _QuestsBar(onTap: () => _open(const QuestsScreen())),
       ],
     );
 
@@ -456,16 +477,24 @@ class _SuitWatermark extends StatelessWidget {
 
 /// The player's card on the home screen: initial, name, level and stats.
 class _PlayerCard extends StatelessWidget {
-  const _PlayerCard({required this.name, required this.xp, required this.onTap, this.stats});
+  const _PlayerCard({
+    required this.name,
+    required this.xp,
+    required this.onTap,
+    required this.frame,
+    required this.title,
+    this.stats,
+  });
 
   final String name;
   final int xp;
+  final AvatarFrame frame;
+  final String title;
   final String? stats;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty ? '?' : name.trim().characters.first.toUpperCase();
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -481,31 +510,33 @@ class _PlayerCard extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: <Color>[Color(0xFF2E7D5B), Color(0xFF0A4A30)],
-                  ),
-                ),
-                child: Text(initial, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-              ),
+              PlayerAvatar(name: name, frame: frame, size: 52),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
+                          ),
+                          child: Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 11, fontWeight: FontWeight.w800)),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     LevelBadge(xp: xp, width: 250),
@@ -745,6 +776,83 @@ class _CenteredDialog extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: child,
+      ),
+    );
+  }
+}
+
+/// Today's quests under the player card: progress and a dot when something
+/// can be collected.
+class _QuestsBar extends StatelessWidget {
+  const _QuestsBar({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final p = ProgressStrings(settings.language);
+    final quests = settings.quests;
+    final ready = settings.questsReady;
+    final done = quests.where((q) => q.claimed).length;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Ink(
+          width: 360,
+          padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: ready > 0 ? PastraColors.gold.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.32),
+            border: Border.all(color: PastraColors.gold.withValues(alpha: ready > 0 ? 0.9 : 0.35)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Badge(
+                isLabelVisible: ready > 0,
+                label: Text('$ready'),
+                child: const Icon(Icons.task_alt_rounded, color: PastraColors.gold, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(p.quests, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: <Widget>[
+                        for (final q in quests)
+                          Expanded(
+                            child: Container(
+                              height: 6,
+                              margin: const EdgeInsetsDirectional.only(end: 4),
+                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: Colors.white12),
+                              child: FractionallySizedBox(
+                                alignment: AlignmentDirectional.centerStart,
+                                widthFactor: (q.progress / q.def.goal).clamp(0.0, 1.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(3),
+                                    color: q.done ? PastraColors.gold : Colors.white54,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(p.questsCount(done), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+            ],
+          ),
+        ),
       ),
     );
   }

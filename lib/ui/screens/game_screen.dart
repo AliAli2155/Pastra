@@ -9,7 +9,9 @@ import '../../engine/pastra_engine.dart';
 import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
 import '../../game/game_controller.dart';
+import '../../game/quests.dart';
 import '../../l10n/online_strings.dart';
+import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
 import '../table_layout.dart';
 import '../theme.dart';
@@ -1146,9 +1148,16 @@ class _AchievementToast extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
-    final icon = kAchievements
-        .firstWhere((a) => a.id == id, orElse: () => const Achievement('?', Icons.emoji_events))
-        .icon;
+    // Daily quests use the same toast ("q:<quest id>").
+    final quest = id.startsWith(GameController.questToastPrefix)
+        ? Quests.byId(id.substring(GameController.questToastPrefix.length))
+        : null;
+    final p = ProgressStrings(s.lang);
+    final icon = quest != null
+        ? Icons.task_alt_rounded
+        : kAchievements.firstWhere((a) => a.id == id, orElse: () => const Achievement('?', Icons.emoji_events)).icon;
+    final header = quest != null ? p.questDone : s.achUnlocked;
+    final title = quest != null ? '${p.quest(quest)} · +${quest.xp} XP' : s.achTitle(id);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: const Duration(milliseconds: 2700),
@@ -1180,9 +1189,9 @@ class _AchievementToast extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(s.achUnlocked, style: const TextStyle(fontSize: 11, color: PastraColors.gold)),
+                Text(header, style: const TextStyle(fontSize: 11, color: PastraColors.gold)),
                 Text(
-                  s.achTitle(id),
+                  title,
                   style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w800),
                 ),
               ],

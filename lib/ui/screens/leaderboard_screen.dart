@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/seasons.dart';
 import '../../l10n/online_strings.dart';
+import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/leaderboard.dart';
 import '../../online/online_service.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 
 /// The best players by XP.
 class LeaderboardScreen extends StatefulWidget {
@@ -16,50 +19,109 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  Future<List<LeaderEntry>>? _future;
+  Future<void>? _submitted;
+  Future<List<LeaderEntry>>? _season;
+  Future<List<LeaderEntry>>? _all;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _load();
+    if (_submitted == null) _load();
   }
 
-  Future<List<LeaderEntry>> _load() async {
+  void _load() {
     final settings = SettingsScope.read(context);
     // Our own row first, so a new XP total shows up in the list.
-    await Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
-    return Leaderboard.top();
+    _submitted = Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
+    final season = settings.season;
+    _season = _submitted!.then((_) => Leaderboard.season(season));
+    _all = _submitted!.then((_) => Leaderboard.top());
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(_load);
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final t = OnlineStrings(settings.language);
+    final p = ProgressStrings(settings.language);
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(t.leaderboard),
+          actions: <Widget>[IconButton(icon: const Icon(Icons.refresh), onPressed: _reload)],
+          bottom: TabBar(
+            indicatorColor: PastraColors.gold,
+            labelColor: PastraColors.gold,
+            unselectedLabelColor: Colors.white70,
+            tabs: <Widget>[
+              Tab(text: p.seasonName(settings.season)),
+              Tab(text: p.allTimeTab),
+            ],
+          ),
+        ),
+        body: Felt(
+          child: SafeArea(
+            top: false,
+            child: TabBarView(
+              children: <Widget>[
+                _Board(
+                  future: _season,
+                  header: p.seasonEnds(p.duration(Seasons.timeLeft(DateTime.now()))),
+                  season: true,
+                ),
+                _Board(future: _all),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Board extends StatelessWidget {
+  const _Board({required this.future, this.header, this.season = false});
+
+  final Future<List<LeaderEntry>>? future;
+  final String? header;
+  final bool season;
 
   @override
   Widget build(BuildContext context) {
     final t = OnlineStrings(SettingsScope.of(context).language);
     final s = Strings.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(t.leaderboard),
-        actions: <Widget>[IconButton(icon: const Icon(Icons.refresh), onPressed: _reload)],
-      ),
-      body: Felt(
-        child: SafeArea(
-          top: false,
-          child: FutureBuilder<List<LeaderEntry>>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.hasError) {
-                return Center(
-                  child: Text(t.error('network'), style: const TextStyle(color: Colors.white70, fontSize: 16)),
-                );
-              }
-              final rows = snap.data ?? const <LeaderEntry>[];
-              if (rows.isEmpty) {
-                return Center(
-                  child: Padding(
+    return FutureBuilder<List<LeaderEntry>>(
+      future: future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snap.hasError) {
+          return Center(
+            child: Text(t.error('network'), style: const TextStyle(color: Colors.white70, fontSize: 16)),
+          );
+        }
+        final rows = snap.data ?? const <LeaderEntry>[];
+        final me = OnlineService.uid;
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                if (header != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      header!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                if (rows.isEmpty)
+                  Padding(
                     padding: const EdgeInsets.all(28),
                     child: Text(
                       t.leaderboardEmpty,
@@ -67,24 +129,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       style: const TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                   ),
-                );
-              }
-              final me = OnlineService.uid;
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: rows.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) => _Row(rank: i + 1, entry: rows[i], mine: rows[i].uid == me, t: t, s: s),
+                for (var i = 0; i < rows.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _Row(rank: i + 1, entry: rows[i], mine: rows[i].uid == me, t: t, s: s),
                   ),
-                ),
-              );
-            },
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -122,6 +176,8 @@ class _Row extends StatelessWidget {
                 : Text('$rank', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 16)),
           ),
           const SizedBox(width: 8),
+          PlayerAvatar(name: entry.name.isEmpty ? t.defaultName : entry.name, frame: entry.frame, size: 38),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

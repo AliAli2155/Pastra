@@ -11,6 +11,7 @@ import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
 import '../engine/rules.dart';
 import 'achievements.dart';
+import 'quests.dart';
 import 'app_settings.dart';
 import 'economy.dart';
 import 'online_link.dart';
@@ -216,6 +217,9 @@ class GameController extends ChangeNotifier {
   int? leftoverSeat;
 
   LastMove? lastMove;
+
+  /// Toasts of finished daily quests are `q:<quest id>`.
+  static const String questToastPrefix = 'q:';
 
   /// Achievement being announced right now (id), then the waiting ones.
   String? achievementToast;
@@ -537,7 +541,7 @@ class GameController extends ChangeNotifier {
       GameFacts? gameFacts;
       if (_state.phase == GamePhase.gameOver) {
         final won = _state.winner == ourTeam;
-        settings.recordGame(won: won, players: _state.numPlayers, level: seats[1].level);
+        settings.recordGame(won: won, players: _state.numPlayers, level: seats[1].level, online: link != null);
         final endXp = Progression.gameXp(won: won, level: seats[1].level);
         _gameXp += endXp;
         final lv = settings.addXp(endXp);
@@ -556,9 +560,25 @@ class GameController extends ChangeNotifier {
         SoundFx.instance.play(won ? Sfx.win : Sfx.lose);
         settings.clearSavedGame();
       }
-      _announce(settings.unlockAchievements(
-        earnedAchievements(settings.stats, round: roundFacts, game: gameFacts),
+      final over = gameFacts != null;
+      final questsDone = settings.questEvent(QuestEvent(
+        pastras: roundFacts.pastras,
+        jackPastras: roundFacts.jackPastras,
+        rounds: 1,
+        roundScore: roundFacts.score,
+        goodCards: roundFacts.goodCards,
+        gameOver: over,
+        won: gameFacts?.won ?? false,
+        online: link != null,
+        players: _state.numPlayers,
+        level: link == null ? seats[1].level : null,
       ));
+      _announce(<String>[
+        ...settings.unlockAchievements(
+          earnedAchievements(settings.stats, round: roundFacts, game: gameFacts),
+        ),
+        for (final id in questsDone) '$questToastPrefix$id',
+      ]);
       if (_state.phase != GamePhase.gameOver) _save();
       _busy = false;
       _notify();
@@ -950,6 +970,10 @@ class GameController extends ChangeNotifier {
           final xp = Progression.roundXp(pastras: 1, jackPastras: jack ? 1 : 0);
           _gameXp += xp;
           settings.addXp(xp);
+          _announce(<String>[
+            for (final id in settings.questEvent(QuestEvent(pastras: 1, jackPastras: jack ? 1 : 0)))
+              '$questToastPrefix$id',
+          ]);
         }
       }
     }
@@ -993,7 +1017,7 @@ class GameController extends ChangeNotifier {
   void _recordGuestGame() {
     if (!isGuest || xpGain != null) return;
     final won = _state.winner == 0;
-    settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium);
+    settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium, online: true);
     final amount = Progression.gameXp(won: won, level: AiLevel.medium);
     final lv = settings.addXp(amount);
     _gameXp += amount;
@@ -1001,6 +1025,13 @@ class GameController extends ChangeNotifier {
     xpGain = _gain(lv.after);
     settings.walletChanged();
     onGameFinished?.call(settings);
+    final questsDone = settings.questEvent(
+      QuestEvent(gameOver: true, won: won, online: true, players: _state.numPlayers),
+    );
+    _announce(<String>[
+      ...settings.unlockAchievements(earnedAchievements(settings.stats)),
+      for (final id in questsDone) '$questToastPrefix$id',
+    ]);
   }
 
   @override

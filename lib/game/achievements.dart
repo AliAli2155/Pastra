@@ -38,6 +38,17 @@ final List<Achievement> kAchievements = <Achievement>[
   Achievement('wins_25', Icons.military_tech, goal: 25, progress: (s) => s.wins),
   Achievement('pastras_25', Icons.workspace_premium_outlined, goal: 25, progress: (s) => s.pastras),
   Achievement('pastras_100', Icons.workspace_premium, goal: 100, progress: (s) => s.pastras),
+  Achievement('games_100', Icons.style, goal: 100, progress: (s) => s.games),
+  Achievement('streak_10', Icons.bolt, goal: 10, progress: (s) => s.bestStreak),
+  Achievement('pastras_250', Icons.auto_awesome_motion, goal: 250, progress: (s) => s.pastras),
+  Achievement('online_win', Icons.public, progress: (s) => s.onlineWins),
+  Achievement('online_10', Icons.language, goal: 10, progress: (s) => s.onlineWins),
+  Achievement('login_7', Icons.event_available, goal: 7, progress: (s) => s.loginBest),
+  Achievement('login_30', Icons.calendar_month, goal: 30, progress: (s) => s.loginBest),
+  Achievement('quests_10', Icons.task_alt, goal: 10, progress: (s) => s.questsDone),
+  Achievement('quests_50', Icons.assignment_turned_in, goal: 50, progress: (s) => s.questsDone),
+  Achievement('daily_all', Icons.verified, progress: (s) => s.perfectDays),
+  Achievement('season_top10', Icons.leaderboard, progress: (s) => s.seasonTop10),
 ];
 
 /// What happened in a finished round (from the local player's side).
