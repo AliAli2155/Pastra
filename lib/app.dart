@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'game/app_settings.dart';
 import 'l10n/strings.dart';
+import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/theme.dart';
 
@@ -35,7 +36,7 @@ class PastraApp extends StatelessWidget {
           // A large font setting on the phone may grow the text a little, but
           // not so much that buttons and cards overflow.
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
+            data: _withWebSafeArea(MediaQuery.of(context)).copyWith(
               textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15),
             ),
             child: CallbackShortcuts(
@@ -62,6 +63,24 @@ class PastraApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Web: the page fills the whole screen (behind the notch and the home bar
+/// too), so the felt reaches every edge. Flutter does not get the safe area
+/// from the browser; it is read from CSS and added here, and every SafeArea
+/// keeps the buttons and cards out of it. Read again whenever the size
+/// changes (turning the phone).
+MediaQueryData _withWebSafeArea(MediaQueryData data) {
+  if (!kIsWeb) return data;
+  final web = webSafeArea();
+  if (web == EdgeInsets.zero) return data;
+  EdgeInsets most(EdgeInsets a) => EdgeInsets.fromLTRB(
+        a.left > web.left ? a.left : web.left,
+        a.top > web.top ? a.top : web.top,
+        a.right > web.right ? a.right : web.right,
+        a.bottom > web.bottom ? a.bottom : web.bottom,
+      );
+  return data.copyWith(padding: most(data.padding), viewPadding: most(data.viewPadding));
 }
 
 /// The game is played sideways. Phones lock the orientation; a browser
