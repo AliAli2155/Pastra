@@ -589,15 +589,37 @@ class GameController extends ChangeNotifier {
     _runBot(seat);
   }
 
+  bool _timerPaused = false;
+
+  /// Offline: the countdown stops while the "leave?" question or the rules
+  /// are open (no card is played for the player meanwhile). Online games go on.
+  void pauseTurnTimer() {
+    if (link != null || _disposed) return;
+    _turnTimer?.cancel();
+    _turnTimer = null;
+    _warnTimer?.cancel();
+    _warnTimer = null;
+    _timerPaused = true;
+  }
+
+  /// Starts the countdown again (from the full time) after [pauseTurnTimer].
+  void resumeTurnTimer() {
+    if (!_timerPaused || _disposed) return;
+    _timerPaused = false;
+    if (!isHumanTurn) return;
+    _beginTurn(sound: false);
+    _notify();
+  }
+
   /// A new turn: restart the countdown. When the human runs out of time a
   /// card is played for them (the selected one, or a sensible choice).
-  void _beginTurn() {
+  void _beginTurn({bool sound = true}) {
     turnId++;
     _turnTimer?.cancel();
     _turnTimer = null;
     _warnTimer?.cancel();
     _warnTimer = null;
-    if (seats[_state.current].isHuman) SoundFx.instance.play(Sfx.turn, volume: 0.7);
+    if (sound && seats[_state.current].isHuman) SoundFx.instance.play(Sfx.turn, volume: 0.7);
     final limit = turnLimit;
     if (limit == null || seats[_state.current].isBot) return;
     if (limit.inSeconds > 5) {

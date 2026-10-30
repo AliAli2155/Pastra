@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../engine/rules.dart';
@@ -22,6 +25,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _name = TextEditingController();
   bool _nameLoaded = false;
 
+  /// Web: the language list is drawn again once the fonts for Arabic and
+  /// Chinese have arrived (text drawn before stays garbled).
+  int _fontPass = 0;
+  final List<Timer> _fontTimers = <Timer>[];
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      for (final ms in const <int>[800, 2500]) {
+        _fontTimers.add(Timer(Duration(milliseconds: ms), () {
+          if (mounted) setState(() => _fontPass++);
+        }));
+      }
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -33,6 +53,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    for (final t in _fontTimers) {
+      t.cancel();
+    }
     _name.dispose();
     super.dispose();
   }
@@ -78,6 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: <Widget>[
               section(s.language),
               Wrap(
+                key: ValueKey<int>(_fontPass),
                 spacing: 8,
                 runSpacing: 8,
                 children: <Widget>[

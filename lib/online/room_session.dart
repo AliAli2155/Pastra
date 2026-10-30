@@ -425,7 +425,9 @@ class HostRoom implements OnlineLink {
     _closed = true;
     if (isPublic) {
       watcher.removeListener(_syncLobby);
-      _unlist();
+      // A started game was unlisted already (removing the entry again is
+      // refused by the database rules: it no longer exists).
+      if (!_started) _unlist();
     }
     controller?.removeListener(_onChange);
     for (final s in _moveSubs) {

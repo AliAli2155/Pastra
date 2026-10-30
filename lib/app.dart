@@ -45,6 +45,12 @@ class PastraApp extends StatelessWidget {
               child: Stack(
                 textDirection: TextDirection.ltr,
                 children: <Widget>[
+                  // Web: the browser fetches the fonts for Arabic and Chinese
+                  // only when such text is first laid out, and text drawn
+                  // before they arrive stays garbled (the language list in
+                  // the settings). Laying out a hidden sample at the start
+                  // loads them early.
+                  if (kIsWeb) const Offstage(child: Text('العربية 中文 Ελληνικά Български')),
                   child ?? const SizedBox.shrink(),
                   if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
                 ],
@@ -62,6 +68,9 @@ class PastraApp extends StatelessWidget {
 /// cannot, so on the web a phone held upright gets this hint.
 bool _isPortraitPhone(BuildContext context) {
   if (!kIsWeb) return false;
+  // Only phones: a narrow browser window on a computer just gets the
+  // upright layout (like a tablet held upright).
+  if (defaultTargetPlatform != TargetPlatform.android && defaultTargetPlatform != TargetPlatform.iOS) return false;
   final size = MediaQuery.sizeOf(context);
   return size.height > size.width && size.shortestSide < 700;
 }

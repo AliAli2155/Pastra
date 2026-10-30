@@ -219,6 +219,25 @@
       }
     };
   </script>
+  <script>
+    // Keep the screen on while the game is open (the phone would otherwise
+    // dim and lock during the other players' turns). Needs a tap first, and
+    // is asked again when the page comes back to the front.
+    (function () {
+      var lock = null;
+      function keepAwake() {
+        if (!('wakeLock' in navigator) || lock || document.visibilityState !== 'visible') return;
+        navigator.wakeLock.request('screen').then(function (l) {
+          lock = l;
+          l.addEventListener('release', function () { lock = null; });
+        }).catch(function () {});
+      }
+      ['pointerdown', 'touchend', 'keydown'].forEach(function (name) {
+        document.addEventListener(name, keepAwake, { passive: true });
+      });
+      document.addEventListener('visibilitychange', keepAwake);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

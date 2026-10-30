@@ -178,18 +178,26 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
     final s = Strings.of(context);
+    c.pauseTurnTimer();
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(s.leaveTitle),
-        content: Text(c.tournament ? s.leaveMatchBody : s.leaveBody),
+        content: Text(
+          c.isOnline
+              ? OnlineStrings(c.settings.language).leaveOnline
+              : (c.tournament ? s.leaveMatchBody : s.leaveBody),
+        ),
         actions: <Widget>[
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(s.cancel)),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(s.leave)),
         ],
       ),
     );
-    if (leave != true || !mounted) return;
+    if (leave != true || !mounted) {
+      c.resumeTurnTimer();
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -229,9 +237,13 @@ class _GameScreenState extends State<GameScreen> {
                       state: c.state,
                       teamNames: _teamNames(s),
                       onBack: _requestLeave,
-                      onRules: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => RulesScreen(variant: c.state.rules.variant)),
-                      ),
+                      onRules: () async {
+                        c.pauseTurnTimer();
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(builder: (_) => RulesScreen(variant: c.state.rules.variant)),
+                        );
+                        c.resumeTurnTimer();
+                      },
                     ),
                     // Own layer: moving cards never repaint the felt or the top bar.
                     Expanded(child: RepaintBoundary(child: _buildTable(context, s))),

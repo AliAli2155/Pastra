@@ -252,10 +252,10 @@ class _CupScreenState extends State<CupScreen> {
         ];
         final c = GameController.cupLocal(settings, seats: seats, rules: rules);
         await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: c)));
+        // Left before the end: the match starts over with "Play match" (it
+        // is not launched again by itself, or the player could never leave).
         if (c.state.phase == GamePhase.gameOver) {
           await CupService.report(key, m.id, c.state.winner == 0 ? me : opp);
-        } else {
-          _launched.remove(m.id);
         }
         return;
       }
@@ -341,8 +341,10 @@ class _CupScreenState extends State<CupScreen> {
       _clearActive(retry: false);
       return;
     }
-    // Back on this screen without a finished game: the match was left.
-    if (ModalRoute.of(context)?.isCurrent ?? false) _clearActive(retry: true);
+    // Back on this screen without a finished game: the match was left. It is
+    // not opened again by itself (the player chose to leave); "Play match"
+    // goes back in.
+    if (ModalRoute.of(context)?.isCurrent ?? false) _clearActive(retry: false);
   }
 
   void _clearActive({required bool retry}) {
