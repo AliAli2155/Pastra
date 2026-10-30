@@ -14,6 +14,7 @@ import '../widgets/fullscreen_button.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/rules_editor.dart';
 import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
@@ -648,7 +649,6 @@ class _NewGameSheetState extends State<NewGameSheet> {
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
-    final rules = SettingsScope.of(context).rules;
     const labelStyle = TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w700);
     final players = Row(
       children: <Widget>[
@@ -713,11 +713,9 @@ class _NewGameSheetState extends State<NewGameSheet> {
             const SizedBox(height: 6),
             levels,
             SizedBox(height: gap),
-            Text(
-              s.targetInfo(rules.variant, rules.targetScore, rules.cardsPerDeal),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
+            // The rules of the game (target, cards per deal, …): changed here,
+            // not in the general settings.
+            const RulesButton(),
             SizedBox(height: gap),
             BigButton(
               icon: Icons.play_arrow_rounded,

@@ -13,6 +13,7 @@ import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
 import '../widgets/menu_tiles.dart';
+import '../widgets/rules_editor.dart';
 import '../widgets/wallet_bar.dart';
 import 'cup_hub_screen.dart';
 import 'game_screen.dart';
@@ -403,15 +404,24 @@ class _OnlineScreenState extends State<OnlineScreen> {
         title: t.createRoom,
         trailing: _visibilityPill(t),
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Expanded(
-              child: BigButton(icon: Icons.person, label: s.mode1v1, onPressed: _busy ? null : () => _create(2)),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: BigButton(icon: Icons.person, label: s.mode1v1, onPressed: _busy ? null : () => _create(2)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: BigButton(icon: Icons.groups, label: s.mode2v2, onPressed: _busy ? null : () => _create(4)),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: BigButton(icon: Icons.groups, label: s.mode2v2, onPressed: _busy ? null : () => _create(4)),
-            ),
+            const SizedBox(height: 8),
+            // The rules of the room's game (the host's choice).
+            RulesButton(enabled: !_busy),
           ],
         ),
       );

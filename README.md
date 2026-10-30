@@ -23,8 +23,10 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
   so you can continue later.
 - **Two game variants:** *Stoiva* (default, the Greek Xeri style: one pile, only the top card is
   visible) and *Athroismata* (the Cypriot capture-by-sum style).
-- **Settings:** target score (51 / 101 / 151 / 251), 4 or 6 cards per deal, jack-on-jack points,
-  whether a jack taking a single card counts as a pastra, pastra on the last card.
+- **Game rules** (set before a game, from *Play*: the new offline game and the new online room):
+  variant, target score (51 / 101 / 151 / 251), 4 or 6 cards per deal, jack-on-jack points,
+  whether a jack taking a single card counts as a pastra, pastra on the last card, time per move.
+  The main *Settings* keep only general options (language, name, colours, sound).
 - **Statistics and achievements**, table and card-back colors, real card sounds.
 - **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
 - **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. New table and card-back colors unlock at certain levels.
