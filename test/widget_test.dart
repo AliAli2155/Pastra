@@ -2,9 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/game/app_settings.dart';
 import 'package:pastra/ui/widgets/playing_card.dart';
+import 'package:pastra/ui/widgets/wallet_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // The daily bonus dialog would cover the home screen.
+  dailyBonusAutoShow = false;
+
   testWidgets('home screen in Greek', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{'language': 'el', 'sound': false});
     final settings = await AppSettings.load();

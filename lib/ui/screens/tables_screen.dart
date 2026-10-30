@@ -5,6 +5,7 @@ import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/lobby.dart';
 import '../theme.dart';
+import '../widgets/wallet_bar.dart';
 
 /// The open tables of the lobby. Tapping one closes this screen and returns
 /// the room code, the caller joins it.
@@ -109,6 +110,10 @@ class _TableTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (table.stake > 0) ...<Widget>[
+                Amount(chips: table.stake, size: 14),
+                const SizedBox(width: 12),
+              ],
               Text(
                 '${table.joined}/${table.players}',
                 style: const TextStyle(color: PastraColors.gold, fontSize: 18, fontWeight: FontWeight.w900),

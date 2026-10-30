@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/economy.dart';
 import '../../l10n/online_strings.dart';
+import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
 import '../widgets/menu_tiles.dart';
+import '../widgets/wallet_bar.dart';
 import 'cup_hub_screen.dart';
 import 'game_screen.dart';
 import 'leaderboard_screen.dart';
+import 'store_screen.dart';
 import 'tables_screen.dart';
 
 /// Create a room or join one with its 4-digit code.
@@ -58,6 +62,34 @@ class _OnlineScreenState extends State<OnlineScreen> {
     super.dispose();
   }
 
+  /// The error text for an online problem (chips and level from the store texts).
+  String _errText(AppSettings settings, String code) {
+    final shop = ShopStrings(settings.language);
+    return switch (code) {
+      'chips' => shop.notEnough,
+      'level' => shop.levelTooLow,
+      _ => OnlineStrings(settings.language).error(code),
+    };
+  }
+
+  /// The chosen salon, or null (and an error) when the player may not sit there.
+  Salon? _salonOrError(AppSettings settings) {
+    // Until the store versions: every table is free.
+    if (!Economy.enabled) return Economy.salons.first;
+    final salon = Economy.salonFor(settings.salonStake);
+    if (settings.playerLevel < salon.minLevel) {
+      setState(() => _error = _errText(settings, 'level'));
+      return null;
+    }
+    if (settings.chips < salon.stake) {
+      setState(() => _error = _errText(settings, 'chips'));
+      return null;
+    }
+    return salon;
+  }
+
+  void _openStore() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StoreScreen()));
+
   String _playerName(OnlineStrings t) {
     final name = _name.text.trim();
     return name.isEmpty ? t.defaultName : name;
@@ -68,12 +100,21 @@ class _OnlineScreenState extends State<OnlineScreen> {
     final t = OnlineStrings(settings.language);
     final name = _playerName(t);
     settings.playerName = _name.text.trim();
+    final salon = _salonOrError(settings);
+    if (salon == null) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final room = await HostRoom.create(settings, players: players, level: settings.level, name: name, public: _public);
+      final room = await HostRoom.create(
+        settings,
+        players: players,
+        level: settings.level,
+        name: name,
+        public: _public,
+        stake: salon.stake,
+      );
       if (!mounted) {
         room.close();
         return;
@@ -83,7 +124,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
         MaterialPageRoute<void>(builder: (_) => LobbyScreen(host: room)),
       );
     } on OnlineException catch (e) {
-      if (mounted) setState(() => _error = t.error(e.code));
+      if (mounted) setState(() => _error = _errText(settings, e.code));
     } catch (_) {
       if (mounted) setState(() => _error = t.error('network'));
     }
@@ -121,7 +162,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
         MaterialPageRoute<void>(builder: (_) => LobbyScreen(guest: room)),
       );
     } on OnlineException catch (e) {
-      if (mounted) setState(() => _error = t.error(e.code));
+      if (mounted) setState(() => _error = _errText(settings, e.code));
     } catch (_) {
       if (mounted) setState(() => _error = t.error('network'));
     }
@@ -140,13 +181,15 @@ class _OnlineScreenState extends State<OnlineScreen> {
     final t = OnlineStrings(settings.language);
     final name = _playerName(t);
     settings.playerName = _name.text.trim();
+    final salon = _salonOrError(settings);
+    if (salon == null) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       GuestRoom? guest;
-      final tables = Lobby.forQuickMatch(await Lobby.list());
+      final tables = Lobby.forQuickMatch(await Lobby.list(), stake: salon.stake);
       for (final table in tables) {
         try {
           guest = await GuestRoom.join(table.code, settings, name);
@@ -170,6 +213,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
           name: name,
           public: true,
           autoStart: true,
+          stake: salon.stake,
         );
         if (!mounted) {
           room.close();
@@ -179,7 +223,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
         await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => LobbyScreen(host: room)));
       }
     } on OnlineException catch (e) {
-      if (mounted) setState(() => _error = t.error(e.code));
+      if (mounted) setState(() => _error = _errText(settings, e.code));
     } catch (_) {
       if (mounted) setState(() => _error = t.error('network'));
     }
@@ -236,7 +280,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       body = LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth >= 640;
-          return wide ? _wide(t, s) : _narrow(t, s, nameInput(compact: false));
+          return wide ? _wide(t, s, settings) : _narrow(t, s, settings, nameInput(compact: false));
         },
       );
     }
@@ -245,6 +289,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
       appBar: AppBar(
         title: Text(t.online, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: <Widget>[
+          if (Economy.enabled)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Center(child: WalletBar(onTap: _openStore, compact: true)),
+            ),
           if (showNameInBar)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
@@ -421,16 +470,20 @@ class _OnlineScreenState extends State<OnlineScreen> {
         );
 
   /// Landscape (phones held sideways, tablets, desktop): three columns.
-  Widget _wide(OnlineStrings t, Strings s) {
+  Widget _wide(OnlineStrings t, Strings s, AppSettings settings) {
     final error = _errorText();
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 460),
+        constraints: BoxConstraints(maxWidth: 1100, maxHeight: Economy.enabled ? 560 : 460),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              if (Economy.enabled) ...<Widget>[
+                _salonBar(settings),
+                const SizedBox(height: 10),
+              ],
               Expanded(child: _wideRow(t, s)),
               if (error != null) error,
             ],
@@ -484,7 +537,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
           );
 
   /// Portrait: everything in one column.
-  Widget _narrow(OnlineStrings t, Strings s, Widget nameField) {
+  Widget _narrow(OnlineStrings t, Strings s, AppSettings settings, Widget nameField) {
     final error = _errorText();
     return Center(
       child: SingleChildScrollView(
@@ -496,7 +549,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               nameField,
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
+              if (Economy.enabled) ...<Widget>[
+                _salonBar(settings),
+                const SizedBox(height: 10),
+              ],
               SizedBox(height: 150, child: _quickTile(t)),
               const SizedBox(height: 12),
               SizedBox(height: 110, child: _cupTile(t)),
@@ -521,6 +578,60 @@ class _OnlineScreenState extends State<OnlineScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// The salons (entry fees) for quick match and new tables, and what the
+  /// winner gets in the chosen one.
+  Widget _salonBar(AppSettings settings) {
+    final shop = ShopStrings(settings.language);
+    final chosen = Economy.salonFor(settings.salonStake);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SizedBox(
+          height: 62,
+          child: Center(
+            child: ListView(
+              shrinkWrap: true,
+              scrollDirection: Axis.horizontal,
+              children: <Widget>[
+                for (final salon in Economy.salons)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _SalonChip(
+                      salon: salon,
+                      shop: shop,
+                      selected: salon.stake == chosen.stake,
+                      locked: settings.playerLevel < salon.minLevel,
+                      short: settings.chips < salon.stake,
+                      onTap: _busy
+                          ? null
+                          : () => setState(() {
+                                settings.salonStake = salon.stake;
+                                _error = null;
+                              }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Tooltip(
+          message: shop.salonHint,
+          child: Text(
+            chosen.free
+                ? '${shop.salonName(chosen)} · ${shop.free}'
+                : '${shop.entry(Economy.group(chosen.stake))} · ${shop.pot(Economy.group(Economy.payout(chosen.stake)))}',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
 
@@ -714,7 +825,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ],
                 ),
               );
+              final stake = widget.host?.stake ?? widget.guest!.stake;
               final actions = <Widget>[
+                if (stake > 0) ...<Widget>[
+                  _StakeBadge(stake: stake, shop: ShopStrings(SettingsScope.of(context).language)),
+                  const SizedBox(height: 12),
+                ],
                 if (isHost && quick) ...<Widget>[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -854,6 +970,135 @@ class _LobbyScreenState extends State<LobbyScreen> {
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// One salon: its name and entry fee; locked below its level.
+class _SalonChip extends StatelessWidget {
+  const _SalonChip({
+    required this.salon,
+    required this.shop,
+    required this.selected,
+    required this.locked,
+    required this.short,
+    required this.onTap,
+  });
+
+  final Salon salon;
+  final ShopStrings shop;
+  final bool selected;
+
+  /// The player's level is too low.
+  final bool locked;
+
+  /// Not enough chips (still selectable; the store gives more).
+  final bool short;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final vip = salon.id == 'vip';
+    return Opacity(
+      opacity: locked ? 0.5 : (short ? 0.75 : 1),
+      child: Material(
+        color: selected ? PastraColors.gold.withValues(alpha: 0.22) : Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: locked ? null : onTap,
+          child: Container(
+            width: 112,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selected ? PastraColors.gold : (vip ? diamondColor.withValues(alpha: 0.7) : Colors.white24),
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    shop.salonName(salon),
+                    style: TextStyle(
+                      color: selected ? PastraColors.gold : Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: locked
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(Icons.lock_rounded, size: 14, color: Colors.white70),
+                            const SizedBox(width: 3),
+                            Text(shop.fromLevel(salon.minLevel), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        )
+                      : salon.free
+                          ? Text(shop.free, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700))
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const ChipIcon(size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  Economy.short(salon.stake),
+                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The entry fee and the prize of the table (waiting room).
+class _StakeBadge extends StatelessWidget {
+  const _StakeBadge({required this.stake, required this.shop});
+
+  final int stake;
+  final ShopStrings shop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const ChipIcon(size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                '${shop.salonName(Economy.salonFor(stake))} · ${shop.entry(Economy.group(stake))} · ${shop.pot(Economy.group(Economy.payout(stake)))}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

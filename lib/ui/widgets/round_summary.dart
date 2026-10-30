@@ -5,6 +5,7 @@ import '../../engine/rules.dart';
 import '../../game/progression.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import 'wallet_bar.dart';
 
 /// End-of-round (and end-of-game) score sheet shown over the table.
 class RoundSummaryPanel extends StatelessWidget {
@@ -260,6 +261,23 @@ class _XpLine extends StatelessWidget {
           '+${gain.amount} XP',
           style: const TextStyle(color: PastraColors.gold, fontSize: 20, fontWeight: FontWeight.w900),
         ),
+        if (gain.chips != 0 || gain.diamonds != 0) ...<Widget>[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 14,
+            alignment: WrapAlignment.center,
+            children: <Widget>[
+              if (gain.chips != 0)
+                Amount(
+                  chips: gain.chips,
+                  size: 18,
+                  sign: true,
+                  color: gain.chips > 0 ? Colors.white : const Color(0xFFFFB4A9),
+                ),
+              if (gain.diamonds != 0) Amount(diamonds: gain.diamonds, size: 18, sign: true, color: diamondColor),
+            ],
+          ),
+        ],
         if (gain.leveledUp) ...<Widget>[
           const SizedBox(height: 6),
           Container(

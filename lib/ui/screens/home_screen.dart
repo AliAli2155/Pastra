@@ -5,19 +5,23 @@ import 'package:flutter/material.dart';
 import '../../engine/cards.dart';
 import '../../engine/pastra_ai.dart';
 import '../../game/app_settings.dart';
+import '../../game/economy.dart';
 import '../../game/game_controller.dart';
+import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/fullscreen_button.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
 import 'play_screen.dart';
 import 'rules_screen.dart';
 import 'settings_screen.dart';
 import 'stats_screen.dart';
+import 'store_screen.dart';
 import 'tournament_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,6 +32,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The daily bonus greets the player once a day.
+    if (Economy.enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showDailyBonusIfReady(context);
+      });
+    }
+  }
+
+  void _openStore() => _open(const StoreScreen());
+
   Future<void> _open(Widget screen) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
     if (mounted) setState(() {});
@@ -178,6 +195,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          if (Economy.enabled) ...<Widget>[
+            _SlideIn(
+              order: 1,
+              child: _MenuButton(
+                icon: Icons.storefront_rounded,
+                label: ShopStrings(settings.language).store,
+                onTap: _openStore,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           _SlideIn(
             order: 1,
             child: _MenuButton(icon: Icons.menu_book_rounded, label: s.rules, onTap: () => _open(const RulesScreen())),
@@ -209,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (!wide) {
                       return Center(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
+                          padding: EdgeInsets.fromLTRB(24, Economy.enabled ? 60 : 24, 24, 80),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 440),
                             child: Column(
@@ -254,6 +282,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
+              ),
+            ),
+            // Chips and diamonds in the top-left corner (opens the store).
+            if (Economy.enabled)
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: Padding(padding: const EdgeInsets.all(8), child: WalletBar(onTap: _openStore)),
               ),
             ),
             // Full screen button in the top-right corner (web version).

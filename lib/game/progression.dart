@@ -97,9 +97,20 @@ class Progression {
 
 /// What one game gave the local player.
 class GameXp {
-  const GameXp({required this.amount, required this.levelBefore, required this.levelAfter});
+  const GameXp({
+    required this.amount,
+    required this.levelBefore,
+    required this.levelAfter,
+    this.chips = 0,
+    this.diamonds = 0,
+  });
 
   final int amount;
+
+  /// Change of the chip and diamond balance in this game (entry fee, pot,
+  /// rewards for a new level).
+  final int chips;
+  final int diamonds;
   final int levelBefore;
   final int levelAfter;
 

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/rules.dart';
 import '../ui/theme.dart';
+import 'economy.dart';
 import 'progression.dart';
 import 'sound.dart';
 
@@ -107,6 +108,14 @@ class AppSettings extends ChangeNotifier {
   static const String _kTournament = 'tournament';
   static const String _kLeaderboard = 'showOnLeaderboard';
   static const String _kCupPaid = 'cupBonusKeys';
+  static const String _kChips = 'chips';
+  static const String _kDiamonds = 'diamonds';
+  static const String _kDailyDay = 'dailyDay';
+  static const String _kDailyStreak = 'dailyStreak';
+  static const String _kFreeAt = 'freeChipsAt';
+  static const String _kOwned = 'ownedItems';
+  static const String _kSalon = 'salon';
+  static const String _kCupFees = 'cupFeeKeys';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -126,6 +135,9 @@ class AppSettings extends ChangeNotifier {
   bool _tutorialDone = false;
   int _xp = 0;
   bool _showOnLeaderboard = true;
+  int _chips = Economy.startChips;
+  int _diamonds = Economy.startDiamonds;
+  Set<String> _owned = <String>{};
 
   /// Unlocked achievement id → when (milliseconds since epoch).
   Map<String, int> _achievements = <String, int>{};
@@ -207,9 +219,19 @@ class AppSettings extends ChangeNotifier {
       _xp = Progression.backfill(games: _stats.games, wins: _stats.wins, pastras: _stats.pastras);
       _prefs.setInt(_kXp, _xp);
     }
+    final chips = _prefs.getInt(_kChips);
+    if (chips == null) {
+      // First start with chips (also players from before chips existed).
+      _prefs.setInt(_kChips, _chips);
+      _prefs.setInt(_kDiamonds, _diamonds);
+    } else {
+      _chips = chips < 0 ? 0 : chips;
+      _diamonds = (_prefs.getInt(_kDiamonds) ?? 0).clamp(0, 999999999);
+    }
+    _owned = (_prefs.getStringList(_kOwned) ?? const <String>[]).toSet();
     // A colour that is still locked (e.g. an old save) falls back to the default.
-    if (Progression.levelFor(Look.table) > playerLevel) Look.table = TableTheme.green;
-    if (Progression.levelForBack(Look.back) > playerLevel) Look.back = CardBackStyle.aegean;
+    if (!isUnlocked(Look.table)) Look.table = TableTheme.green;
+    if (!isBackUnlocked(Look.back)) Look.back = CardBackStyle.aegean;
   }
 
   String get language => _language;
@@ -255,18 +277,137 @@ class AppSettings extends ChangeNotifier {
   int get xp => _xp;
   int get playerLevel => Progression.levelOf(_xp);
 
-  bool isUnlocked(TableTheme t) => Progression.levelFor(t) <= playerLevel;
-  bool isBackUnlocked(CardBackStyle b) => Progression.levelForBack(b) <= playerLevel;
+  /// Level colours unlock with the level; store colours when bought.
+  bool isUnlocked(TableTheme t) {
+    final item = Economy.itemForTable(t);
+    return item != null ? owns(item.id) : Progression.levelFor(t) <= playerLevel;
+  }
 
-  /// Adds experience points; returns the level before and after. Does not
-  /// notify (called during games; screens read the value when they build).
+  bool isBackUnlocked(CardBackStyle b) {
+    final item = Economy.itemForBack(b);
+    return item != null ? owns(item.id) : Progression.levelForBack(b) <= playerLevel;
+  }
+
+  /// Adds experience points; returns the level before and after. Every new
+  /// level also gives chips and diamonds. Does not notify (called during
+  /// games; screens read the value when they build).
   ({int before, int after}) addXp(int amount) {
     final before = playerLevel;
     if (amount > 0) {
       _xp += amount;
       _prefs.setInt(_kXp, _xp);
     }
-    return (before: before, after: playerLevel);
+    final after = playerLevel;
+    for (var l = before + 1; Economy.enabled && l <= after; l++) {
+      _chips += Economy.levelUpChips(l);
+      _diamonds += Economy.levelUpDiamonds;
+    }
+    if (Economy.enabled && after > before) _saveWallet();
+    return (before: before, after: after);
+  }
+
+  // ---- chips and diamonds (see Economy)
+
+  int get chips => _chips;
+  int get diamonds => _diamonds;
+
+  void _saveWallet() {
+    _prefs.setInt(_kChips, _chips);
+    _prefs.setInt(_kDiamonds, _diamonds);
+  }
+
+  /// Tells the screens that the balances changed (not during a game move).
+  void walletChanged() => notifyListeners();
+
+  /// Adds (or with a negative amount removes) chips and diamonds.
+  /// [notify] = false during a game.
+  void addWallet({int chips = 0, int diamonds = 0, bool notify = true}) {
+    _chips = (_chips + chips).clamp(0, 999999999999);
+    _diamonds = (_diamonds + diamonds).clamp(0, 999999999);
+    _saveWallet();
+    if (notify) notifyListeners();
+  }
+
+  /// Pays [chips] / [diamonds] if the balance allows it.
+  bool spend({int chips = 0, int diamonds = 0, bool notify = true}) {
+    if (chips > _chips || diamonds > _diamonds) return false;
+    addWallet(chips: -chips, diamonds: -diamonds, notify: notify);
+    return true;
+  }
+
+  bool owns(String itemId) => _owned.contains(itemId);
+
+  /// Buys a store item; false when it is owned already or too expensive.
+  bool buy(ShopItem item) {
+    if (owns(item.id) || !spend(chips: item.chips, diamonds: item.diamonds, notify: false)) return false;
+    _owned.add(item.id);
+    _prefs.setStringList(_kOwned, _owned.toList());
+    notifyListeners();
+    return true;
+  }
+
+  /// Diamonds → chips.
+  bool exchange(Exchange e) {
+    if (!spend(diamonds: e.diamonds, notify: false)) return false;
+    addWallet(chips: e.chips);
+    return true;
+  }
+
+  /// The daily bonus streak (days in a row it was claimed).
+  int get dailyStreak => _prefs.getInt(_kDailyStreak) ?? 0;
+
+  /// The streak claiming today would give (null = already claimed today).
+  int? dailyNext(DateTime now) => Economy.nextStreak(
+        lastDay: _prefs.getInt(_kDailyDay) ?? -1,
+        streak: dailyStreak,
+        today: Economy.dayNumber(now),
+      );
+
+  /// Claims today's bonus; returns what it gave (null = claimed already).
+  ({int chips, int diamonds, int day})? claimDaily(DateTime now) {
+    final streak = dailyNext(now);
+    if (streak == null) return null;
+    _prefs.setInt(_kDailyDay, Economy.dayNumber(now));
+    _prefs.setInt(_kDailyStreak, streak);
+    final chips = Economy.dailyReward(streak);
+    final diamonds = Economy.dailyDiamonds(streak);
+    addWallet(chips: chips, diamonds: diamonds);
+    return (chips: chips, diamonds: diamonds, day: Economy.streakDay(streak));
+  }
+
+  /// When the next free chips can be taken.
+  DateTime get freeChipsAt => DateTime.fromMillisecondsSinceEpoch(_prefs.getInt(_kFreeAt) ?? 0);
+
+  /// Takes the free chips; returns how many (0 = not yet).
+  int claimFreeChips(DateTime now) {
+    if (now.isBefore(freeChipsAt)) return 0;
+    final amount = Economy.freeChipsFor(_chips);
+    _prefs.setInt(_kFreeAt, now.add(Economy.freeChipsEvery).millisecondsSinceEpoch);
+    addWallet(chips: amount);
+    return amount;
+  }
+
+  /// The salon (stake) picked for online tables.
+  int get salonStake {
+    final stake = _prefs.getInt(_kSalon) ?? Economy.salons[1].stake;
+    return Economy.salons.any((s) => s.stake == stake) ? stake : Economy.salons[1].stake;
+  }
+
+  set salonStake(int value) {
+    _prefs.setInt(_kSalon, value);
+    notifyListeners();
+  }
+
+  /// Whether the player may sit at a table of this salon.
+  bool canSit(Salon salon) => playerLevel >= salon.minLevel && _chips >= salon.stake;
+
+  /// Online cups whose entry fee was paid (to give it back on leaving).
+  bool cupFeePaid(String key) => (_prefs.getStringList(_kCupFees) ?? const <String>[]).contains(key);
+
+  void setCupFeePaid(String key, bool paid) {
+    final list = <String>[...(_prefs.getStringList(_kCupFees) ?? const <String>[])]..remove(key);
+    if (paid) list.add(key);
+    _prefs.setStringList(_kCupFees, list.length > 20 ? list.sublist(list.length - 20) : list);
   }
 
   set tableTheme(TableTheme value) {

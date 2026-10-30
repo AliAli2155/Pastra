@@ -15,6 +15,7 @@ class OpenTable {
     required this.joined,
     required this.level,
     required this.created,
+    this.stake = 0,
   });
 
   final String code;
@@ -26,6 +27,9 @@ class OpenTable {
 
   /// Milliseconds since epoch.
   final int created;
+
+  /// Entry fee in chips (0 = a friendly table).
+  final int stake;
 
   int get free => players - joined;
 
@@ -57,6 +61,7 @@ class OpenTable {
           joined: joined,
           level: AiLevel.values.firstWhere((l) => l.name == levelName, orElse: () => AiLevel.medium),
           created: created,
+          stake: (raw['stake'] as num?)?.toInt() ?? 0,
         ),
       );
     });
@@ -94,9 +99,11 @@ class Lobby {
     }
   }
 
-  /// The best table for a quick match: 1v1 before 2v2, then the one with
-  /// the fewest free seats (it starts soonest), then the newest.
-  static List<OpenTable> forQuickMatch(List<OpenTable> tables) => tables.toList()
+  /// The best table for a quick match: only tables of the chosen salon
+  /// ([stake]), 1v1 before 2v2, then the one with the fewest free seats (it
+  /// starts soonest), then the newest.
+  static List<OpenTable> forQuickMatch(List<OpenTable> tables, {int? stake}) =>
+      tables.where((t) => stake == null || t.stake == stake).toList()
     ..sort((a, b) {
       if (a.players != b.players) return a.players.compareTo(b.players);
       if (a.free != b.free) return a.free.compareTo(b.free);

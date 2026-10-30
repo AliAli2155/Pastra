@@ -11,6 +11,7 @@ import '../engine/pastra_engine.dart';
 import '../engine/perspective.dart';
 import '../engine/rules.dart';
 import '../game/app_settings.dart';
+import '../game/economy.dart';
 import '../game/game_controller.dart';
 import '../game/online_link.dart';
 import '../game/seats.dart';
@@ -145,9 +146,15 @@ class HostRoom implements OnlineLink {
     this._presence, {
     this.isPublic = false,
     this.autoStart = false,
+    this.stake = 0,
   }) {
     if (isPublic) watcher.addListener(_syncLobby);
   }
+
+  /// Entry fee of the table (its salon), paid by everybody when the game
+  /// starts.
+  @override
+  final int stake;
 
   /// Listed in the lobby (open tables), so anybody can join.
   final bool isPublic;
@@ -250,7 +257,9 @@ class HostRoom implements OnlineLink {
     required String name,
     bool public = false,
     bool autoStart = false,
+    int stake = 0,
   }) async {
+    if (stake > settings.chips) throw const OnlineException('chips');
     final rnd = Random.secure();
     for (var attempt = 0; attempt < 10; attempt++) {
       final code = (1000 + rnd.nextInt(9000)).toString();
@@ -264,6 +273,7 @@ class HostRoom implements OnlineLink {
           'hostOnline': true,
           'level': level.name,
           'turn': settings.turnSeconds,
+          'stake': stake,
           'created': DateTime.now().millisecondsSinceEpoch,
         });
       });
@@ -277,7 +287,17 @@ class HostRoom implements OnlineLink {
         'rooms/$code/meta/hostOnline',
         'rooms/$code/seats/s0/online',
       ]).listen((_) {});
-      final room = HostRoom._(code, players, level, settings, RoomWatcher(code), presence, isPublic: public, autoStart: autoStart);
+      final room = HostRoom._(
+        code,
+        players,
+        level,
+        settings,
+        RoomWatcher(code),
+        presence,
+        isPublic: public,
+        autoStart: autoStart,
+        stake: stake,
+      );
       if (public) {
         room._listInLobby(<String, Object?>{
           'host': uid,
@@ -285,6 +305,7 @@ class HostRoom implements OnlineLink {
           'players': players,
           'joined': 1,
           'level': level.name,
+          'stake': stake,
           'created': DateTime.now().millisecondsSinceEpoch,
         });
       }
@@ -316,7 +337,10 @@ class HostRoom implements OnlineLink {
       if (rs.uid != null) {
         seats.add(SeatInfo.remote(rs.name));
       } else {
-        final botLevel = this.botLevel ?? ((i == 2 && level == AiLevel.easy) ? AiLevel.medium : level);
+        // At a table with an entry fee the bots play their best (nobody
+        // collects the pot by beating easy bots).
+        final botLevel = this.botLevel ??
+            (stake > 0 ? AiLevel.hard : ((i == 2 && level == AiLevel.easy) ? AiLevel.medium : level));
         final botIndex = seatBots[i] ?? botNames[i];
         seats.add(SeatInfo.bot(botLevel, botIndex));
         await OnlineService.ref('rooms/$code/seats/s$i').set(<String, Object?>{
@@ -420,7 +444,7 @@ class HostRoom implements OnlineLink {
 // ======================================================================
 
 class GuestRoom implements OnlineLink {
-  GuestRoom._(this.code, this.mySeat, this.settings, this.watcher, this._presence) {
+  GuestRoom._(this.code, this.mySeat, this.settings, this.watcher, this._presence, {this.stake = 0}) {
     _viewSub = OnlineService.ref('rooms/$code/views/s$mySeat').onValue.listen(_onView);
     watcher.addListener(_onRoom);
   }
@@ -430,6 +454,10 @@ class GuestRoom implements OnlineLink {
   final AppSettings settings;
   final RoomWatcher watcher;
   final StreamSubscription<void> _presence;
+
+  /// Entry fee of the table (from the room), paid when the game starts.
+  @override
+  final int stake;
 
   /// Set when the first state of the game arrives.
   final ValueNotifier<GameController?> controller = ValueNotifier<GameController?>(null);
@@ -461,6 +489,7 @@ class GuestRoom implements OnlineLink {
     final meta = _map(metaSnap.value);
     if (meta == null || meta['status'] == 'closed') throw const OnlineException('notFound');
     final players = (meta['players'] as num?)?.toInt() ?? 2;
+    final stake = (meta['stake'] as num?)?.toInt() ?? 0;
     final seats = _map(seatsSnap.value);
     int? mine;
     for (var i = 0; i < players; i++) {
@@ -468,6 +497,11 @@ class GuestRoom implements OnlineLink {
     }
     if (mine == null) {
       if (meta['status'] != 'lobby') throw const OnlineException('started');
+      if (stake > 0) {
+        final salon = Economy.salonFor(stake);
+        if (settings.playerLevel < salon.minLevel) throw const OnlineException('level');
+        if (settings.chips < stake) throw const OnlineException('chips');
+      }
       for (var i = seat ?? 1; i < (seat == null ? players : seat + 1) && mine == null; i++) {
         final tx = await OnlineService.ref('rooms/$code/seats/s$i').runTransaction((value) {
           if (value != null) return Transaction.abort();
@@ -478,7 +512,7 @@ class GuestRoom implements OnlineLink {
       if (mine == null) throw const OnlineException('full');
     }
     final presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$mine/online']).listen((_) {});
-    return GuestRoom._(code, mine, settings, RoomWatcher(code), presence);
+    return GuestRoom._(code, mine, settings, RoomWatcher(code), presence, stake: stake);
   }
 
   void _onRoom() {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
+import '../../game/economy.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
 import '../../online/leaderboard.dart';
@@ -128,7 +129,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: <Widget>[
+                  // Store colours only once bought (the store shows the rest).
                   for (final t in TableTheme.values)
+                    if (Economy.itemForTable(t) == null || settings.isUnlocked(t))
                     _Swatch(
                       selected: settings.tableTheme == t,
                       lockedLevel: settings.isUnlocked(t) ? null : Progression.levelFor(t),
@@ -146,6 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 runSpacing: 12,
                 children: <Widget>[
                   for (final b in CardBackStyle.values)
+                    if (Economy.itemForBack(b) == null || settings.isBackUnlocked(b))
                     _Swatch(
                       selected: settings.cardBack == b,
                       lockedLevel: settings.isBackUnlocked(b) ? null : Progression.levelForBack(b),

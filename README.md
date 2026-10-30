@@ -28,6 +28,14 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
 - **Statistics and achievements**, table and card-back colors, real card sounds.
 - **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
 - **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. New table and card-back colors unlock at certain levels.
+- **Chips, diamonds and a store** (like Okey and Pişti apps): online tables are grouped in
+  salons with an entry fee (Friendly 0, Rookie 100 … VIP 50,000 chips, higher salons need a
+  level). Everybody pays the entry when the game starts and each winner gets two entries minus a
+  10% table fee. Scheduled cups have an entry fee and chip prizes. Chips come from a 7-day daily
+  bonus, free chips every 3 hours (more when almost broke), wins and new levels (+chips, +3
+  diamonds). The store sells tables and card backs for chips or diamonds, turns diamonds into
+  chips and lists the packs for real money (to be enabled with Google Play / App Store billing,
+  see `docs/PARA_KAZANMA.md`). Chips have no cash value and cannot be sent to other players.
 - Sound effects: Kenney.nl "Casino Audio", "Interface Sounds" and "Music Jingles" (CC0).
   `python tool/make_sounds.py` builds `assets/sounds/` from the packs in `tool/sounds_raw/`.
 
@@ -154,6 +162,7 @@ lib/
     seats.dart            seats (human / bot / remote player)
     progression.dart     XP, levels and the colors that unlock at each level
     tournament.dart      the offline knockout tournament (bracket, rounds, results)
+    economy.dart         chips and diamonds: salons, pot, daily bonus, cup fees, store items
   online/            Firebase: sign-in, rooms, host and guest sessions
   l10n/              UI texts (generated from tool/l10n/)
   ui/
@@ -170,6 +179,8 @@ docs/                design notes and research
 
 All texts live in the tables in `tool/l10n/`. After changing them, run
 `python tool/l10n/gen.py` to regenerate `lib/l10n/translations.dart`.
+The store texts are in `tool/l10n/shop.py` (`python tool/l10n/shop.py` writes
+`lib/l10n/shop_strings.dart`).
 
 ## Contributing and commits
 

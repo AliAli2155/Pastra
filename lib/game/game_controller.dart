@@ -12,6 +12,7 @@ import '../engine/pastra_engine.dart';
 import '../engine/rules.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
+import 'economy.dart';
 import 'online_link.dart';
 import 'progression.dart';
 import 'seats.dart';
@@ -66,9 +67,40 @@ class GameController extends ChangeNotifier {
     this.hostTurnSeconds = 0,
     this.tournament = false,
   })  : _state = state,
-        _levelAtStart = settings.playerLevel {
+        _levelAtStart = settings.playerLevel,
+        _chipsAtStart = settings.chips,
+        _diamondsAtStart = settings.diamonds {
     if (isGuest) _state = _stabilize(_state, null);
+    // An online table with an entry fee: everybody pays when the game starts.
+    if (stake > 0) _stakePaid = settings.spend(chips: stake, notify: false);
   }
+
+  /// Balances when this game started (the summary shows the difference).
+  final int _chipsAtStart;
+  final int _diamondsAtStart;
+
+  /// The entry fee of this online table (0 = free).
+  int get stake => link?.stake ?? 0;
+  bool _stakePaid = false;
+
+  /// Chips for the result of a finished game: the pot share at an online
+  /// table, a small reward for beating the computer offline.
+  void _payResult({required bool won, required AiLevel level}) {
+    if (!won || !Economy.enabled) return;
+    if (link != null) {
+      if (_stakePaid) settings.addWallet(chips: Economy.payout(stake), notify: false);
+    } else if (!tournament) {
+      settings.addWallet(chips: Economy.offlineWin(level), notify: false);
+    }
+  }
+
+  GameXp _gain(int levelAfter) => GameXp(
+        amount: _gameXp,
+        levelBefore: _levelAtStart,
+        levelAfter: levelAfter,
+        chips: settings.chips - _chipsAtStart,
+        diamonds: settings.diamonds - _diamondsAtStart,
+      );
 
   /// The player's level when this game started (for the level-up message).
   final int _levelAtStart;
@@ -509,7 +541,9 @@ class GameController extends ChangeNotifier {
         final endXp = Progression.gameXp(won: won, level: seats[1].level);
         _gameXp += endXp;
         final lv = settings.addXp(endXp);
-        xpGain = GameXp(amount: _gameXp, levelBefore: _levelAtStart, levelAfter: lv.after);
+        _payResult(won: won, level: seats[1].level);
+        xpGain = _gain(lv.after);
+        settings.walletChanged();
         onGameFinished?.call(settings);
         gameFacts = GameFacts(
           won: won,
@@ -941,7 +975,9 @@ class GameController extends ChangeNotifier {
     final amount = Progression.gameXp(won: won, level: AiLevel.medium);
     final lv = settings.addXp(amount);
     _gameXp += amount;
-    xpGain = GameXp(amount: _gameXp, levelBefore: _levelAtStart, levelAfter: lv.after);
+    _payResult(won: won, level: AiLevel.medium);
+    xpGain = _gain(lv.after);
+    settings.walletChanged();
     onGameFinished?.call(settings);
   }
 

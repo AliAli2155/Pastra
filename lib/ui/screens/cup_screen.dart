@@ -7,10 +7,12 @@ import '../../engine/game_state.dart';
 import '../../engine/pastra_ai.dart';
 import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
+import '../../game/economy.dart';
 import '../../game/game_controller.dart';
 import '../../game/seats.dart';
 import '../../game/tournament.dart';
 import '../../l10n/online_strings.dart';
+import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/cup_logic.dart';
 import '../../online/cup_service.dart';
@@ -20,6 +22,7 @@ import '../../online/room_session.dart';
 import '../theme.dart';
 import '../widgets/bracket_view.dart';
 import '../widgets/menu_tiles.dart';
+import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
 import 'online_screen.dart';
 
@@ -202,6 +205,11 @@ class _CupScreenState extends State<CupScreen> {
     if (bracket.lostIn(me) < 0 && !champion) return;
     settings.markCupBonusPaid(key);
     settings.addXp(_bonus(bracket.winsOf(me), champion));
+    // Chips for the result, when the entry fee was paid.
+    if (settings.cupFeePaid(key)) {
+      final prize = Economy.cupPrize(_fee, wins: bracket.winsOf(me), champion: champion);
+      settings.addWallet(chips: prize);
+    }
     Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
   }
 
@@ -360,7 +368,33 @@ class _CupScreenState extends State<CupScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
-  Future<void> _toggleNext() => _run(() => _inNext ? CupService.unregister(_nextKey) : CupService.register(_nextKey, widget.name));
+  /// Entry fee of this cup (scheduled cups only).
+  int get _fee => _friends || !Economy.enabled ? 0 : Economy.cupFee(widget.type.id);
+
+  /// Registers (paying the entry fee) or leaves (getting it back).
+  Future<void> _toggleNext() async {
+    final settings = SettingsScope.read(context);
+    final key = _nextKey;
+    if (_inNext) {
+      await _run(() async {
+        await CupService.unregister(key);
+        if (settings.cupFeePaid(key)) {
+          settings.setCupFeePaid(key, false);
+          settings.addWallet(chips: _fee);
+        }
+      });
+      return;
+    }
+    final fee = _fee;
+    if (fee > settings.chips) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ShopStrings(settings.language).notEnough)));
+      return;
+    }
+    await _run(() async {
+      await CupService.register(key, widget.name);
+      if (fee > 0 && settings.spend(chips: fee)) settings.setCupFeePaid(key, true);
+    });
+  }
 
   /// Another 1v1/2v2 or target: another cup (other players, other key).
   void _choose({int? teams, int? target}) {
@@ -562,6 +596,26 @@ class _CupScreenState extends State<CupScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
+          if (_fee > 0) ...<Widget>[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                const ChipIcon(size: 18),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    ShopStrings(SettingsScope.of(context).language).cupEntry(
+                      Economy.group(_fee),
+                      Economy.group(Economy.cupPrize(_fee, wins: 3, champion: true)),
+                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           _names(t, data.signups),
         ],
@@ -711,6 +765,16 @@ class _CupScreenState extends State<CupScreen> {
         ),
         if (bonus > 0)
           Text(s.tournamentBonus(bonus), style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w700)),
+        if (SettingsScope.of(context).cupFeePaid(_currentKey) && Economy.cupPrize(_fee, wins: bracket.winsOf(me), champion: won) > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Amount(
+              chips: Economy.cupPrize(_fee, wins: bracket.winsOf(me), champion: won),
+              size: 18,
+              sign: true,
+              color: PastraColors.gold,
+            ),
+          ),
         const SizedBox(height: 12),
         if (_friends)
           BigButton(icon: Icons.arrow_back_rounded, label: t.back, onPressed: () => Navigator.of(context).pop())
