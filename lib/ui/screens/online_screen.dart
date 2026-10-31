@@ -12,6 +12,7 @@ import '../../l10n/strings.dart';
 import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
+import '../../online/social_service.dart';
 import '../theme.dart';
 import '../widgets/invite_share.dart';
 import '../widgets/menu_tiles.dart';
@@ -61,6 +62,8 @@ class _OnlineScreenState extends State<OnlineScreen> {
       _checking = false;
       _configured = problem == null;
     });
+    // The player's code ("Ali #2155") and online status for friends.
+    if (problem == null) SocialService.instance.start(SettingsScope.read(context));
     final code = widget.joinCode;
     if (problem == null && code != null) {
       _code.text = code;

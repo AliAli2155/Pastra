@@ -1,25 +1,40 @@
 /// A person met at an online table. Favourites stay; the others are the
 /// most recent players. Pure Dart; [AppSettings] stores the list.
 class Friend {
-  const Friend({required this.uid, required this.name, required this.lastPlayed, this.favorite = false, this.games = 1});
+  const Friend({
+    required this.uid,
+    required this.name,
+    required this.lastPlayed,
+    this.favorite = false,
+    this.games = 1,
+    this.tag = '',
+  });
 
   final String uid;
   final String name;
+
+  /// The 4-digit code after the name ("Ali #2155"); empty when unknown.
+  final String tag;
 
   /// Milliseconds since the epoch of the last game together.
   final int lastPlayed;
   final bool favorite;
   final int games;
 
-  Friend copyWith({String? name, int? lastPlayed, bool? favorite, int? games}) => Friend(
+  Friend copyWith({String? name, int? lastPlayed, bool? favorite, int? games, String? tag}) => Friend(
         uid: uid,
         name: name ?? this.name,
         lastPlayed: lastPlayed ?? this.lastPlayed,
         favorite: favorite ?? this.favorite,
         games: games ?? this.games,
+        tag: tag ?? this.tag,
       );
 
-  Map<String, Object> toJson() => <String, Object>{'u': uid, 'n': name, 't': lastPlayed, 'f': favorite, 'g': games};
+  /// "Ali #2155" (or just the name when the code is not known).
+  String get handle => tag.isEmpty ? name : '$name #$tag';
+
+  Map<String, Object> toJson() =>
+      <String, Object>{'u': uid, 'n': name, 't': lastPlayed, 'f': favorite, 'g': games, 'c': tag};
 
   static Friend? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -33,6 +48,7 @@ class Friend {
       lastPlayed: t.toInt(),
       favorite: j['f'] == true,
       games: (j['g'] as num?)?.toInt() ?? 1,
+      tag: j['c'] is String ? j['c'] as String : '',
     );
   }
 
@@ -54,4 +70,31 @@ class Friend {
         if (f.favorite || others++ < maxRecent) f,
     ];
   }
+}
+
+/// Player codes ("Ali #2155"): every player gets a random 4-digit tag, and
+/// name + tag finds them (like in other online games).
+class PlayerHandle {
+  PlayerHandle._();
+
+  /// The lookup key of a name and tag in the database (lower case, without
+  /// the characters a database key may not contain).
+  static String keyOf(String name, String tag) => '${normalize(name)}~$tag';
+
+  static String normalize(String name) {
+    var n = name.trim().toLowerCase().replaceAll(RegExp(r'[.#$\[\]/~\s]+'), '_');
+    if (n.isEmpty) n = 'player';
+    return n;
+  }
+
+  /// Reads "Ali #2155", "ali#2155" or "Ali 2155"; null when it is not a code.
+  static (String, String)? parse(String text) {
+    final m = RegExp(r'^\s*(.+?)\s*[#\s]\s*(\d{4})\s*$').firstMatch(text);
+    if (m == null) return null;
+    final name = m.group(1)!.trim();
+    if (name.isEmpty || name == '#') return null;
+    return (name, m.group(2)!);
+  }
+
+  static String format(String name, String tag) => tag.isEmpty ? name : '$name #$tag';
 }

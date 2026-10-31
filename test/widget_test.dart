@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/game/app_settings.dart';
+import 'package:pastra/online/social_service.dart';
 import 'package:pastra/ui/widgets/invite_banner.dart';
 import 'package:pastra/ui/widgets/playing_card.dart';
 import 'package:pastra/ui/widgets/wallet_bar.dart';
@@ -12,6 +13,7 @@ void main() {
   dailyBonusAutoShow = false;
   // No Firebase in the tests.
   inviteListenerEnabled = false;
+  SocialService.enabled = false;
 
   testWidgets('home screen in Greek', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{'language': 'el', 'sound': false});

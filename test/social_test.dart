@@ -103,4 +103,19 @@ void main() {
     expect(settings.stats.bestGamePastras, 3);
     expect(settings.stats.favoriteTable, 'green');
   });
+
+  test('player codes: "Ali #2155" is read and keyed the same way however it is typed', () {
+    expect(PlayerHandle.parse('Ali #2155'), ('Ali', '2155'));
+    expect(PlayerHandle.parse('ali#2155'), ('ali', '2155'));
+    expect(PlayerHandle.parse('Ali Veli # 0042'), ('Ali Veli', '0042'));
+    expect(PlayerHandle.parse('Ali 2155'), ('Ali', '2155'));
+    expect(PlayerHandle.parse('Ali'), isNull);
+    expect(PlayerHandle.parse('#2155'), isNull);
+    expect(PlayerHandle.keyOf('Ali', '2155'), PlayerHandle.keyOf(' ALI ', '2155'));
+    expect(PlayerHandle.keyOf('a.b#c', '1000'), isNot(contains('.')));
+    expect(PlayerHandle.keyOf('a.b#c', '1000'), isNot(contains('#')));
+    expect(PlayerHandle.format('Ali', '2155'), 'Ali #2155');
+    final f = Friend.fromJson(const Friend(uid: 'u', name: 'Ali', lastPlayed: 1, tag: '2155').toJson())!;
+    expect(f.handle, 'Ali #2155');
+  });
 }

@@ -69,6 +69,24 @@
         }
       }
     },
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'tag'])",
+        "name": { ".validate": "newData.isString() && newData.val().length <= 16" },
+        "tag": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)" },
+        "online": { ".validate": "newData.isBoolean()" },
+        "seen": { ".validate": "newData.isNumber()" }
+      }
+    },
+    "handles": {
+      "$key": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid))",
+        ".validate": "!newData.exists() || newData.val() === auth.uid"
+      }
+    },
     "invites": {
       "$to": {
         ".read": "auth != null && auth.uid === $to",

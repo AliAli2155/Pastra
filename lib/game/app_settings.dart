@@ -193,6 +193,8 @@ class AppSettings extends ChangeNotifier {
   static const String _kSeasonPending = 'seasonPending';
   static const String _kSeasonBadges = 'seasonBadges';
   static const String _kFriends = 'friends';
+  static const String _kTag = 'playerTag';
+  static const String _kHandleKey = 'handleKey';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -814,6 +816,41 @@ class AppSettings extends ChangeNotifier {
   }
 
   void removeFriend(String uid) => _saveFriends(<Friend>[for (final f in friends) if (f.uid != uid) f]);
+
+  /// Adds somebody found by their code (a favourite at once).
+  void addFriend({required String uid, required String name, required String tag}) {
+    final list = friends;
+    final i = list.indexWhere((f) => f.uid == uid);
+    if (i >= 0) {
+      list[i] = list[i].copyWith(name: name, tag: tag, favorite: true);
+    } else {
+      list.insert(0, Friend(uid: uid, name: name, tag: tag, lastPlayed: DateTime.now().millisecondsSinceEpoch, favorite: true, games: 0));
+    }
+    _saveFriends(list);
+  }
+
+  /// A friend's current name and code (read from the database).
+  void updateFriendInfo(String uid, {required String name, required String tag}) {
+    final list = friends;
+    final i = list.indexWhere((f) => f.uid == uid);
+    if (i < 0 || (list[i].name == name && list[i].tag == tag) || name.isEmpty) return;
+    list[i] = list[i].copyWith(name: name, tag: tag);
+    _saveFriends(list);
+  }
+
+  // ---- the player's own code ("Ali #2155")
+
+  /// The 4-digit tag after the name (null until it was given online).
+  String? get playerTag => _prefs.getString(_kTag);
+
+  /// The database key the tag is registered under (name~tag).
+  String? get handleKey => _prefs.getString(_kHandleKey);
+
+  void setHandle({required String tag, required String key}) {
+    _prefs.setString(_kTag, tag);
+    _prefs.setString(_kHandleKey, key);
+    notifyListeners();
+  }
 
   // ---- avatar frame and title
 

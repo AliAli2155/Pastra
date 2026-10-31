@@ -9,6 +9,7 @@ import '../../game/economy.dart';
 import '../../game/game_controller.dart';
 import '../../online/invite_link.dart';
 import '../../online/leaderboard.dart';
+import '../../online/social_service.dart';
 import '../../game/progression.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
@@ -55,6 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${s.achUnlocked}: ${fresh.map(s.achTitle).join(', ')}')),
         );
+      }
+      // Players with friends: their code and "online" for their friends.
+      if (settings.friends.isNotEmpty || settings.playerTag != null) {
+        SocialService.instance.start(settings);
       }
       // Opened with an invite link: straight to that table.
       final invite = InviteLink.takePending();
@@ -242,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 18),
         _PlayerCard(
           name: name,
+          tag: settings.playerTag,
           xp: settings.xp,
           frame: settings.avatarFrame,
           title: ProgressStrings(settings.language).title(settings.title),
@@ -536,7 +542,11 @@ class _PlayerCard extends StatelessWidget {
     required this.frame,
     required this.title,
     this.stats,
+    this.tag,
   });
+
+  /// The player code after the name ("#2155"), once given.
+  final String? tag;
 
   final String name;
   final int xp;
@@ -572,8 +582,14 @@ class _PlayerCard extends StatelessWidget {
                     Row(
                       children: <Widget>[
                         Flexible(
-                          child: Text(
-                            name,
+                          child: Text.rich(
+                            TextSpan(
+                              children: <InlineSpan>[
+                                TextSpan(text: name),
+                                if (tag != null)
+                                  TextSpan(text: ' #$tag', style: const TextStyle(color: PastraColors.gold, fontSize: 13)),
+                              ],
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
