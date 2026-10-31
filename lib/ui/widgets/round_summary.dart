@@ -249,6 +249,8 @@ class RoundSummaryPanel extends StatelessWidget {
             // Sideways: the score sheet on the left, the game score and the
             // buttons on the right.
             final wide = box.maxWidth > box.maxHeight && box.maxWidth >= 560;
+            // Big screens: the whole panel grows (text and width) up to 1.6x.
+            final zoom = min(box.maxWidth / 844, box.maxHeight / 390).clamp(1.0, 1.6).toDouble();
             final content = wide
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -270,9 +272,11 @@ class RoundSummaryPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[header, const SizedBox(height: 10), sheet, const SizedBox(height: 14), side],
                   );
-            return SingleChildScrollView(
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(zoom)),
+              child: SingleChildScrollView(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: wide ? 820 : 460),
+                constraints: BoxConstraints(maxWidth: (wide ? 820 : 460) * zoom),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                   decoration: BoxDecoration(
@@ -291,6 +295,7 @@ class RoundSummaryPanel extends StatelessWidget {
                   child: content,
                 ),
               ),
+            ),
             );
           },
         ),

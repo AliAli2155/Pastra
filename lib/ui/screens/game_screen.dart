@@ -382,6 +382,7 @@ class _GameScreenState extends State<GameScreen> {
         highlighted: c.highlighted,
         tableShown: c.tableShown,
         landing: c.landing,
+        scale: TableLayout.scaleFor(Size(box.maxWidth, box.maxHeight)),
       );
       _dropLine = layout.dropLine;
       if (_dragCard != null && !c.isHumanTurn) {
@@ -463,7 +464,7 @@ class _GameScreenState extends State<GameScreen> {
                     cards: c.quadAlert!.cards,
                     subtitle: s.quadBy(_seatName(s, c.quadAlert!.seat)),
                     footer: s.quadRedeal,
-                    cardWidth: min(64.0, max(36.0, box.maxWidth / 11)),
+                    cardWidth: min(64.0 * TableLayout.scaleFor(box.biggest), max(36.0, box.maxWidth / 11)),
                   ),
                 ),
               ),

@@ -93,6 +93,9 @@ class TableLayout {
   static const double cardRatio = 1.42;
   static const double margin = 8;
 
+  /// Big screens (a desktop browser) get bigger cards: 1 on a phone, up to 2.
+  static double scaleFor(Size size) => min(size.width / 844, size.height / 390).clamp(1.0, 2.0).toDouble();
+
   /// Opening cards side by side: each starts this far (in card widths) to
   /// the right of the previous one.
   static const double spreadStep = 0.8;
@@ -113,6 +116,7 @@ class TableLayout {
     required Set<int> highlighted,
     int? tableShown,
     int? landing,
+    double scale = 1,
   }) {
     final w = size.width;
     final h = size.height;
@@ -123,7 +127,7 @@ class TableLayout {
     // ---- the local player's hand: big cards at the bottom
     final slots = max(state.rules.cardsPerDeal, state.hands[0].length);
     final spacing = slots > 4 ? 0.74 : 1.06;
-    var hh = min(170.0, max(60.0, h * 0.31));
+    var hh = min(170.0 * scale, max(60.0, h * 0.31));
     var hw = hh / cardRatio;
     final handSpan = 1 + (slots - 1) * spacing;
     final maxHandW = w * 0.56;
@@ -135,7 +139,7 @@ class TableLayout {
     final raise = hh * 0.12;
 
     // ---- small cards: other hands, deck, piles
-    final sh = min(90.0, max(36.0, h * 0.17));
+    final sh = min(90.0 * scale, max(36.0, h * 0.17));
     final sw = sh / cardRatio;
     const topY = 4.0;
     // Room for the name plate under the top hand (avatar + padding).
@@ -294,7 +298,7 @@ class TableLayout {
       }
     } else {
       // ---- table grid
-      var w0 = min(hw * 0.9, 90.0);
+      var w0 = min(hw * 0.9, 90.0 * scale);
       var gap = w0 * 0.12;
       var cols = 1;
       var rows = 0;
