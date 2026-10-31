@@ -5,6 +5,7 @@ import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../../l10n/progress_strings.dart';
+import '../../l10n/social_strings.dart';
 import '../theme.dart';
 import 'progress_views.dart';
 
@@ -74,11 +75,17 @@ class StatsScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 900),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: <Widget>[for (final t in tiles) t],
+                child: Column(
+                  children: <Widget>[
+                    _Highlights(stats: st),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: <Widget>[for (final t in tiles) t],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -269,6 +276,109 @@ class _Tile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The four numbers players care about most, big: win rate, best streak,
+/// most pastras in a game and the favourite table.
+class _Highlights extends StatelessWidget {
+  const _Highlights({required this.stats});
+
+  final GameStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final s = Strings.of(context);
+    final t = SocialStrings(settings.language);
+    final p = ProgressStrings(settings.language);
+    final favName = stats.favoriteTable;
+    final fav = TableTheme.values.where((x) => x.name == favName).firstOrNull;
+    Widget card({required Widget top, required String value, required String label}) => Container(
+          width: 200,
+          height: 150,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[Color(0xFF1E5A43), Color(0xFF0B2A1E)],
+            ),
+            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            children: <Widget>[
+              Expanded(child: Center(child: top)),
+              Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            ],
+          ),
+        );
+    return Column(
+      children: <Widget>[
+        Text(t.highlights, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.center,
+          children: <Widget>[
+            card(
+              top: SizedBox(
+                width: 64,
+                height: 64,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: stats.winRate / 100),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, v, _) => CircularProgressIndicator(
+                        value: v,
+                        strokeWidth: 7,
+                        strokeCap: StrokeCap.round,
+                        color: PastraColors.gold,
+                        backgroundColor: Colors.white12,
+                      ),
+                    ),
+                    Center(
+                      child: Text('${stats.winRate}%', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+                    ),
+                  ],
+                ),
+              ),
+              value: '${stats.wins} / ${stats.games}',
+              label: s.statWinRate,
+            ),
+            card(
+              top: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF8A5B), size: 52),
+              value: '${stats.bestStreak}',
+              label: s.statBestStreak,
+            ),
+            card(
+              top: const Icon(Icons.auto_awesome, color: PastraColors.gold, size: 50),
+              value: '${stats.bestGamePastras}',
+              label: t.bestGamePastras,
+            ),
+            card(
+              top: fav == null
+                  ? const Icon(Icons.table_restaurant_rounded, color: Colors.white38, size: 50)
+                  : DecoratedBox(
+                      decoration: fav.decoration.copyWith(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white38),
+                      ),
+                      child: const SizedBox(width: 80, height: 52),
+                    ),
+              value: fav == null ? '–' : p.table(fav),
+              label: t.favTable,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

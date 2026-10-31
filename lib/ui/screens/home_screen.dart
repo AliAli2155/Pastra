@@ -7,10 +7,12 @@ import '../../engine/pastra_ai.dart';
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../game/game_controller.dart';
+import '../../online/invite_link.dart';
 import '../../online/leaderboard.dart';
 import '../../game/progression.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
+import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
@@ -54,6 +56,14 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('${s.achUnlocked}: ${fresh.map(s.achTitle).join(', ')}')),
         );
       }
+      // Opened with an invite link: straight to that table.
+      final invite = InviteLink.takePending();
+      if (invite != null) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => OnlineScreen(joinCode: invite)),
+        );
+        return;
+      }
       // The daily bonus greets the player once a day.
       if (Economy.enabled) await showDailyBonusIfReady(context);
       // A season that ended: the final place and the badge.
@@ -82,10 +92,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Offline: a quick game or the tournament.
   Future<void> _offline(BuildContext ctx) async {
-    final choice = await showDialog<bool>(
+    final choice = await showDialog<String>(
       context: ctx,
       builder: (sheet) {
         final s = Strings.of(sheet);
+        final social = SocialStrings(SettingsScope.of(sheet).language);
+        final training = TextButton.icon(
+          onPressed: () => Navigator.of(sheet).pop('training'),
+          icon: const Icon(Icons.school_rounded, color: PastraColors.gold),
+          label: Text(
+            '${social.training} · ${social.trainingHint}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          ),
+        );
         Widget quick(double? h) => SizedBox(
               height: h,
               child: MenuTile(
@@ -93,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: s.quickGame,
                 subtitle: s.quickGameHint,
                 colors: TileColors.green,
-                onTap: () => Navigator.of(sheet).pop(false),
+                onTap: () => Navigator.of(sheet).pop('quick'),
               ),
             );
         Widget cup(double? h) => SizedBox(
@@ -104,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: s.tournamentHint,
                 colors: TileColors.gold,
                 darkText: true,
-                onTap: () => Navigator.of(sheet).pop(true),
+                onTap: () => Navigator.of(sheet).pop('cup'),
               ),
             );
         return _CenteredDialog(
@@ -114,21 +135,26 @@ class _HomeScreenState extends State<HomeScreen> {
               final screen = MediaQuery.sizeOf(context);
               // Side by side when there is room, else one under the other.
               final side = box.maxWidth >= 480;
-              final h = side ? min(220.0, screen.height * 0.62) : 96.0;
+              final h = side ? min(200.0, screen.height * 0.5) : 96.0;
               return Padding(
-                padding: const EdgeInsets.all(16),
-                child: side
-                    ? Row(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (side)
+                      Row(
                         children: <Widget>[
                           Expanded(child: quick(h)),
                           const SizedBox(width: 14),
                           Expanded(child: cup(h)),
                         ],
                       )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[quick(h), const SizedBox(height: 12), cup(h)],
-                      ),
+                    else ...<Widget>[quick(h), const SizedBox(height: 12), cup(h)],
+                    const SizedBox(height: 6),
+                    training,
+                  ],
+                ),
               );
             },
           ),
@@ -136,11 +162,24 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
     if (choice == null || !ctx.mounted) return;
-    if (choice) {
+    if (choice == 'cup') {
       await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => const TournamentScreen()));
+    } else if (choice == 'training') {
+      await _training(ctx);
     } else {
       await _newGame(ctx);
     }
+  }
+
+  /// Training: an easy computer, the guided tour again and hints.
+  Future<void> _training(BuildContext ctx) async {
+    final settings = SettingsScope.read(ctx);
+    await settings.clearSavedGame();
+    if (!ctx.mounted) return;
+    final controller = GameController.newGame(settings, players: 2, level: AiLevel.easy);
+    await Navigator.of(ctx).push(
+      MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller, training: true)),
+    );
   }
 
   /// Offline: pick players and level, then play against the computer.
@@ -162,7 +201,19 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => GameScreen(controller: controller)));
   }
 
-  void _openPlay() => _open(
+  /// "Play": a brand-new player first gets the guided first game (and is
+  /// asked their name after it); everybody else picks how to play.
+  void _openPlay() {
+    final settings = SettingsScope.read(context);
+    if (!settings.tutorialDone && !settings.hasSavedGame) {
+      final controller = GameController.newGame(settings, players: 2, level: AiLevel.easy);
+      _open(GameScreen(controller: controller));
+      return;
+    }
+    _openPlayScreen();
+  }
+
+  void _openPlayScreen() => _open(
         PlayScreen(
           onOffline: _offline,
           onContinue: _continue,

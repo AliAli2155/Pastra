@@ -18,6 +18,20 @@
             ".write": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid"
           }
         },
+        "chat": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".validate": "newData.hasChildren(['n', 'm']) && newData.child('n').isNumber() && newData.child('m').isString() && newData.child('m').val().length <= 24"
+          }
+        },
+        "rematch": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".validate": "newData.isBoolean()"
+          }
+        },
         "moves": {
           "$seat": {
             ".read": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid",
@@ -52,6 +66,15 @@
         "$uid": {
           ".write": "auth != null && auth.uid === $uid && $season.matches(/^[0-9]{6}$/)",
           ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
+        }
+      }
+    },
+    "invites": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'code', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('code').isString() && newData.child('code').val().matches(/^[0-9]{4}$/) && newData.child('t').val() === now)"
         }
       }
     },

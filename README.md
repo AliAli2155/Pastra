@@ -30,6 +30,11 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
 - **Statistics and achievements**, table and card-back colors, real card sounds.
 - **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
 - **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. The *level path* (tap the player card on the home screen) is a horizontal track that shows what each level unlocks: table colors, card backs, avatar frames (bronze → legend) and titles (Novice → Pastra king).
+- **Invite links:** the waiting room shares a link (`…/Pastra/#/oda/1234`) by the phone's share sheet, WhatsApp or Telegram; opening it joins the room directly.
+- **Friends:** everybody you played online with is listed (star your favourites); one tap opens a private table and sends them an invitation, which pops up on their screen.
+- **Quick chat and rematch:** ready-made messages and emojis at online tables (no free text), and a one-tap rematch at the same table of people.
+- **Learning:** a new player starts with the guided first game and is asked their name after it; *Training* replays the tour against an easy computer; offline games have a hint button; after every game the *game review* lists the pastras and captures that were missed.
+- **Four of a kind** voids only the first deal of a round (the same dealer deals again); in the later deals it is simply played.
 - **Daily quests:** three new quests every day (easy, medium, hard), different for every player. Collect XP for each one and a bonus for all three; one unstarted quest per day can be swapped.
 - **Achievements:** 30 badges, including win streaks, online wins, days in a row and collected quests.
 - **Monthly seasons:** the XP earned in a month makes the season ranking (Leaderboard → this month). When the season ends the player gets a badge (Champion, Top 3, Top 10, Top 100 or Participant) and bonus XP.
@@ -188,7 +193,8 @@ All texts live in the tables in `tool/l10n/`. After changing them, run
 `python tool/l10n/gen.py` to regenerate `lib/l10n/translations.dart`.
 The store texts are in `tool/l10n/shop.py` (`python tool/l10n/shop.py` writes
 `lib/l10n/shop_strings.dart`). Quests, level path and seasons are in
-`tool/l10n/progress.py` (writes `lib/l10n/progress_strings.dart`).
+`tool/l10n/progress.py` (writes `lib/l10n/progress_strings.dart`); invites, friends, chat, training and
+the game review in `tool/l10n/social.py` (writes `lib/l10n/social_strings.dart`).
 
 ## Contributing and commits
 

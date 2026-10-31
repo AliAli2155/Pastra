@@ -7,6 +7,7 @@ import 'game/app_settings.dart';
 import 'l10n/strings.dart';
 import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/widgets/invite_banner.dart';
 import 'ui/theme.dart';
 
 class PastraApp extends StatelessWidget {
@@ -53,11 +54,16 @@ class PastraApp extends StatelessWidget {
                   // loads them early.
                   if (kIsWeb) const Offstage(child: Text('العربية 中文 Ελληνικά Български')),
                   child ?? const SizedBox.shrink(),
+                  // A friend's invitation, over every screen.
+                  Positioned.fill(child: InviteBanner(navigator: _navigator)),
                   if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
                 ],
               ),
             ),
           ),
+          // Invite links (#/oda/1234) are taken out of the address by
+          // web/index.html before Flutter starts, so the app always opens on
+          // the home screen (which then joins the room).
           home: const HomeScreen(),
         ),
       ),

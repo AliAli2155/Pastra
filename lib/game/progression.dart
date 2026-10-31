@@ -74,6 +74,7 @@ class Progression {
     TableTheme.blue: 4,
     TableTheme.wood: 8,
     TableTheme.red: 12,
+    TableTheme.olive: 14,
     TableTheme.purple: 18,
     TableTheme.night: 26,
   };
@@ -84,6 +85,7 @@ class Progression {
     CardBackStyle.green: 5,
     CardBackStyle.black: 10,
     CardBackStyle.purple: 15,
+    CardBackStyle.meander: 17,
     CardBackStyle.gold: 22,
   };
 

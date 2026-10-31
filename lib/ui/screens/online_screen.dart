@@ -7,15 +7,19 @@ import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../l10n/online_strings.dart';
 import '../../l10n/shop_strings.dart';
+import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
+import '../widgets/invite_share.dart';
 import '../widgets/menu_tiles.dart';
+import '../widgets/name_prompt.dart';
 import '../widgets/rules_editor.dart';
 import '../widgets/wallet_bar.dart';
 import 'cup_hub_screen.dart';
+import 'friends_screen.dart';
 import 'game_screen.dart';
 import 'leaderboard_screen.dart';
 import 'store_screen.dart';
@@ -23,7 +27,10 @@ import 'tables_screen.dart';
 
 /// Create a room or join one with its 4-digit code.
 class OnlineScreen extends StatefulWidget {
-  const OnlineScreen({super.key});
+  const OnlineScreen({super.key, this.joinCode});
+
+  /// Joins this room right away (an invite link or a friend's invitation).
+  final String? joinCode;
 
   @override
   State<OnlineScreen> createState() => _OnlineScreenState();
@@ -54,6 +61,17 @@ class _OnlineScreenState extends State<OnlineScreen> {
       _checking = false;
       _configured = problem == null;
     });
+    final code = widget.joinCode;
+    if (problem == null && code != null) {
+      _code.text = code;
+      // Somebody new from an invite link: their name first.
+      if (SettingsScope.read(context).playerName.isEmpty) {
+        final name = await askPlayerName(context);
+        if (!mounted) return;
+        if (name != null) _name.text = name;
+      }
+      await _joinCode(code);
+    }
   }
 
   @override
@@ -290,6 +308,18 @@ class _OnlineScreenState extends State<OnlineScreen> {
       appBar: AppBar(
         title: Text(t.online, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: <Widget>[
+          IconButton(
+            tooltip: SocialStrings(settings.language).friends,
+            onPressed: _busy
+                ? null
+                : () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())),
+            icon: Badge(
+              isLabelVisible: settings.friends.any((f) => f.favorite),
+              smallSize: 8,
+              backgroundColor: PastraColors.gold,
+              child: const Icon(Icons.people_alt_rounded),
+            ),
+          ),
           if (Economy.enabled)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -681,8 +711,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
 
 /// Waiting room: shows the code and who has joined.
 class LobbyScreen extends StatefulWidget {
-  const LobbyScreen({super.key, this.host, this.guest, this.cupOpponent})
+  const LobbyScreen({super.key, this.host, this.guest, this.cupOpponent, this.rematch = false})
       : assert((host == null) != (guest == null));
+
+  /// The table of a rematch (after an online game).
+  final bool rematch;
 
   final HostRoom? host;
   final GuestRoom? guest;
@@ -730,10 +763,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (info.exists && info.joined >= (host.expectedPeople ?? info.players)) _start();
   }
 
+  /// The people at this table go to the recent players (friends list).
+  void _rememberPlayers() {
+    final me = OnlineService.uid;
+    final people = <String, String>{
+      for (final seat in _watcher.info.seats)
+        if (seat.uid != null && seat.uid != me) seat.uid!: seat.name,
+    };
+    SettingsScope.read(context).addRecentPlayers(people);
+  }
+
   void _guestGameReady() {
     final c = widget.guest?.controller.value;
     if (c == null || _handedOver || !mounted) return;
     _handedOver = true;
+    _rememberPlayers();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => GameScreen(controller: c)),
     );
@@ -754,6 +798,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       final c = await host.start();
       if (!mounted) return;
       _handedOver = true;
+      _rememberPlayers();
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => GameScreen(controller: c)),
       );
@@ -783,7 +828,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final cup = widget.cupOpponent != null;
     return Scaffold(
       appBar: AppBar(
-        title: Text(cup ? t.cup : (quick ? t.quickMatch : t.online), style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          cup ? t.cup : (widget.rematch ? SocialStrings(SettingsScope.of(context).language).rematch : (quick ? t.quickMatch : t.online)),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: Felt(
         child: SafeArea(
@@ -832,6 +880,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.white70, fontSize: 14),
                     ),
+                    if (!quick || widget.rematch) ...<Widget>[
+                      const SizedBox(height: 12),
+                      InviteShareRow(code: _code),
+                      if (isHost && SettingsScope.of(context).friends.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => showInviteFriendsSheet(context, _code),
+                          icon: const Icon(Icons.people_alt_rounded, color: PastraColors.gold),
+                          label: Text(
+                            SocialStrings(SettingsScope.of(context).language).inviteFriends,
+                            style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               );
@@ -853,7 +916,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(width: 12),
                       Flexible(
                         child: Text(
-                          cup ? t.cupOpponentWait(widget.cupOpponent!) : t.searching,
+                          cup
+                              ? t.cupOpponentWait(widget.cupOpponent!)
+                              : (widget.rematch ? SocialStrings(SettingsScope.of(context).language).rematchWait : t.searching),
                           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                         ),
                       ),

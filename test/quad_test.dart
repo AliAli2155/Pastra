@@ -42,4 +42,27 @@ void main() {
     expect(PastraEngine.hasFourOfAKind(<int>[0, 13, 26, 39]), isTrue);
     expect(PastraEngine.hasFourOfAKind(<int>[0, 13, 26, 1, 14]), isFalse);
   });
+
+  test('later deals of a round keep four of a kind (no redeal)', () {
+    final rules = PastraRules.pileDefaults;
+    final aces = <int>[for (var s = 0; s < 4; s++) Cards.make(s, Cards.ace)];
+    final others = <int>[
+      for (var c = 0; c < Cards.deckSize; c++)
+        if (!aces.contains(c)) c,
+    ];
+    final dealOrder = <int>[];
+    var a = 0;
+    var o = 0;
+    for (var i = 0; i < 8; i++) {
+      dealOrder.add(i.isEven ? aces[a++] : others[o++]);
+    }
+    final deck = <int>[...others.sublist(o), ...dealOrder.reversed];
+    final s = GameState(rules: rules, numPlayers: 2, seed: 7, dealer: 1, deck: deck, dealNumber: 1);
+
+    PastraEngine.dealHands(s);
+
+    expect(s.quads, isEmpty);
+    expect(PastraEngine.hasFourOfAKind(s.hands[0]), isTrue);
+    expect(s.dealNumber, 2);
+  });
 }

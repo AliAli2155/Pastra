@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/game/app_settings.dart';
+import 'package:pastra/ui/widgets/invite_banner.dart';
 import 'package:pastra/ui/widgets/playing_card.dart';
 import 'package:pastra/ui/widgets/wallet_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   // The daily bonus dialog would cover the home screen.
   dailyBonusAutoShow = false;
+  // No Firebase in the tests.
+  inviteListenerEnabled = false;
 
   testWidgets('home screen in Greek', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{'language': 'el', 'sound': false});
@@ -80,20 +83,14 @@ void main() {
     expect(find.text('Ρυθμίσεις'), findsOneWidget);
   });
 
-  testWidgets('the first game starts with the tutorial', (tester) async {
+  testWidgets('a new player gets the tutorial first, then is asked their name', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false});
     final settings = await AppSettings.load();
     await tester.pumpWidget(PastraApp(settings: settings));
     await tester.pumpAndSettle();
 
+    // "Play" opens the guided first game directly.
     await tester.tap(find.text('Play'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Offline'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Quick game'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Start'));
-    // The sheet closes, then the game screen opens on the next frames.
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -104,10 +101,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await tester.tap(find.text("Let's play!"));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text("What's your name?"), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Ali');
+    await tester.tap(find.text('Save'));
     for (var i = 0; i < 60; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(settings.tutorialDone, isTrue);
+    expect(settings.playerName, 'Ali');
     expect(find.text('Your turn'), findsOneWidget);
   });
 

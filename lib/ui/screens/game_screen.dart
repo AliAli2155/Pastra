@@ -12,19 +12,30 @@ import '../../game/game_controller.dart';
 import '../../game/quests.dart';
 import '../../l10n/online_strings.dart';
 import '../../l10n/progress_strings.dart';
+import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
+import '../../online/online_service.dart';
+import '../../online/room_session.dart';
+import '../../online/room_social.dart';
 import '../table_layout.dart';
 import '../theme.dart';
 import '../widgets/fullscreen_button.dart';
+import '../widgets/game_review.dart';
+import '../widgets/name_prompt.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/quick_chat.dart';
 import '../widgets/round_summary.dart';
+import 'online_screen.dart';
 import 'rules_screen.dart';
 
 /// The card table. Owns (and disposes) its [GameController].
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, required this.controller});
+  const GameScreen({super.key, required this.controller, this.training = false});
 
   final GameController controller;
+
+  /// Training: the guided tour again, hints and tips.
+  final bool training;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -85,12 +96,109 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    if (!c.isOnline && !c.settings.tutorialDone && c.state.round == 1 && PastraEngine.isOpeningPosition(c.state)) {
+    final fresh = c.state.round == 1 && PastraEngine.isOpeningPosition(c.state);
+    if (!c.isOnline && fresh && (widget.training || !c.settings.tutorialDone)) {
       _tutorialStep = 0;
     } else {
       c.start();
     }
+    c.link?.social.addListener(_onSocial);
   }
+
+  // ------------------------------------------------------------ online extras
+
+  bool _rematchBusy = false;
+  bool _joiningRematch = false;
+
+  /// Guest: the host opened the rematch table; join it if we asked for it.
+  void _onSocial() {
+    final social = c.link?.social;
+    if (social == null || !mounted) return;
+    if (social.nextCode != null && social.iVoted && !c.isHostOfLink) _joinRematch();
+  }
+
+  /// Host: opens a new table for the same people and tells them. Guest: asks
+  /// the host (and joins as soon as the table is there).
+  Future<void> _rematch() async {
+    final link = c.link;
+    if (link == null || _rematchBusy) return;
+    if (link is! HostRoom) {
+      link.social.voteRematch();
+      _onSocial();
+      return;
+    }
+    final settings = c.settings;
+    final s = Strings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _rematchBusy = true);
+    try {
+      final room = await HostRoom.create(
+        settings,
+        players: link.players,
+        level: link.level,
+        name: settings.playerName.isEmpty ? s.you : settings.playerName,
+        autoStart: true,
+        stake: link.stake,
+      );
+      room.expectedPeople = 1 + c.seats.where((x) => x.isRemote).length;
+      await link.social.offerRematch(room.code);
+      if (!mounted) {
+        room.close();
+        return;
+      }
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => LobbyScreen(host: room, rematch: true)),
+      );
+    } on OnlineException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(OnlineStrings(settings.language).error(e.code))));
+      if (mounted) setState(() => _rematchBusy = false);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(OnlineStrings(settings.language).error('network'))));
+      if (mounted) setState(() => _rematchBusy = false);
+    }
+  }
+
+  Future<void> _joinRematch() async {
+    final code = c.link?.social.nextCode;
+    if (code == null || _joiningRematch) return;
+    _joiningRematch = true;
+    final settings = c.settings;
+    final s = Strings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final room = await GuestRoom.join(code, settings, settings.playerName.isEmpty ? s.you : settings.playerName);
+      if (!mounted) {
+        room.close();
+        return;
+      }
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => LobbyScreen(guest: room, rematch: true)),
+      );
+    } on OnlineException catch (e) {
+      _joiningRematch = false;
+      messenger.showSnackBar(SnackBar(content: Text(OnlineStrings(settings.language).error(e.code))));
+    } catch (_) {
+      _joiningRematch = false;
+    }
+  }
+
+  void _openChat() {
+    final social = c.link?.social;
+    if (social == null) return;
+    showQuickChat(context, social);
+  }
+
+  void _hint() {
+    c.showHint();
+    if (c.hintCard == null) return;
+    final t = SocialStrings(c.settings.language);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(t.hintText), duration: const Duration(seconds: 2)));
+  }
+
+  /// Hints: offline games except tournament matches.
+  bool get _hintsAllowed => !c.isOnline && !c.tournament;
 
   void _tutorialNext() {
     final step = _tutorialStep;
@@ -102,9 +210,12 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void _tutorialEnd() {
+  Future<void> _tutorialEnd() async {
     setState(() => _tutorialStep = null);
     c.settings.tutorialDone = true;
+    // A new player: now their name (shown at the table and online).
+    if (c.settings.playerName.isEmpty) await askPlayerName(context);
+    if (!mounted) return;
     c.start();
   }
 
@@ -157,6 +268,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    c.link?.social.removeListener(_onSocial);
     c.dispose();
     super.dispose();
   }
@@ -230,7 +342,7 @@ class _GameScreenState extends State<GameScreen> {
         body: Felt(
           child: SafeArea(
             child: AnimatedBuilder(
-              animation: c,
+              animation: Listenable.merge(<Listenable?>[c, c.link?.social]),
               builder: (context, _) {
                 final s = Strings.of(context);
                 return Column(
@@ -239,6 +351,9 @@ class _GameScreenState extends State<GameScreen> {
                       state: c.state,
                       teamNames: _teamNames(s),
                       onBack: _requestLeave,
+                      onHint: _hintsAllowed && c.isHumanTurn ? _hint : null,
+                      showHint: _hintsAllowed,
+                      onChat: c.isOnline ? _openChat : null,
                       onRules: () async {
                         c.pauseTurnTimer();
                         await Navigator.of(context).push(
@@ -279,6 +394,7 @@ class _GameScreenState extends State<GameScreen> {
         _dragDelta = Offset.zero;
         _overTable = false;
       }
+      _updateStagger(state);
       int zOf(MapEntry<int, CardPlacement> e) => e.key == _dragCard ? 10000 : e.value.z;
       final entries = layout.cards.entries.toList()..sort((a, b) => zOf(a).compareTo(zOf(b)));
       final duration = Duration(milliseconds: settings.fastAnimations ? 240 : 420);
@@ -320,6 +436,11 @@ class _GameScreenState extends State<GameScreen> {
               child: IgnorePointer(
                 child: _PastraBurst(key: ValueKey<int>(event.id), center: layout.playCenter),
               ),
+            ),
+          // Our pastra: confetti over the whole table.
+          if (event != null && (event.seat == 0 || (c.isTeamGame && event.seat == 2)))
+            Positioned.fill(
+              child: IgnorePointer(child: _Confetti(key: ValueKey<int>(event.id))),
             ),
           Positioned.fromRect(
             rect: layout.infoRect,
@@ -363,12 +484,17 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          for (final b in c.link?.social.bubbles.values ?? const <ChatBubble>[]) _chatBubble(s, layout, b, box.biggest),
           if (c.onlineClosed)
             Positioned.fill(
               child: _OnlineClosedOverlay(
-                text: OnlineStrings(c.settings.language).hostLeft,
+                text: c.link?.social.nextCode != null
+                    ? SocialStrings(c.settings.language).rematchReady
+                    : OnlineStrings(c.settings.language).hostLeft,
                 button: OnlineStrings(c.settings.language).back,
                 onBack: () => Navigator.of(context).pop(),
+                action: c.link?.social.nextCode != null ? SocialStrings(c.settings.language).join : null,
+                onAction: _joinRematch,
               ),
             ),
           if (state.phase != GamePhase.playing && !c.busy && !c.onlineClosed)
@@ -378,15 +504,78 @@ class _GameScreenState extends State<GameScreen> {
                 teamNames: _teamNames(s),
                 onNextRound: c.nextRound,
                 onMainMenu: () => Navigator.of(context).pop(),
-                onPlayAgain: _playAgain,
+                onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
+                playAgainLabel: c.isOnline ? _rematchLabel() : null,
                 xpGain: c.xpGain,
                 tournament: c.tournament,
+                onReview: () => showGameReview(context, c.misses),
+                reviewCount: c.misses.length,
               ),
             ),
         ],
       ),
       );
     });
+  }
+
+  /// Online: rematch is possible while the table is still there.
+  bool get _rematchAvailable {
+    final social = c.link?.social;
+    if (social == null || _rematchBusy) return false;
+    if (c.isHostOfLink) return true;
+    return !social.iVoted || social.nextCode != null;
+  }
+
+  String _rematchLabel() {
+    final t = SocialStrings(c.settings.language);
+    final social = c.link?.social;
+    if (social == null) return t.rematch;
+    if (c.isHostOfLink) {
+      final n = social.rematchVotes.where((x) => x != social.mySeat).length;
+      return n > 0 ? t.rematchVotes(n) : t.rematch;
+    }
+    if (social.nextCode != null) return t.join;
+    return social.iVoted ? t.rematchWait : t.rematch;
+  }
+
+  /// A quick chat message next to the seat that sent it.
+  Widget _chatBubble(Strings s, TableLayout layout, ChatBubble b, Size size) {
+    final text = SocialStrings(s.lang).chat(b.message);
+    if (text.isEmpty) return const SizedBox.shrink();
+    final rect = layout.seatRects[b.seat];
+    final side = layout.seatSides[b.seat];
+    Offset anchor;
+    Offset shift;
+    if (rect == null || side == null) {
+      // Me: above my hand.
+      anchor = Offset(size.width / 2, layout.dropLine - 8);
+      shift = const Offset(-0.5, -1);
+    } else {
+      switch (side) {
+        case SeatSide.top:
+          anchor = Offset(rect.center.dx, rect.bottom + 34);
+          shift = const Offset(-0.5, 0);
+        case SeatSide.left:
+          anchor = Offset(rect.right + 10, rect.center.dy);
+          shift = const Offset(0, -0.5);
+        case SeatSide.right:
+          anchor = Offset(rect.left - 10, rect.center.dy);
+          shift = const Offset(-1, -0.5);
+        case SeatSide.bottom:
+          anchor = Offset(rect.center.dx, rect.top - 8);
+          shift = const Offset(-0.5, -1);
+      }
+    }
+    return Positioned(
+      left: anchor.dx,
+      top: anchor.dy,
+      child: IgnorePointer(
+        child: FractionalTranslation(
+          translation: shift,
+          child: QuickChatBubble(key: ValueKey<int>(b.id), text: text, emoji: b.message.startsWith('e:')),
+        ),
+      ),
+    );
   }
 
   /// The card a bot just played, shown small next to it for a moment
@@ -431,14 +620,76 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  // ---- dealing and gathering one card after the other
+
+  int _staggerVersion = -1;
+  Set<int> _prevDeck = <int>{};
+  Set<int> _prevTable = <int>{};
+
+  /// Order of the cards just dealt (deck → hands) and just gathered (table
+  /// → pile): each one leaves a little after the one before.
+  Map<int, int> _dealt = <int, int>{};
+  Map<int, int> _gathered = <int, int>{};
+  DateTime _staggerAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void _updateStagger(GameState state) {
+    if (c.stateVersion == _staggerVersion) return;
+    _staggerVersion = c.stateVersion;
+    final dealt = <int, int>{};
+    if (_prevDeck.isNotEmpty) {
+      var longest = 0;
+      for (final h in state.hands) {
+        longest = max(longest, h.length);
+      }
+      var i = 0;
+      for (var k = 0; k < longest; k++) {
+        for (var seat = 0; seat < state.numPlayers; seat++) {
+          // Dealing starts left of the dealer.
+          final who = (state.dealer + 1 + seat) % state.numPlayers;
+          final hand = state.hands[who];
+          if (k < hand.length && _prevDeck.contains(hand[k])) dealt[hand[k]] = i++;
+        }
+      }
+    }
+    final gathered = <int, int>{};
+    var j = 0;
+    for (final pile in state.piles) {
+      for (final card in pile) {
+        if (_prevTable.contains(card)) gathered[card] = j++;
+      }
+    }
+    // A new deal or capture replaces the old order; otherwise the order is
+    // kept a moment longer, so that cards still on their way keep moving
+    // smoothly.
+    final now = DateTime.now();
+    if (dealt.isNotEmpty || gathered.isNotEmpty || now.difference(_staggerAt) > const Duration(milliseconds: 1200)) {
+      _dealt = dealt;
+      _gathered = gathered;
+      _staggerAt = now;
+    }
+    _prevDeck = state.deck.toSet();
+    _prevTable = state.table.toSet();
+  }
+
   Widget _card(int card, CardPlacement p, Duration duration) {
     final dragging = card == _dragCard;
     final rect = dragging ? p.rect.shift(_dragDelta) : p.rect;
     final canDrag = p.interactive && c.isHumanTurn;
+    final fast = c.settings.fastAnimations;
+    final state = c.state;
+    // Only while the card is still where it went (a card played from the
+    // hand moves at once).
+    final dealtIndex = _dealt[card];
+    final gatheredIndex = _gathered[card];
+    final inHand = dealtIndex != null && state.hands.any((h) => h.contains(card));
+    final inPile = gatheredIndex != null && state.piles.any((pile) => pile.contains(card));
+    final delay = inHand ? dealtIndex * (fast ? 35 : 70) : (inPile ? min(gatheredIndex, 20) * (fast ? 12 : 25) : 0);
+    final total = duration.inMilliseconds + delay;
+    final curve = delay == 0 ? Curves.easeOutCubic : Interval(delay / total, 1, curve: Curves.easeOutCubic);
     return AnimatedPositioned(
       key: ValueKey<int>(card),
-      duration: dragging ? Duration.zero : duration,
-      curve: Curves.easeOutCubic,
+      duration: dragging ? Duration.zero : Duration(milliseconds: total),
+      curve: curve,
       left: rect.left,
       top: rect.top,
       width: rect.width,
@@ -457,7 +708,7 @@ class _GameScreenState extends State<GameScreen> {
               card: card,
               faceUp: p.faceUp,
               covered: p.covered,
-              highlighted: p.highlighted,
+              highlighted: p.highlighted || (card == c.hintCard && p.interactive),
               selected: p.selected,
             ),
           ),
@@ -674,12 +925,22 @@ class _TopBar extends StatelessWidget {
     required this.teamNames,
     required this.onBack,
     required this.onRules,
+    this.onHint,
+    this.showHint = false,
+    this.onChat,
   });
 
   final GameState state;
   final List<String> teamNames;
   final VoidCallback onBack;
   final VoidCallback onRules;
+
+  /// Hint button (offline; null = disabled now).
+  final VoidCallback? onHint;
+  final bool showHint;
+
+  /// Quick chat (online games).
+  final VoidCallback? onChat;
 
   /// One slim row with the scoreboard exactly in the middle.
   @override
@@ -755,7 +1016,8 @@ class _TopBar extends StatelessWidget {
     final roomForInfo = MediaQuery.sizeOf(context).width >= 760;
     // Width of the buttons (and text) on the right; the left gets the same,
     // so the board is centred. The full screen button is only on the web.
-    final sideRoom = (roomForInfo ? 150.0 : 0.0) + 48 + (kIsWeb ? 48 : 0);
+    final extra = (showHint ? 44.0 : 0) + (onChat != null ? 44.0 : 0);
+    final sideRoom = (roomForInfo ? 150.0 : 0.0) + 48 + (kIsWeb ? 48 : 0) + extra;
     return Container(
       height: 48,
       decoration: BoxDecoration(
@@ -792,6 +1054,20 @@ class _TopBar extends StatelessWidget {
                   Text(
                     '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
                     style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                if (onChat != null)
+                  IconButton(
+                    onPressed: onChat,
+                    iconSize: 26,
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+                    tooltip: SocialStrings(s.lang).quickChat,
+                  ),
+                if (showHint)
+                  IconButton(
+                    onPressed: onHint,
+                    iconSize: 26,
+                    icon: Icon(Icons.lightbulb_outline_rounded, color: onHint == null ? Colors.white38 : PastraColors.gold),
+                    tooltip: SocialStrings(s.lang).hint,
                   ),
                 IconButton(
                   onPressed: onRules,
@@ -1383,11 +1659,21 @@ class _DimPainter extends CustomPainter {
 
 /// Shown to an online guest when the host has left the game.
 class _OnlineClosedOverlay extends StatelessWidget {
-  const _OnlineClosedOverlay({required this.text, required this.button, required this.onBack});
+  const _OnlineClosedOverlay({
+    required this.text,
+    required this.button,
+    required this.onBack,
+    this.action,
+    this.onAction,
+  });
 
   final String text;
   final String button;
   final VoidCallback onBack;
+
+  /// A second, main button (join the rematch).
+  final String? action;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1403,7 +1689,22 @@ class _OnlineClosedOverlay extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onBack, child: Text(button)),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: <Widget>[
+                if (action != null) OutlinedButton(onPressed: onBack, child: Text(button)),
+                if (action != null)
+                  FilledButton.icon(
+                    onPressed: onAction,
+                    icon: const Icon(Icons.replay_rounded),
+                    label: Text(action!),
+                  )
+                else
+                  FilledButton(onPressed: onBack, child: Text(button)),
+              ],
+            ),
           ],
         ),
       ),
@@ -1461,4 +1762,94 @@ class _TableZonePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TableZonePainter old) => old.highlight != highlight;
+}
+
+/// Colourful paper pieces falling over the table (our pastra).
+class _Confetti extends StatefulWidget {
+  const _Confetti({super.key});
+
+  @override
+  State<_Confetti> createState() => _ConfettiState();
+}
+
+class _ConfettiState extends State<_Confetti> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(painter: _ConfettiPainter(_c, widget.key.hashCode), size: Size.infinite),
+    );
+  }
+}
+
+class _Piece {
+  _Piece(Random r)
+      : x = r.nextDouble(),
+        delay = r.nextDouble() * 0.35,
+        speed = 0.55 + r.nextDouble() * 0.6,
+        drift = (r.nextDouble() - 0.5) * 0.25,
+        spin = (r.nextDouble() - 0.5) * 18,
+        w = 5 + r.nextDouble() * 5,
+        h = 8 + r.nextDouble() * 8,
+        color = _ConfettiPainter.colors[r.nextInt(_ConfettiPainter.colors.length)];
+
+  final double x;
+  final double delay;
+  final double speed;
+  final double drift;
+  final double spin;
+  final double w;
+  final double h;
+  final Color color;
+}
+
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter(this.anim, int seed)
+      : _pieces = List<_Piece>.generate(70, (i) => _Piece(Random(seed + i * 104729))),
+        super(repaint: anim);
+
+  static const List<Color> colors = <Color>[
+    PastraColors.gold,
+    Color(0xFFFF5A6E),
+    Color(0xFF4CA8FF),
+    Color(0xFF5BD69A),
+    Color(0xFFB57BFF),
+    Colors.white,
+  ];
+
+  final Animation<double> anim;
+  final List<_Piece> _pieces;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = anim.value;
+    if (t <= 0 || t >= 1 || size.isEmpty) return;
+    final paint = Paint();
+    for (final p in _pieces) {
+      final lt = ((t - p.delay) / (1 - p.delay)).clamp(0.0, 1.0);
+      if (lt <= 0) continue;
+      final y = -20 + (size.height + 40) * lt * p.speed * 1.4;
+      final x = size.width * (p.x + p.drift * lt) + sin(lt * 9 + p.x * 20) * 14;
+      final fade = lt > 0.8 ? (1 - lt) / 0.2 : 1.0;
+      paint.color = p.color.withValues(alpha: fade.clamp(0.0, 1.0));
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(p.spin * lt);
+      // A turning piece: its width shrinks and grows.
+      final flip = cos(lt * 12 + p.x * 10).abs();
+      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: p.w * (0.3 + 0.7 * flip), height: p.h), paint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter oldDelegate) => false;
 }

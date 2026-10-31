@@ -110,15 +110,17 @@ class PastraEngine {
   /// Deals [PastraRules.cardsPerDeal] cards to everybody, starting after the
   /// dealer. No cards go to the table on re-deals.
   ///
-  /// A player who is dealt four cards of the same rank voids the deal: the
-  /// cards are shuffled back (the visible bottom cards stay where they are,
-  /// see [GameState.exposed]) and the same dealer deals again. Each void deal
-  /// is recorded in [GameState.quads].
+  /// Only in the first deal of a round: a player who is dealt four cards of
+  /// the same rank voids the deal: the cards are shuffled back (the visible
+  /// bottom cards stay where they are, see [GameState.exposed]) and the same
+  /// dealer deals again. Each void deal is recorded in [GameState.quads].
+  /// In the later deals of the round four of a kind is simply played.
   static void dealHands(GameState s) {
     s.quads = <QuadEvent>[];
+    final first = s.dealNumber == 0;
     for (var attempt = 0;; attempt++) {
       if (!_dealOnce(s)) return;
-      if (attempt >= maxRedeals) break;
+      if (!first || attempt >= maxRedeals) break;
       final found = <QuadEvent>[
         for (var p = 0; p < s.numPlayers; p++)
           if (hasFourOfAKind(s.hands[p])) QuadEvent(p, List<int>.of(s.hands[p])..sort()),

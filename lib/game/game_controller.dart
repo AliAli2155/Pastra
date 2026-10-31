@@ -10,12 +10,13 @@ import '../engine/game_state.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/pastra_engine.dart';
 import '../engine/rules.dart';
+import '../engine/move_review.dart';
 import 'achievements.dart';
-import 'quests.dart';
 import 'app_settings.dart';
 import 'economy.dart';
 import 'online_link.dart';
 import 'progression.dart';
+import 'quests.dart';
 import 'seats.dart';
 import 'sound.dart';
 
@@ -132,6 +133,9 @@ class GameController extends ChangeNotifier {
 
   bool get isOnline => link != null;
 
+  /// Online host (runs the game; guests only see it).
+  bool get isHostOfLink => link != null && !isGuest;
+
   /// Grows every time the game state changes (the online host publishes
   /// the new state when it sees a new value).
   int stateVersion = 0;
@@ -231,6 +235,18 @@ class GameController extends ChangeNotifier {
 
   /// Pastras the local player made in this round (for the statistics).
   int _roundPastras = 0;
+
+  /// Pastras of the local player in this game (for the statistics).
+  int _gamePastras = 0;
+
+  /// Better plays the local player missed (the review after the game).
+  final List<MissedChance> misses = <MissedChance>[];
+
+  /// Hints asked for in this game.
+  int hintsUsed = 0;
+
+  /// The card the hint suggests right now (glows in the hand).
+  int? hintCard;
   int _roundJackPastras = 0;
   Timer? _warnTimer;
 
@@ -431,6 +447,29 @@ class GameController extends ChangeNotifier {
     _play(card);
   }
 
+  /// Remembers a clearly better play the local player missed.
+  void _review(int card) {
+    try {
+      final miss = MoveReview.review(_state, card);
+      if (miss != null) misses.add(miss);
+    } catch (_) {}
+  }
+
+  /// Offline: suggests a card (the strong computer's choice) and selects it
+  /// so that what it takes lights up.
+  void showHint() {
+    if (!isHumanTurn || isOnline) return;
+    final hand = _state.hands[humanSeat];
+    if (hand.isEmpty) return;
+    var card = PastraAI.chooseCard(_state.copy(), AiLevel.hard, _rng);
+    if (!hand.contains(card)) card = hand.first;
+    hintsUsed++;
+    hintCard = card;
+    selected = card;
+    if (settings.haptics) HapticFeedback.selectionClick();
+    _notify();
+  }
+
   void clearSelection() {
     if (selected == null) return;
     selected = null;
@@ -456,7 +495,9 @@ class GameController extends ChangeNotifier {
     _warnTimer = null;
     final seat = _state.current;
     final pv = PastraEngine.preview(_state, card);
+    if (seat == humanSeat) _review(card);
     selected = null;
+    hintCard = null;
     if (pv.isCapture) {
       pending = PendingPlay(seat, card, pv.captured);
       _notify();
@@ -475,6 +516,7 @@ class GameController extends ChangeNotifier {
       if (settings.haptics) HapticFeedback.heavyImpact();
       if (seat == humanSeat) {
         _roundPastras++;
+        _gamePastras++;
         if (Cards.isJack(card)) _roundJackPastras++;
       }
       _clearEventLater(event.id);
@@ -541,7 +583,13 @@ class GameController extends ChangeNotifier {
       GameFacts? gameFacts;
       if (_state.phase == GamePhase.gameOver) {
         final won = _state.winner == ourTeam;
-        settings.recordGame(won: won, players: _state.numPlayers, level: seats[1].level, online: link != null);
+        settings.recordGame(
+          won: won,
+          players: _state.numPlayers,
+          level: seats[1].level,
+          online: link != null,
+          pastras: _gamePastras,
+        );
         final endXp = Progression.gameXp(won: won, level: seats[1].level);
         _gameXp += endXp;
         final lv = settings.addXp(endXp);
@@ -798,7 +846,9 @@ class GameController extends ChangeNotifier {
 
   /// Guest: asks the host to play [card].
   void _guestPlay(int card) {
+    _review(card);
     selected = null;
+    hintCard = null;
     // Show the card on the table at once; the host's answer takes a moment.
     final pv = PastraEngine.preview(_state, card);
     pending = PendingPlay(humanSeat, card, pv.captured);
@@ -967,6 +1017,7 @@ class GameController extends ChangeNotifier {
         if (isGuest && event.seat == humanSeat) {
           final card = mv is Map ? mv['card'] : null;
           final jack = card is num && Cards.isJack(card.toInt());
+          _gamePastras++;
           final xp = Progression.roundXp(pastras: 1, jackPastras: jack ? 1 : 0);
           _gameXp += xp;
           settings.addXp(xp);
@@ -1017,7 +1068,7 @@ class GameController extends ChangeNotifier {
   void _recordGuestGame() {
     if (!isGuest || xpGain != null) return;
     final won = _state.winner == 0;
-    settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium, online: true);
+    settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium, online: true, pastras: _gamePastras);
     final amount = Progression.gameXp(won: won, level: AiLevel.medium);
     final lv = settings.addXp(amount);
     _gameXp += amount;

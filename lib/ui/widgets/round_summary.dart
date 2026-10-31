@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../engine/game_state.dart';
 import '../../engine/rules.dart';
 import '../../game/progression.dart';
+import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
 import 'wallet_bar.dart';
@@ -18,13 +19,27 @@ class RoundSummaryPanel extends StatelessWidget {
     required this.onPlayAgain,
     this.xpGain,
     this.tournament = false,
+    this.playAgainLabel,
+    this.onReview,
+    this.reviewCount = 0,
   });
 
   final GameState state;
   final List<String> teamNames;
   final VoidCallback onNextRound;
   final VoidCallback onMainMenu;
-  final VoidCallback onPlayAgain;
+
+  /// Null: shown but disabled (online rematch already asked for).
+  final VoidCallback? onPlayAgain;
+
+  /// Instead of "play again" (online: "rematch").
+  final String? playAgainLabel;
+
+  /// The game review (end of game).
+  final VoidCallback? onReview;
+
+  /// Chances missed in the game (shown on the review button).
+  final int reviewCount;
 
   /// XP earned in the finished game (end-of-game panel only).
   final GameXp? xpGain;
@@ -164,9 +179,31 @@ class RoundSummaryPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: FilledButton(onPressed: onPlayAgain, child: Text(s.playAgain))),
+              Expanded(
+                child: FilledButton(
+                  onPressed: onPlayAgain,
+                  child: Text(playAgainLabel ?? s.playAgain, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+              ),
             ],
           ),
+        if (over && onReview != null) ...<Widget>[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: onReview,
+            icon: Icon(
+              reviewCount == 0 ? Icons.verified_rounded : Icons.manage_search_rounded,
+              color: PastraColors.gold,
+              size: 20,
+            ),
+            label: Text(
+              reviewCount == 0
+                  ? SocialStrings(s.lang).analysis
+                  : '${SocialStrings(s.lang).analysis} · ${SocialStrings(s.lang).missedCount(reviewCount)}',
+              style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
       ],
     );
 

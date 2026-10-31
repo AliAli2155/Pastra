@@ -185,10 +185,13 @@ enum TableTheme {
   wood(Color(0xFFA0703F), Color(0xFF6B4423), Color(0xFF34200F)),
   purple(Color(0xFF7448AA), Color(0xFF452870), Color(0xFF22123A)),
   night(Color(0xFF3E4656), Color(0xFF242A35), Color(0xFF101318)),
+  olive(Color(0xFF7C8A3A), Color(0xFF4E5A22), Color(0xFF232A0D)),
   // Store tables (bought with chips or diamonds, see Economy.items).
   ocean(Color(0xFF14A3A0), Color(0xFF0B6B72), Color(0xFF04323A)),
   royal(Color(0xFF3446A8), Color(0xFF1C2466), Color(0xFF0A0D2E)),
-  sunset(Color(0xFFD9733A), Color(0xFF9C3446), Color(0xFF3E1230));
+  sunset(Color(0xFFD9733A), Color(0xFF9C3446), Color(0xFF3E1230)),
+  aurora(Color(0xFF2FB38A), Color(0xFF2A5FA8), Color(0xFF1A1440)),
+  rose(Color(0xFFC0587A), Color(0xFF7A2848), Color(0xFF2E0C1C));
 
   const TableTheme(this.light, this.mid, this.dark);
 
@@ -214,10 +217,13 @@ enum CardBackStyle {
   black(Color(0xFF15161A), Color(0xFF3A3D45), PastraColors.gold),
   purple(Color(0xFF3B1B6E), Color(0xFF7A4BC2), Colors.white),
   gold(Color(0xFF6B4E0E), Color(0xFFD4A43A), Color(0xFFFFF6DA)),
+  meander(Color(0xFF0D47A1), Color(0xFF42A5F5), Colors.white),
   // Store card backs.
   emerald(Color(0xFF053D2E), Color(0xFF12A374), PastraColors.gold),
   ruby(Color(0xFF4A0618), Color(0xFFD01E4A), PastraColors.gold),
-  diamond(Color(0xFF0B4A6E), Color(0xFF7FD8F5), Colors.white);
+  diamond(Color(0xFF0B4A6E), Color(0xFF7FD8F5), Colors.white),
+  copper(Color(0xFF4A2410), Color(0xFFC46A2E), Color(0xFFFFE0B2)),
+  galaxy(Color(0xFF140A36), Color(0xFF6A3FD0), Color(0xFFE6D7FF));
 
   const CardBackStyle(this.dark, this.light, this.accent);
 

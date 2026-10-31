@@ -82,6 +82,36 @@
 </head>
 <body>
   <div id="app"></div>
+  <script>
+    // Invite links: https://…/Pastra/#/oda/1234 (or #/room/1234). The code
+    // is kept for the app and the address is cleaned, so Flutter starts on
+    // the home screen and a reload does not join again.
+    (function () {
+      try {
+        var m = /^#\/(?:oda|room)\/(\d{4})\/?$/.exec(window.location.hash || '');
+        if (m) {
+          window.pastraInviteCode = m[1];
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      } catch (e) {}
+    })();
+    window.pastraTakeInvite = function () {
+      var c = window.pastraInviteCode || '';
+      window.pastraInviteCode = '';
+      return c;
+    };
+    // The phone's share sheet (WhatsApp, Telegram, …) where there is one.
+    window.pastraCanShare = function () { return !!navigator.share; };
+    window.pastraShare = function (text, url) {
+      try {
+        navigator.share({ title: 'Pastra', text: text, url: url }).catch(function () {});
+        return true;
+      } catch (e) { return false; }
+    };
+    window.pastraOpen = function (url) {
+      try { window.open(url, '_blank', 'noopener'); } catch (e) {}
+    };
+  </script>
   <div id="safe-probe"></div>
   <script>
     // The safe area (notch, rounded corners, home bar) in CSS pixels as

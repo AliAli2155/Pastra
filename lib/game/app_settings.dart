@@ -9,6 +9,7 @@ import '../engine/rules.dart';
 import '../ui/theme.dart';
 import 'achievements.dart';
 import 'economy.dart';
+import 'friends.dart';
 import 'progression.dart';
 import 'quests.dart';
 import 'seasons.dart';
@@ -41,6 +42,25 @@ class GameStats {
   /// Seasons finished in the top 10.
   int seasonTop10 = 0;
 
+  /// Most pastras of the local player in one game.
+  int bestGamePastras = 0;
+
+  /// Finished games per table colour (the favourite table).
+  Map<String, int> tableGames = <String, int>{};
+
+  /// The table colour played on most (null before the first game).
+  String? get favoriteTable {
+    String? best;
+    var n = 0;
+    tableGames.forEach((k, v) {
+      if (v > n) {
+        n = v;
+        best = k;
+      }
+    });
+    return best;
+  }
+
   /// Indexed by [AiLevel.index].
   List<int> gamesByLevel = <int>[0, 0, 0];
   List<int> winsByLevel = <int>[0, 0, 0];
@@ -68,9 +88,19 @@ class GameStats {
         'perfectDays': perfectDays,
         'loginBest': loginBest,
         'seasonTop10': seasonTop10,
+        'bestGamePastras': bestGamePastras,
+        'tableGames': tableGames,
         'gamesByLevel': gamesByLevel,
         'winsByLevel': winsByLevel,
       };
+
+  static Map<String, int> _counts(Object? v) {
+    if (v is! Map) return <String, int>{};
+    return <String, int>{
+      for (final e in v.entries)
+        if (e.value is num) '${e.key}': (e.value as num).toInt(),
+    };
+  }
 
   factory GameStats.fromJson(Map<String, dynamic> j) {
     int i(String k) => (j[k] as num?)?.toInt() ?? 0;
@@ -99,6 +129,8 @@ class GameStats {
       ..perfectDays = i('perfectDays')
       ..loginBest = i('loginBest')
       ..seasonTop10 = i('seasonTop10')
+      ..bestGamePastras = i('bestGamePastras')
+      ..tableGames = _counts(j['tableGames'])
       ..gamesByLevel = l('gamesByLevel')
       ..winsByLevel = l('winsByLevel');
   }
@@ -160,6 +192,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kSeasonGames = 'seasonGames';
   static const String _kSeasonPending = 'seasonPending';
   static const String _kSeasonBadges = 'seasonBadges';
+  static const String _kFriends = 'friends';
 
   /// Supported languages. The app always starts in English; the language the
   /// user picks is remembered.
@@ -572,9 +605,17 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordGame({required bool won, required int players, required AiLevel level, bool online = false}) {
+  void recordGame({
+    required bool won,
+    required int players,
+    required AiLevel level,
+    bool online = false,
+    int pastras = 0,
+  }) {
     final st = _stats;
     st.games++;
+    if (pastras > st.bestGamePastras) st.bestGamePastras = pastras;
+    st.tableGames[Look.table.name] = (st.tableGames[Look.table.name] ?? 0) + 1;
     if (online) {
       st.onlineGames++;
       if (won) st.onlineWins++;
@@ -742,6 +783,37 @@ class AppSettings extends ChangeNotifier {
 
   /// Unlocks the counter achievements reached outside a game.
   List<String> unlockEarned() => unlockAchievements(earnedAchievements(_stats));
+
+  // ---- friends (people met online)
+
+  List<Friend> get friends {
+    try {
+      final raw = jsonDecode(_prefs.getString(_kFriends) ?? '[]') as List<dynamic>;
+      return <Friend>[
+        for (final j in raw)
+          if (Friend.fromJson(j) case final f?) f,
+      ];
+    } catch (_) {
+      return <Friend>[];
+    }
+  }
+
+  void _saveFriends(List<Friend> list) {
+    _prefs.setString(_kFriends, jsonEncode(<Object>[for (final f in list) f.toJson()]));
+    notifyListeners();
+  }
+
+  /// The people of an online game (uid → name), newest first.
+  void addRecentPlayers(Map<String, String> people) {
+    if (people.isEmpty) return;
+    _saveFriends(Friend.merge(friends, people, DateTime.now().millisecondsSinceEpoch));
+  }
+
+  void setFavorite(String uid, bool favorite) {
+    _saveFriends(<Friend>[for (final f in friends) f.uid == uid ? f.copyWith(favorite: favorite) : f]);
+  }
+
+  void removeFriend(String uid) => _saveFriends(<Friend>[for (final f in friends) if (f.uid != uid) f]);
 
   // ---- avatar frame and title
 

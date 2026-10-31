@@ -17,6 +17,7 @@ import '../game/online_link.dart';
 import '../game/seats.dart';
 import 'lobby.dart';
 import 'online_service.dart';
+import 'room_social.dart';
 
 Map<String, dynamic>? _map(Object? v) {
   if (v is! Map) return null;
@@ -147,9 +148,12 @@ class HostRoom implements OnlineLink {
     this.isPublic = false,
     this.autoStart = false,
     this.stake = 0,
-  }) {
+  }) : social = RoomSocial(code: code, mySeat: 0, players: players) {
     if (isPublic) watcher.addListener(_syncLobby);
   }
+
+  @override
+  final RoomSocial social;
 
   /// Entry fee of the table (its salon), paid by everybody when the game
   /// starts.
@@ -191,7 +195,9 @@ class HostRoom implements OnlineLink {
     Lobby.remove(code);
   }
 
+  @override
   final String code;
+  @override
   final int players;
   final AiLevel level;
   final AppSettings settings;
@@ -434,6 +440,7 @@ class HostRoom implements OnlineLink {
       s.cancel();
     }
     _presence.cancel();
+    social.dispose();
     // Tells the guests that the room is over.
     OnlineService.ref('rooms/$code/meta/status').set('closed').catchError((Object _) {});
     OnlineService.ref('rooms/$code/meta/hostOnline').set(false).catchError((Object _) {});
@@ -446,13 +453,18 @@ class HostRoom implements OnlineLink {
 // ======================================================================
 
 class GuestRoom implements OnlineLink {
-  GuestRoom._(this.code, this.mySeat, this.settings, this.watcher, this._presence, {this.stake = 0}) {
+  GuestRoom._(this.code, this.mySeat, this.settings, this.watcher, this._presence, {this.stake = 0, int players = 2})
+      : social = RoomSocial(code: code, mySeat: mySeat, players: players) {
     _viewSub = OnlineService.ref('rooms/$code/views/s$mySeat').onValue.listen(_onView);
     watcher.addListener(_onRoom);
   }
 
+  @override
   final String code;
   final int mySeat;
+
+  @override
+  final RoomSocial social;
   final AppSettings settings;
   final RoomWatcher watcher;
   final StreamSubscription<void> _presence;
@@ -473,7 +485,8 @@ class GuestRoom implements OnlineLink {
   int _moveCounter = 0;
   bool _left = false;
 
-  int get players => watcher.info.players;
+  @override
+  int get players => watcher.info.exists ? watcher.info.players : social.players;
 
   /// Joins the room; [seat] takes exactly that seat (tournament matches).
   static Future<GuestRoom> join(String code, AppSettings settings, String name, {int? seat}) async {
@@ -514,7 +527,7 @@ class GuestRoom implements OnlineLink {
       if (mine == null) throw const OnlineException('full');
     }
     final presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$mine/online']).listen((_) {});
-    return GuestRoom._(code, mine, settings, RoomWatcher(code), presence, stake: stake);
+    return GuestRoom._(code, mine, settings, RoomWatcher(code), presence, stake: stake, players: players);
   }
 
   void _onRoom() {
@@ -628,6 +641,7 @@ class GuestRoom implements OnlineLink {
     _viewSub?.cancel();
     watcher.removeListener(_onRoom);
     _presence.cancel();
+    social.dispose();
     final seatRef = OnlineService.ref('rooms/$code/seats/s$mySeat');
     if (watcher.info.status == 'lobby') {
       seatRef.remove().catchError((Object _) {});
