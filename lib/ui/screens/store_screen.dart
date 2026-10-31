@@ -6,6 +6,7 @@ import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../l10n/shop_strings.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/wallet_bar.dart';
@@ -20,7 +21,8 @@ class StoreScreen extends StatelessWidget {
     final settings = SettingsScope.of(context);
     final shop = ShopStrings(settings.language);
     return Scaffold(
-      appBar: AppBar(
+      appBar: GameAppBar(
+        icon: Icons.storefront_rounded,
         title: Text(shop.store, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: const <Widget>[
           Padding(padding: EdgeInsets.only(right: 12), child: Center(child: WalletBar(onTap: null, compact: true))),

@@ -14,6 +14,7 @@ import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../../online/social_service.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/invite_share.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/name_prompt.dart';
@@ -308,7 +309,8 @@ class _OnlineScreenState extends State<OnlineScreen> {
     }
     final showNameInBar = _configured && !_checking && MediaQuery.sizeOf(context).width >= 640;
     return Scaffold(
-      appBar: AppBar(
+      appBar: GameAppBar(
+        icon: Icons.public,
         title: Text(t.online, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: <Widget>[
           IconButton(
@@ -830,7 +832,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final quick = widget.host?.autoStart == true;
     final cup = widget.cupOpponent != null;
     return Scaffold(
-      appBar: AppBar(
+      appBar: GameAppBar(
+        icon: Icons.public,
         title: Text(
           cup ? t.cup : (widget.rematch ? SocialStrings(SettingsScope.of(context).language).rematch : (quick ? t.quickMatch : t.online)),
           style: const TextStyle(fontWeight: FontWeight.w900),

@@ -11,6 +11,7 @@ import '../../online/cup_logic.dart';
 import '../../online/cup_service.dart';
 import '../../online/online_service.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
 import 'cup_screen.dart';
 
@@ -79,7 +80,8 @@ class _CupHubScreenState extends State<CupHubScreen> {
       onTap: _friendsDialog,
     );
     return Scaffold(
-      appBar: AppBar(title: Text(t.cup, style: const TextStyle(fontWeight: FontWeight.w900))),
+      appBar: GameAppBar(
+        icon: Icons.emoji_events_rounded,title: Text(t.cup, style: const TextStyle(fontWeight: FontWeight.w900))),
       body: Felt(
         child: SafeArea(
           top: false,

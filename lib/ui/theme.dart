@@ -57,6 +57,19 @@ ThemeData buildPastraTheme() {
       titleTextStyle: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3),
       iconTheme: IconThemeData(color: Colors.white, size: 26),
     ),
+    // Tabs: a gold pill behind the chosen one.
+    tabBarTheme: TabBarThemeData(
+      indicator: BoxDecoration(color: PastraColors.gold, borderRadius: BorderRadius.circular(20)),
+      indicatorSize: TabBarIndicatorSize.tab,
+      dividerHeight: 0,
+      labelColor: Colors.black,
+      unselectedLabelColor: Colors.white70,
+      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+      unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+      splashBorderRadius: BorderRadius.circular(20),
+      overlayColor: WidgetStateProperty.all(Colors.white10),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: PastraColors.gold,

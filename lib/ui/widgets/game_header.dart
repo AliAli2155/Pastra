@@ -13,48 +13,7 @@ class GameHeader extends StatelessWidget {
   final List<Widget> trailing;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 12, 4),
-      child: Row(
-        children: <Widget>[
-          Material(
-            color: Colors.black.withValues(alpha: 0.3),
-            shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => Navigator.of(context).maybePop(),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (icon != null) ...<Widget>[
-            Icon(icon, color: PastraColors.gold, size: 26),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            flex: 3,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: GoldText(title, size: 26, letterSpacing: 0.5),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[for (final w in trailing) Flexible(child: w)]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => GameAppBar(title: Text(title), icon: icon, actions: trailing);
 }
 
 /// A small rounded label (countdown, XP total, …) for the header.
@@ -88,6 +47,118 @@ class HeaderPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The bar at the top of every menu screen (instead of the plain app bar):
+/// the round back button, a gold title with its icon and the screen's
+/// buttons on the right, on a dark band that suits every table colour.
+class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const GameAppBar({super.key, required this.title, this.icon, this.actions = const <Widget>[], this.bottom});
+
+  final Widget title;
+  final IconData? icon;
+  final List<Widget> actions;
+
+  /// Tabs under the title.
+  final PreferredSizeWidget? bottom;
+
+  static const double height = 56;
+
+  @override
+  Size get preferredSize => Size.fromHeight(height + (bottom == null ? 0 : bottom!.preferredSize.height + 8));
+
+  @override
+  Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Colors.black.withValues(alpha: 0.55), Colors.black.withValues(alpha: 0.28)],
+        ),
+        border: Border(bottom: BorderSide(color: PastraColors.gold.withValues(alpha: 0.18))),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox(
+              height: height,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: <Widget>[
+                    if (canPop) ...<Widget>[
+                      const _RoundBack(),
+                      const SizedBox(width: 12),
+                    ],
+                    if (icon != null) ...<Widget>[
+                      Icon(icon, color: PastraColors.gold, size: 24),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      flex: 3,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: AlignmentDirectional.centerStart,
+                        child: DefaultTextStyle.merge(
+                          style: const TextStyle(
+                            color: PastraColors.gold,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.3,
+                          ),
+                          maxLines: 1,
+                          child: title,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: IconTheme.merge(
+                        data: const IconThemeData(color: Colors.white, size: 24),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[for (final a in actions) Flexible(child: a)]),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (bottom != null) Padding(padding: const EdgeInsets.fromLTRB(10, 0, 10, 8), child: bottom!),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundBack extends StatelessWidget {
+  const _RoundBack();
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: MaterialLocalizations.of(context).backButtonTooltip,
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.3),
+        shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => Navigator.of(context).maybePop(),
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+          ),
+        ),
       ),
     );
   }

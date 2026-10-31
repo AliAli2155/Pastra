@@ -6,6 +6,7 @@ import '../../engine/cards.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/playing_card.dart';
 
@@ -64,7 +65,8 @@ class _PlayScreenState extends State<PlayScreen> {
       onTap: () => _run(widget.onOnline),
     );
     return Scaffold(
-      appBar: AppBar(title: Text(s.play)),
+      appBar: GameAppBar(
+        icon: Icons.play_arrow_rounded,title: Text(s.play)),
       body: Felt(
         child: SafeArea(
           top: false,

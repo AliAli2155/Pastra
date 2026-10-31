@@ -20,6 +20,7 @@ import '../../online/leaderboard.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/bracket_view.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/wallet_bar.dart';
@@ -498,7 +499,8 @@ class _CupScreenState extends State<CupScreen> {
       body = _signupView(t, s);
     }
     return Scaffold(
-      appBar: AppBar(
+      appBar: GameAppBar(
+        icon: Icons.emoji_events_rounded,
         title: Text(
           live && !_friends ? '${cupTitle(t, type)} · ${t.cupLive}' : cupTitle(t, type),
           style: const TextStyle(fontWeight: FontWeight.w900),

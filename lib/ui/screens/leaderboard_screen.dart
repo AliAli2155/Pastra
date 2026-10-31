@@ -8,6 +8,7 @@ import '../../l10n/strings.dart';
 import '../../online/leaderboard.dart';
 import '../../online/online_service.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/avatar.dart';
 
 /// The best players by XP.
@@ -48,13 +49,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
+        appBar: GameAppBar(
+        icon: Icons.leaderboard_rounded,
           title: Text(t.leaderboard),
           actions: <Widget>[IconButton(icon: const Icon(Icons.refresh), onPressed: _reload)],
           bottom: TabBar(
-            indicatorColor: PastraColors.gold,
-            labelColor: PastraColors.gold,
-            unselectedLabelColor: Colors.white70,
             tabs: <Widget>[
               Tab(text: p.seasonName(settings.season)),
               Tab(text: p.allTimeTab),

@@ -5,6 +5,7 @@ import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/playing_card.dart';
 
 class RulesScreen extends StatelessWidget {
@@ -27,7 +28,8 @@ class RulesScreen extends StatelessWidget {
       (Cards.tenOfDiamonds, s.tenOfDiamonds),
     ];
     return Scaffold(
-      appBar: AppBar(
+      appBar: GameAppBar(
+        icon: Icons.menu_book_rounded,
         title: Text('${s.rules} · ${s.variantName(v)}'),
         actions: <Widget>[
           IconButton(

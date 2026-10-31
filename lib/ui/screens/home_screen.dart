@@ -24,6 +24,7 @@ import '../widgets/playing_card.dart';
 import '../widgets/rules_editor.dart';
 import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
+import 'friends_screen.dart';
 import 'level_path_screen.dart';
 import 'online_screen.dart';
 import 'play_screen.dart';
@@ -337,10 +338,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: <Widget>[
                             Expanded(
                               flex: 11,
-                              // Bounded (no scrolling) so the hero shrinks to
-                              // fit; the bottom stays free for the About text.
+                              // Bounded (no scrolling) so the hero shrinks to fit.
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 60),
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                                 child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: hero)),
                               ),
                             ),
@@ -373,33 +373,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Padding(padding: const EdgeInsets.all(8), child: WalletBar(onTap: _openStore)),
               ),
             ),
-            // Full screen button in the top-right corner (web version).
-            const Positioned(
+            // Top right: friends and (web) full screen.
+            Positioned(
               top: 0,
               right: 0,
-              child: SafeArea(child: Padding(padding: EdgeInsets.all(6), child: FullscreenButton(size: 30))),
-            ),
-            // About: plain text in the bottom-left corner (home screen only).
-            Positioned.fill(
-              child: IgnorePointer(
-                child: SafeArea(
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            s.about,
-                            style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(s.aboutBody, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                        ],
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      _CornerButton(
+                        icon: Icons.people_alt_rounded,
+                        tooltip: SocialStrings(settings.language).friends,
+                        onTap: () => _open(const FriendsScreen()),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      const FullscreenButton(size: 30),
+                    ],
                   ),
                 ),
               ),
@@ -921,6 +912,31 @@ class _QuestsBar extends StatelessWidget {
               const Icon(Icons.chevron_right_rounded, color: Colors.white54),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A small round button in a corner of the home screen.
+class _CornerButton extends StatelessWidget {
+  const _CornerButton({required this.icon, required this.tooltip, required this.onTap});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.3),
+        shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(9), child: Icon(icon, color: Colors.white, size: 22)),
         ),
       ),
     );

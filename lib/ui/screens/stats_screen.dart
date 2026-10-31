@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../engine/pastra_ai.dart';
@@ -7,6 +9,7 @@ import '../../l10n/strings.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/social_strings.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import 'progress_views.dart';
 
 /// Lifetime statistics and achievements of the local player.
@@ -126,7 +129,8 @@ class StatsScreen extends StatelessWidget {
       length: 3,
       initialIndex: initialTab,
       child: Scaffold(
-        appBar: AppBar(
+        appBar: GameAppBar(
+        icon: Icons.insights_rounded,
           title: Text(s.statistics),
           actions: <Widget>[
             IconButton(
@@ -136,9 +140,6 @@ class StatsScreen extends StatelessWidget {
             ),
           ],
           bottom: TabBar(
-            indicatorColor: PastraColors.gold,
-            labelColor: PastraColors.gold,
-            unselectedLabelColor: Colors.white70,
             isScrollable: MediaQuery.sizeOf(context).width < 520,
             tabAlignment: MediaQuery.sizeOf(context).width < 520 ? TabAlignment.start : null,
             tabs: <Widget>[
@@ -295,9 +296,11 @@ class _Highlights extends StatelessWidget {
     final p = ProgressStrings(settings.language);
     final favName = stats.favoriteTable;
     final fav = TableTheme.values.where((x) => x.name == favName).firstOrNull;
+    // Four in a row when the phone is held sideways, two when upright.
+    final cardW = ((min(MediaQuery.sizeOf(context).width, 900.0) - 32 - 36) / 4).clamp(140.0, 200.0);
     Widget card({required Widget top, required String value, required String label}) => Container(
-          width: 200,
-          height: 150,
+          width: cardW,
+          height: 136,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),

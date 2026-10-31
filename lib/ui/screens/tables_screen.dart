@@ -5,6 +5,7 @@ import '../../l10n/online_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/lobby.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/wallet_bar.dart';
 
 /// The open tables of the lobby. Tapping one closes this screen and returns
@@ -17,7 +18,8 @@ class TablesScreen extends StatelessWidget {
     final t = OnlineStrings(SettingsScope.of(context).language);
     final s = Strings.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.openTables)),
+      appBar: GameAppBar(
+        icon: Icons.table_restaurant_rounded,title: Text(t.openTables)),
       body: Felt(
         child: SafeArea(
           top: false,

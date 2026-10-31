@@ -11,6 +11,7 @@ import '../../online/leaderboard.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/avatar.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
@@ -66,19 +67,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = Strings.of(context);
     final settings = SettingsScope.of(context);
 
-    Widget section(String title) => Padding(
-          padding: const EdgeInsets.fromLTRB(4, 22, 4, 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: PastraColors.gold,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
-          ),
-        );
-
     Widget label(String text, {String? hint}) => Padding(
           padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
           child: Column(
@@ -92,35 +80,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.settings)),
+      appBar: GameAppBar(
+        icon: Icons.tune_rounded,title: Text(s.settings)),
       body: Felt(
         child: SafeArea(
           top: false,
-          child: ListView(
-            padding: _listPadding(context),
-            children: <Widget>[
-              section(s.language),
-              Wrap(
-                key: ValueKey<int>(_fontPass),
-                spacing: 8,
-                runSpacing: 8,
-                children: <Widget>[
-                  for (final code in _languagesAlphabetical)
-                    ChoiceChip(
-                      label: Text(Strings.languageName(code)),
-                      selected: settings.language == code,
-                      onSelected: (_) => settings.language = code,
-                      selectedColor: PastraColors.gold,
-                      labelStyle: TextStyle(
-                        color: settings.language == code ? Colors.black : Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      backgroundColor: Colors.black.withValues(alpha: 0.25),
-                      showCheckmark: false,
-                    ),
-                ],
-              ),
-              label(s.yourName),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              Widget card(String title, IconData icon, List<Widget> children) =>
+                  _SettingsCard(title: title, icon: icon, children: children);
+              final profile = card(s.yourName, Icons.person_rounded, <Widget>[
+              const SizedBox(height: 6),
               TextField(
                 controller: _name,
                 maxLength: 16,
@@ -146,7 +116,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 },
               ),
-              section(s.appearance),
+              ]);
+              final language = card(s.language, Icons.translate_rounded, <Widget>[
+              Wrap(
+                key: ValueKey<int>(_fontPass),
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final code in _languagesAlphabetical)
+                    ChoiceChip(
+                      label: Text(Strings.languageName(code)),
+                      selected: settings.language == code,
+                      onSelected: (_) => settings.language = code,
+                      selectedColor: PastraColors.gold,
+                      labelStyle: TextStyle(
+                        color: settings.language == code ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      backgroundColor: Colors.black.withValues(alpha: 0.25),
+                      showCheckmark: false,
+                    ),
+                ],
+              ),
+              ]);
+              final appearance = card(s.appearance, Icons.palette_rounded, <Widget>[
               Padding(padding: const EdgeInsets.only(bottom: 4), child: LevelBadge(xp: settings.xp, width: 280)),
               label(s.tableColor),
               Wrap(
@@ -207,7 +200,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                 ],
               ),
-              section(s.gameplay),
+              ]);
+              final gameplay = card(s.gameplay, Icons.sports_esports_rounded, <Widget>[
               SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                 title: Text(s.fastAnimations),
@@ -238,12 +232,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => settings.volume = v,
                 onChangeEnd: (_) => SoundFx.instance.play(Sfx.play),
               ),
-              section(s.about),
+              ]);
+              final aboutCard = card(s.about, Icons.info_outline_rounded, <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text('${s.aboutBody}\n${s.credits}', style: const TextStyle(color: Colors.white70, height: 1.5)),
               ),
-            ],
+              ]);
+              const gap = SizedBox(height: 14);
+              // Sideways / wide: two columns of cards; upright: one.
+              if (box.maxWidth >= 760) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(child: Column(children: <Widget>[profile, gap, language, gap, gameplay])),
+                          const SizedBox(width: 14),
+                          Expanded(child: Column(children: <Widget>[appearance, gap, aboutCard])),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return ListView(
+                padding: _listPadding(context),
+                children: <Widget>[profile, gap, language, gap, appearance, gap, gameplay, gap, aboutCard],
+              );
+            },
           ),
         ),
       ),
@@ -324,6 +344,50 @@ class _Swatch extends StatelessWidget {
                 ],
               )
             : child,
+      ),
+    );
+  }
+}
+
+/// One group of settings: a rounded card with a gold title and icon.
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.title, required this.icon, required this.children});
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      // Own (see-through) Material: the switches' ripples show on the card.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: PastraColors.gold.withValues(alpha: 0.16), shape: BoxShape.circle),
+                child: Icon(icon, color: PastraColors.gold, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../game/tournament.dart';
 import '../../l10n/strings.dart';
 import '../../online/leaderboard.dart';
 import '../theme.dart';
+import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
 import 'game_screen.dart';
 
@@ -98,7 +99,8 @@ class _TournamentScreenState extends State<TournamentScreen> {
     );
     final panel = _statusPanel(s);
     return Scaffold(
-      appBar: AppBar(title: Text(s.tournament)),
+      appBar: GameAppBar(
+        icon: Icons.emoji_events_rounded,title: Text(s.tournament)),
       body: Felt(
         child: SafeArea(
           top: false,
