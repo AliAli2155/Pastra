@@ -51,15 +51,19 @@ class PlayingCardView extends StatelessWidget {
     final glowColor = highlighted ? PastraColors.gold : Colors.white;
     final Widget content = !faceUp
         ? CardBack(key: const ValueKey<String>('back'), width: w, height: h, style: backStyle ?? Look.back)
-        : covered
-            ? const _BlankCard(key: ValueKey<String>('blank'), width: w, height: h)
-            : CardFace(
-                key: const ValueKey<String>('face'),
-                card: card,
-                width: w,
-                height: h,
-                highlighted: highlighted,
-              );
+        // Face and blank share one key, so covering a card (another one lands
+        // on it) swaps the picture without a flip; only back <-> front flips.
+        : KeyedSubtree(
+            key: const ValueKey<String>('front'),
+            child: covered
+                ? const _BlankCard(width: w, height: h)
+                : CardFace(
+                    card: card,
+                    width: w,
+                    height: h,
+                    highlighted: highlighted,
+                  ),
+          );
     return FittedBox(
       fit: BoxFit.fill,
       child: SizedBox(
@@ -185,7 +189,7 @@ class CardFace extends StatelessWidget {
 
 /// A face-up card seen from the side of a pile: just the cream card.
 class _BlankCard extends StatelessWidget {
-  const _BlankCard({super.key, required this.width, required this.height});
+  const _BlankCard({required this.width, required this.height});
 
   final double width;
   final double height;
