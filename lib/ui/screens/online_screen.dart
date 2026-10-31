@@ -62,7 +62,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       _checking = false;
       _configured = problem == null;
     });
-    // The player's code ("Ali #2155") and online status for friends.
+    // The player's code ("Player #1270") and online status for friends.
     if (problem == null) SocialService.instance.start(SettingsScope.read(context));
     final code = widget.joinCode;
     if (problem == null && code != null) {

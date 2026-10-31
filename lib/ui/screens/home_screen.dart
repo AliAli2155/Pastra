@@ -545,7 +545,7 @@ class _PlayerCard extends StatelessWidget {
     this.tag,
   });
 
-  /// The player code after the name ("#2155"), once given.
+  /// The player code after the name ("#1270"), once given.
   final String? tag;
 
   final String name;

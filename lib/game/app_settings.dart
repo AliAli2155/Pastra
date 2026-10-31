@@ -838,7 +838,7 @@ class AppSettings extends ChangeNotifier {
     _saveFriends(list);
   }
 
-  // ---- the player's own code ("Ali #2155")
+  // ---- the player's own code ("Player #1270")
 
   /// The 4-digit tag after the name (null until it was given online).
   String? get playerTag => _prefs.getString(_kTag);

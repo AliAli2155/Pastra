@@ -20,7 +20,7 @@ class PlayerStatus {
   final int seen;
 }
 
-/// The player's own code ("Ali #2155") and presence, and finding / watching
+/// The player's own code ("Player #1270") and presence, and finding / watching
 /// other players. Data: `users/<uid>` (name, tag, online, seen) and
 /// `handles/<name~tag>` → uid (so that name + code finds the player).
 class SocialService {

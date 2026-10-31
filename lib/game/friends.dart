@@ -13,7 +13,7 @@ class Friend {
   final String uid;
   final String name;
 
-  /// The 4-digit code after the name ("Ali #2155"); empty when unknown.
+  /// The 4-digit code after the name ("Player #1270"); empty when unknown.
   final String tag;
 
   /// Milliseconds since the epoch of the last game together.
@@ -30,7 +30,7 @@ class Friend {
         tag: tag ?? this.tag,
       );
 
-  /// "Ali #2155" (or just the name when the code is not known).
+  /// "Player #1270" (or just the name when the code is not known).
   String get handle => tag.isEmpty ? name : '$name #$tag';
 
   Map<String, Object> toJson() =>
@@ -72,7 +72,7 @@ class Friend {
   }
 }
 
-/// Player codes ("Ali #2155"): every player gets a random 4-digit tag, and
+/// Player codes ("Player #1270"): every player gets a random 4-digit tag, and
 /// name + tag finds them (like in other online games).
 class PlayerHandle {
   PlayerHandle._();
@@ -87,7 +87,7 @@ class PlayerHandle {
     return n;
   }
 
-  /// Reads "Ali #2155", "ali#2155" or "Ali 2155"; null when it is not a code.
+  /// Reads "Player #1270", "player#1270" or "Player 1270"; null when it is not a code.
   static (String, String)? parse(String text) {
     final m = RegExp(r'^\s*(.+?)\s*[#\s]\s*(\d{4})\s*$').firstMatch(text);
     if (m == null) return null;

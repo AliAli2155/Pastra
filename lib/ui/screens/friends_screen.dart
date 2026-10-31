@@ -109,7 +109,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
-  /// "Add friend": name + code, like Ali #2155.
+  /// "Add friend": name + code, like Player #1270.
   Future<void> _addFriend() async {
     final settings = SettingsScope.read(context);
     final t = SocialStrings(settings.language);
@@ -300,7 +300,7 @@ class _MyCodeCard extends StatelessWidget {
   }
 }
 
-/// "Ali #2155": the name in white, the code in gold.
+/// "Player #1270": the name in white, the code in gold.
 class _HandleText extends StatelessWidget {
   const _HandleText({required this.name, required this.tag, this.size = 16});
 
@@ -354,7 +354,7 @@ class _AddFriendDialogState extends State<_AddFriendDialog> {
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         decoration: InputDecoration(
-          hintText: 'Ali #2155',
+          hintText: 'Player #1270',
           helperText: t.addFriendHint,
           filled: true,
           fillColor: Colors.black.withValues(alpha: 0.25),
