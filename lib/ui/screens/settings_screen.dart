@@ -147,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 runSpacing: 12,
                 children: <Widget>[
                   // Store colours only once bought (the store shows the rest).
-                  for (final t in TableTheme.values)
+                  for (final t in (TableTheme.values.toList()..sort((a, b) => Progression.levelFor(a).compareTo(Progression.levelFor(b)))))
                     if (Economy.itemForTable(t) == null || settings.isUnlocked(t))
                     _Swatch(
                       selected: settings.tableTheme == t,
@@ -165,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: <Widget>[
-                  for (final b in CardBackStyle.values)
+                  for (final b in (CardBackStyle.values.toList()..sort((x, y) => Progression.levelForBack(x).compareTo(Progression.levelForBack(y)))))
                     if (Economy.itemForBack(b) == null || settings.isBackUnlocked(b))
                     _Swatch(
                       selected: settings.cardBack == b,

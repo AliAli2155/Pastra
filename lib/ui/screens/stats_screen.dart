@@ -42,9 +42,7 @@ class StatsScreen extends StatelessWidget {
     final tiles = <_Tile>[
       _Tile(Icons.casino_outlined, s.statGames, '${st.games}'),
       _Tile(Icons.emoji_events_outlined, s.statWins, '${st.wins}'),
-      _Tile(Icons.percent, s.statWinRate, st.games == 0 ? '–' : '${st.winRate}%'),
       _Tile(Icons.local_fire_department_outlined, s.statStreak, '${st.streak}'),
-      _Tile(Icons.whatshot_outlined, s.statBestStreak, '${st.bestStreak}'),
       _Tile(Icons.auto_awesome, s.statPastras, '${st.pastras}'),
       _Tile(Icons.stars_outlined, s.statJackPastras, '${st.jackPastras}'),
       _Tile(Icons.trending_up, s.statBestRound, '${st.bestRound}'),

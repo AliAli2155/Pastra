@@ -255,8 +255,9 @@ class _MyCodeCard extends StatelessWidget {
     final settings = SettingsScope.of(context);
     final t = SocialStrings(settings.language);
     final s = Strings.of(context);
-    final name = settings.playerName.isEmpty ? s.you : settings.playerName;
     final tag = settings.playerTag;
+    // With a code: the name friends type ("Player" before a name is set).
+    final name = tag != null ? settings.handleName : (settings.playerName.isEmpty ? s.you : settings.playerName);
     final handle = tag == null ? null : PlayerHandle.format(name, tag);
     return Container(
       margin: const EdgeInsets.only(top: 4),

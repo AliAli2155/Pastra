@@ -70,8 +70,7 @@ class SocialService {
   }
 
   static String _nameOf(AppSettings s) {
-    var name = s.playerName.trim();
-    if (name.isEmpty) name = 'Player';
+    final name = s.handleName;
     return name.length > 16 ? name.substring(0, 16) : name;
   }
 

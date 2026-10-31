@@ -101,34 +101,37 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Icon(icon, color: PastraColors.gold, size: 24),
                       const SizedBox(width: 8),
                     ],
-                    Flexible(
-                      flex: 3,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
+                    Expanded(
+                      child: Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: DefaultTextStyle.merge(
-                          style: const TextStyle(
-                            color: PastraColors.gold,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.3,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: DefaultTextStyle.merge(
+                            style: const TextStyle(
+                              color: PastraColors.gold,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.3,
+                            ),
+                            maxLines: 1,
+                            child: title,
                           ),
-                          maxLines: 1,
-                          child: title,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: IconTheme.merge(
-                        data: const IconThemeData(color: Colors.white, size: 24),
-                        child: Align(
-                          alignment: AlignmentDirectional.centerEnd,
+                    if (actions.isNotEmpty) ...<Widget>[
+                      const SizedBox(width: 8),
+                      // The buttons keep their size (up to 60% of the bar);
+                      // the title gets smaller first.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.6),
+                        child: IconTheme.merge(
+                          data: const IconThemeData(color: Colors.white, size: 24),
                           child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[for (final a in actions) Flexible(child: a)]),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

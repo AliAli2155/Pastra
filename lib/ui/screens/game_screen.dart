@@ -1034,11 +1034,23 @@ class _TopBar extends StatelessWidget {
         children: <Widget>[
           Align(
             alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              iconSize: 28,
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              tooltip: s.leave,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Tooltip(
+                message: s.leave,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onBack,
+                    child: const Padding(
+                      padding: EdgeInsets.all(7),
+                      child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           Padding(

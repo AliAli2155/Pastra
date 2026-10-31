@@ -247,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 18),
         _PlayerCard(
-          name: name,
+          name: settings.playerTag != null ? settings.handleName : name,
           tag: settings.playerTag,
           xp: settings.xp,
           frame: settings.avatarFrame,

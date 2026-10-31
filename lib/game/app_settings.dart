@@ -840,6 +840,12 @@ class AppSettings extends ChangeNotifier {
 
   // ---- the player's own code ("Player #1270")
 
+  /// The name others see with the code ("Player" until a name is set).
+  String get handleName {
+    final n = _playerName.trim();
+    return n.isEmpty ? 'Player' : n;
+  }
+
   /// The 4-digit tag after the name (null until it was given online).
   String? get playerTag => _prefs.getString(_kTag);
 

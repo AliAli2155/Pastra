@@ -32,15 +32,23 @@ class InviteShareRow extends StatelessWidget {
       if (!shareSheet(t.inviteText(code, '').trim(), link)) copy();
     }
 
-    Widget round(String tooltip, Widget icon, Color color, VoidCallback onTap) => Tooltip(
-          message: tooltip,
-          child: Material(
-            color: color,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: SizedBox(width: 44, height: 44, child: Center(child: icon)),
+    // A small labelled button in the app's colour (WhatsApp green, …).
+    Widget pill(String label, IconData icon, Color color, VoidCallback onTap) => Material(
+          color: color,
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(icon, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                ],
+              ),
             ),
           ),
         );
@@ -62,19 +70,14 @@ class InviteShareRow extends StatelessWidget {
           label: Text(kIsWeb ? t.shareInvite : t.copyLink),
         ),
         if (kIsWeb) ...<Widget>[
-          round(
-            'WhatsApp',
-            const Icon(Icons.chat_rounded, color: Colors.white, size: 22),
-            const Color(0xFF25D366),
-            () => openLink(InviteLink.whatsapp(text)),
-          ),
-          round(
+          pill('WhatsApp', Icons.chat_rounded, const Color(0xFF25A35A), () => openLink(InviteLink.whatsapp(text))),
+          pill(
             'Telegram',
-            const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            Icons.send_rounded,
             const Color(0xFF229ED9),
             () => openLink(InviteLink.telegram(link, t.inviteText(code, '').trim())),
           ),
-          round(t.copyLink, const Icon(Icons.link_rounded, color: Colors.white, size: 22), Colors.white24, copy),
+          pill(t.copyLink, Icons.link_rounded, Colors.white24, copy),
         ],
       ],
     );
