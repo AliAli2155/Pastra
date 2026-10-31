@@ -21,6 +21,7 @@ import '../widgets/playing_card.dart';
 import '../widgets/rules_editor.dart';
 import '../widgets/wallet_bar.dart';
 import 'game_screen.dart';
+import 'level_path_screen.dart';
 import 'online_screen.dart';
 import 'play_screen.dart';
 import 'progress_views.dart';
@@ -194,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
           frame: settings.avatarFrame,
           title: ProgressStrings(settings.language).title(settings.title),
           stats: settings.gamesPlayed > 0 ? s.stats(settings.gamesWon, settings.gamesPlayed) : null,
-          onTap: () => _open(const StatsScreen()),
+          onTap: () => _open(const LevelPathScreen()),
         ),
         const SizedBox(height: 10),
         _QuestsBar(onTap: () => _open(const QuestsScreen())),
@@ -539,7 +540,7 @@ class _PlayerCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    LevelBadge(xp: xp, width: 250),
+                    LevelBadge(xp: xp, width: 232),
                     if (stats != null) ...<Widget>[
                       const SizedBox(height: 6),
                       Text(stats!, style: const TextStyle(color: Colors.white60, fontSize: 12)),
@@ -547,6 +548,7 @@ class _PlayerCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
             ],
           ),
         ),

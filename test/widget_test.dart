@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/game/app_settings.dart';
@@ -109,4 +110,31 @@ void main() {
     expect(settings.tutorialDone, isTrue);
     expect(find.text('Your turn'), findsOneWidget);
   });
+
+  for (final size in <Size>[const Size(844, 390), const Size(390, 760)]) {
+    testWidgets('daily quests and level path fit on ${size.width.toInt()}x${size.height.toInt()}', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false, 'xp': 900});
+      final settings = await AppSettings.load();
+      await tester.pumpWidget(PastraApp(settings: settings));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Daily quests'));
+      await tester.tap(find.text('Daily quests'));
+      await tester.pumpAndSettle();
+      expect(find.text('Daily chest'), findsOneWidget);
+      expect(find.text('Collect'), findsNWidgets(3));
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text(settings.playerLevel >= 5 ? 'Card player' : 'Novice'));
+      await tester.tap(find.text(settings.playerLevel >= 5 ? 'Card player' : 'Novice'));
+      await tester.pumpAndSettle();
+      // The gold title is drawn twice (outline and fill).
+      expect(find.text('Level path'), findsWidgets);
+      expect(find.text('You are here'), findsOneWidget);
+    });
+  }
 }

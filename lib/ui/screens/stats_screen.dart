@@ -116,7 +116,7 @@ class StatsScreen extends StatelessWidget {
 
     final p = ProgressStrings(settings.language);
     return DefaultTabController(
-      length: 4,
+      length: 3,
       initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
@@ -137,7 +137,6 @@ class StatsScreen extends StatelessWidget {
             tabs: <Widget>[
               Tab(text: s.statistics),
               Tab(text: s.achievements),
-              Tab(text: p.levelPath),
               Tab(text: p.season),
             ],
           ),
@@ -145,7 +144,7 @@ class StatsScreen extends StatelessWidget {
         body: Felt(
           child: SafeArea(
             top: false,
-            child: TabBarView(children: <Widget>[statsBody, achievementsBody, const LevelPathView(), const SeasonView()]),
+            child: TabBarView(children: <Widget>[statsBody, achievementsBody, const SeasonView()]),
           ),
         ),
       ),

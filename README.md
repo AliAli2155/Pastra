@@ -29,7 +29,7 @@ Play it in the browser: <https://aliali2155.github.io/Pastra/>
   The main *Settings* keep only general options (language, name, colours, sound).
 - **Statistics and achievements**, table and card-back colors, real card sounds.
 - **Offline tournament**: 8 players, knockout over three rounds (quarterfinal, semifinal, final) against computers that get stronger every round (easy → medium → hard), with an XP bonus for how far you get.
-- **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. The *level path* shows what each level unlocks: table colors, card backs, avatar frames (bronze → legend) and titles (Novice → Pastra king).
+- **Levels and XP** (30 levels): every game, win and pastra earns XP, and beating a harder computer pays more. The *level path* (tap the player card on the home screen) is a horizontal track that shows what each level unlocks: table colors, card backs, avatar frames (bronze → legend) and titles (Novice → Pastra king).
 - **Daily quests:** three new quests every day (easy, medium, hard), different for every player. Collect XP for each one and a bonus for all three; one unstarted quest per day can be swapped.
 - **Achievements:** 30 badges, including win streaks, online wins, days in a row and collected quests.
 - **Monthly seasons:** the XP earned in a month makes the season ranking (Leaderboard → this month). When the season ends the player gets a badge (Champion, Top 3, Top 10, Top 100 or Participant) and bonus XP.
