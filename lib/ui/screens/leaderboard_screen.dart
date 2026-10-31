@@ -181,8 +181,17 @@ class _Row extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  entry.name.isEmpty ? t.defaultName : entry.name,
+                Text.rich(
+                  TextSpan(
+                    children: <InlineSpan>[
+                      TextSpan(text: entry.name.isEmpty ? t.defaultName : entry.name),
+                      if (entry.tag.isNotEmpty)
+                        TextSpan(
+                          text: ' #${entry.tag}',
+                          style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
+                    ],
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -192,7 +201,7 @@ class _Row extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${s.levelN(entry.level)} · ${entry.wins}/${entry.games}',
+                  '${s.levelN(entry.level)} · ${s.stats(entry.wins, entry.games)}',
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],

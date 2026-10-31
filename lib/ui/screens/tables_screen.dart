@@ -38,10 +38,24 @@ class TablesScreen extends StatelessWidget {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(28),
-                    child: Text(
-                      t.noTables,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.table_restaurant_outlined, color: Colors.white38, size: 56),
+                        const SizedBox(height: 12),
+                        Text(
+                          t.noTables,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 16),
+                        ),
+                        const SizedBox(height: 16),
+                        // Back to "Play online", where a room is created.
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.add_rounded),
+                          label: Text(t.createRoom),
+                        ),
+                      ],
                     ),
                   ),
                 );

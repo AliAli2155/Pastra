@@ -13,7 +13,11 @@ class LeaderEntry {
     required this.games,
     this.frame = AvatarFrame.none,
     this.storedLevel,
+    this.tag = '',
   });
+
+  /// The player's code ("#2155"); empty for old rows.
+  final String tag;
 
   final AvatarFrame frame;
 
@@ -47,6 +51,7 @@ class LeaderEntry {
           games: (raw['games'] as num?)?.toInt() ?? 0,
           frame: AvatarFrame.values.where((f) => f.name == raw['frame']).firstOrNull ?? AvatarFrame.none,
           storedLevel: (raw['lvl'] as num?)?.toInt(),
+          tag: raw['tag'] is String ? raw['tag'] as String : '',
         ),
       );
     });
@@ -74,7 +79,8 @@ class Leaderboard {
     try {
       if (await OnlineService.ensureReady() != null) return;
       final raw = settings.playerName.trim();
-      var name = raw.isEmpty ? fallbackName : raw;
+      // With a player code the name friends type ("Player #2155").
+      var name = raw.isEmpty ? (settings.playerTag != null ? settings.handleName : fallbackName) : raw;
       if (name.length > maxNameLength) name = name.substring(0, maxNameLength);
       final now = DateTime.now().millisecondsSinceEpoch;
       await OnlineService.ref('leaderboard/${OnlineService.uid}').set(<String, Object?>{
@@ -83,6 +89,7 @@ class Leaderboard {
         'wins': settings.gamesWon,
         'games': settings.gamesPlayed,
         'frame': settings.avatarFrame.name,
+        if (settings.playerTag != null) 'tag': settings.playerTag,
         'updated': now,
       });
       // This month's season: only the XP earned in it.
@@ -94,6 +101,7 @@ class Leaderboard {
           'games': settings.seasonGames,
           'lvl': settings.playerLevel,
           'frame': settings.avatarFrame.name,
+          if (settings.playerTag != null) 'tag': settings.playerTag,
           'updated': now,
         });
       }
