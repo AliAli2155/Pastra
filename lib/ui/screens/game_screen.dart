@@ -264,6 +264,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     c.link?.social.removeListener(_onSocial);
+    c.saveNow();
     c.dispose();
     super.dispose();
   }

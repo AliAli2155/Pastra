@@ -36,7 +36,7 @@ Future<void> showGameReview(BuildContext context, List<MissedChance> misses) {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     Text(
-                      t.missedCount(misses.length),
+                      misses.length == 1 ? t.missedOne : t.missedCount(misses.length),
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800),
                     ),

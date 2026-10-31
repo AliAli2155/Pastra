@@ -210,7 +210,7 @@ class RoundSummaryPanel extends StatelessWidget {
             label: Text(
               reviewCount == 0
                   ? SocialStrings(s.lang).analysis
-                  : '${SocialStrings(s.lang).analysis} · ${SocialStrings(s.lang).missedCount(reviewCount)}',
+                  : '${SocialStrings(s.lang).analysis} · ${(reviewCount == 1 ? SocialStrings(s.lang).missedOne : SocialStrings(s.lang).missedCount(reviewCount))}',
               style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800),
             ),
           )

@@ -1,3 +1,7 @@
+import 'dart:math';
+
+import 'package:firebase_database/firebase_database.dart';
+
 import '../game/app_settings.dart';
 import '../game/progression.dart';
 import '../game/seasons.dart';
@@ -82,30 +86,68 @@ class Leaderboard {
       // With a player code the name friends type ("Player #2155").
       var name = raw.isEmpty ? (settings.playerTag != null ? settings.handleName : fallbackName) : raw;
       if (name.length > maxNameLength) name = name.substring(0, maxNameLength);
-      final now = DateTime.now().millisecondsSinceEpoch;
-      await OnlineService.ref('leaderboard/${OnlineService.uid}').set(<String, Object?>{
+      // The database only accepts believable steps (see the rules: at most
+      // [maxXpStep] XP and [maxGameStep] games per update, one update every
+      // [minGap]), so a changed saved game cannot jump to the top. A player
+      // who is further ahead locally catches up a step per game.
+      final lb = OnlineService.ref('leaderboard/${OnlineService.uid}');
+      final old = await _row(lb);
+      if (_tooSoon(old)) return;
+      final games = _clampGames(settings.gamesPlayed, old);
+      await lb.set(<String, Object?>{
         'name': name,
-        'xp': settings.xp,
-        'wins': settings.gamesWon,
-        'games': settings.gamesPlayed,
+        'xp': _clampXp(settings.xp, games, old),
+        'wins': min(settings.gamesWon, games),
+        'games': games,
         'frame': settings.avatarFrame.name,
         if (settings.playerTag != null) 'tag': settings.playerTag,
-        'updated': now,
+        'updated': ServerValue.timestamp,
       });
       // This month's season: only the XP earned in it.
       if (settings.seasonXp > 0) {
-        await OnlineService.ref('seasons/${settings.season}/${OnlineService.uid}').set(<String, Object?>{
+        final sr = OnlineService.ref('seasons/${settings.season}/${OnlineService.uid}');
+        final sold = await _row(sr);
+        if (_tooSoon(sold)) return;
+        final sgames = _clampGames(settings.seasonGames, sold);
+        await sr.set(<String, Object?>{
           'name': name,
-          'xp': settings.seasonXp,
-          'wins': settings.seasonWins,
-          'games': settings.seasonGames,
+          'xp': _clampXp(settings.seasonXp, sgames, sold),
+          'wins': min(settings.seasonWins, sgames),
+          'games': sgames,
           'lvl': settings.playerLevel,
           'frame': settings.avatarFrame.name,
           if (settings.playerTag != null) 'tag': settings.playerTag,
-          'updated': now,
+          'updated': ServerValue.timestamp,
         });
       }
     } catch (_) {}
+  }
+
+  // ---- limits (the same numbers are in database.rules.json)
+
+  static const int maxXpStep = 1500;
+  static const int maxGameStep = 3;
+  static const int xpPerGame = 300;
+  static const int xpBase = 3000;
+  static const Duration minGap = Duration(seconds: 10);
+
+  static Future<Map<Object?, Object?>?> _row(DatabaseReference ref) async {
+    final v = (await ref.once().timeout(const Duration(seconds: 8))).snapshot.value;
+    return v is Map ? v : null;
+  }
+
+  static int _int(Map<Object?, Object?>? row, String key) => (row?[key] as num?)?.toInt() ?? 0;
+
+  static bool _tooSoon(Map<Object?, Object?>? old) =>
+      old != null && OnlineService.serverNow - _int(old, 'updated') < minGap.inMilliseconds + 500;
+
+  static int _clampGames(int local, Map<Object?, Object?>? old) =>
+      old == null ? local : min(local, _int(old, 'games') + maxGameStep);
+
+  static int _clampXp(int local, int games, Map<Object?, Object?>? old) {
+    var xp = min(local, games * xpPerGame + xpBase);
+    if (old != null) xp = min(xp, _int(old, 'xp') + maxXpStep);
+    return max(0, xp);
   }
 
   /// Takes the player off the board (and this season's ranking).

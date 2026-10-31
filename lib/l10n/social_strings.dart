@@ -57,6 +57,7 @@ class SocialStrings {
   String missedCapture(Object card, Object n) => _t('missedCapture', <String, Object>{'card': card, 'n': n});
   String playedInstead(Object card) => _t('playedInstead', <String, Object>{'card': card});
   String missedCount(Object n) => _t('missedCount', <String, Object>{'n': n});
+  String get missedOne => _t('missedOne');
   String get highlights => _t('highlights');
   String get favTable => _t('favTable');
   String get bestGamePastras => _t('bestGamePastras');
@@ -138,6 +139,7 @@ class SocialStrings {
       'missedCapture': '{card} would have taken {n} cards',
       'playedInstead': 'You played {card}',
       'missedCount': '{n} missed chances',
+      'missedOne': '1 missed chance',
       'highlights': 'Highlights',
       'favTable': 'Favourite table',
       'bestGamePastras': 'Most pastras in a game',
@@ -203,6 +205,7 @@ class SocialStrings {
       'missedCapture': 'Με {card} θα έπαιρνες {n} φύλλα',
       'playedInstead': 'Έπαιξες {card}',
       'missedCount': '{n} χαμένες ευκαιρίες',
+      'missedOne': '1 χαμένη ευκαιρία',
       'highlights': 'Κορυφαία',
       'favTable': 'Αγαπημένο τραπέζι',
       'bestGamePastras': 'Περισσότερες πάστρες σε ένα παιχνίδι',
@@ -268,6 +271,7 @@ class SocialStrings {
       'missedCapture': '{card} ile {n} kart alabilirdin',
       'playedInstead': '{card} oynadın',
       'missedCount': '{n} kaçırılan fırsat',
+      'missedOne': '1 kaçırılan fırsat',
       'highlights': 'Öne çıkanlar',
       'favTable': 'Favori masa',
       'bestGamePastras': 'Bir oyunda en çok pastra',
@@ -333,6 +337,7 @@ class SocialStrings {
       'missedCapture': 'Mit {card} hättest du {n} Karten genommen',
       'playedInstead': 'Du hast {card} gespielt',
       'missedCount': '{n} verpasste Chancen',
+      'missedOne': '1 verpasste Chance',
       'highlights': 'Höhepunkte',
       'favTable': 'Lieblingstisch',
       'bestGamePastras': 'Meiste Pastras in einer Partie',
@@ -398,6 +403,7 @@ class SocialStrings {
       'missedCapture': '{card} aurait pris {n} cartes',
       'playedInstead': 'Tu as joué {card}',
       'missedCount': '{n} occasions manquées',
+      'missedOne': '1 occasion manquée',
       'highlights': 'Points forts',
       'favTable': 'Table préférée',
       'bestGamePastras': 'Plus de pastras en une partie',
@@ -463,6 +469,7 @@ class SocialStrings {
       'missedCapture': '{card} habría tomado {n} cartas',
       'playedInstead': 'Jugaste {card}',
       'missedCount': '{n} ocasiones perdidas',
+      'missedOne': '1 ocasión perdida',
       'highlights': 'Lo más destacado',
       'favTable': 'Mesa favorita',
       'bestGamePastras': 'Más pastras en una partida',
@@ -528,6 +535,7 @@ class SocialStrings {
       'missedCapture': 'Con {card} avresti preso {n} carte',
       'playedInstead': 'Hai giocato {card}',
       'missedCount': '{n} occasioni perse',
+      'missedOne': '1 occasione persa',
       'highlights': 'In evidenza',
       'favTable': 'Tavolo preferito',
       'bestGamePastras': 'Più pastre in una partita',
@@ -593,6 +601,7 @@ class SocialStrings {
       'missedCapture': 'Com {card} terias levado {n} cartas',
       'playedInstead': 'Jogaste {card}',
       'missedCount': '{n} oportunidades perdidas',
+      'missedOne': '1 oportunidade perdida',
       'highlights': 'Destaques',
       'favTable': 'Mesa favorita',
       'bestGamePastras': 'Mais pastras num jogo',
@@ -658,6 +667,7 @@ class SocialStrings {
       'missedCapture': 'Картой {card} можно было взять {n} карт',
       'playedInstead': 'Ты сыграл {card}',
       'missedCount': 'Упущенных шансов: {n}',
+      'missedOne': '1 упущенный шанс',
       'highlights': 'Главное',
       'favTable': 'Любимый стол',
       'bestGamePastras': 'Больше всего пастр за игру',
@@ -723,6 +733,7 @@ class SocialStrings {
       'missedCapture': 'С {card} щеше да вземеш {n} карти',
       'playedInstead': 'Изигра {card}',
       'missedCount': '{n} пропуснати шанса',
+      'missedOne': '1 пропуснат шанс',
       'highlights': 'Акценти',
       'favTable': 'Любима маса',
       'bestGamePastras': 'Най-много пастри в една игра',
@@ -788,6 +799,7 @@ class SocialStrings {
       'missedCapture': 'كنت ستأخذ {n} أوراق بـ {card}',
       'playedInstead': 'لعبت {card}',
       'missedCount': '{n} فرص ضائعة',
+      'missedOne': 'فرصة ضائعة واحدة',
       'highlights': 'أبرز الأرقام',
       'favTable': 'الطاولة المفضلة',
       'bestGamePastras': 'أكثر باسترا في مباراة',
@@ -853,6 +865,7 @@ class SocialStrings {
       'missedCapture': '用 {card} 可以拿走 {n} 张牌',
       'playedInstead': '你出了 {card}',
       'missedCount': '错过 {n} 次机会',
+      'missedOne': '错过 1 次机会',
       'highlights': '亮点',
       'favTable': '最爱的牌桌',
       'bestGamePastras': '单局最多 Pastra',

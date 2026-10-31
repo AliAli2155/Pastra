@@ -22,7 +22,7 @@
           ".read": "auth != null",
           "$seat": {
             ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
-            ".validate": "newData.hasChildren(['n', 'm']) && newData.child('n').isNumber() && newData.child('m').isString() && newData.child('m').val().length <= 24"
+            ".validate": "newData.hasChildren(['n', 'm']) && newData.child('n').isNumber() && newData.child('m').isString() && newData.child('m').val().length <= 12 && (newData.child('m').val().beginsWith('m:') || newData.child('m').val().beginsWith('e:'))"
           }
         },
         "rematch": {
@@ -54,7 +54,7 @@
       ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
+        ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
       }
     },
     "seasons": {
@@ -65,7 +65,7 @@
         ],
         "$uid": {
           ".write": "auth != null && auth.uid === $uid && $season.matches(/^[0-9]{6}$/)",
-          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('games').isNumber())"
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
         }
       }
     },
@@ -74,10 +74,18 @@
         ".read": "auth != null",
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['name', 'tag'])",
-        "name": { ".validate": "newData.isString() && newData.val().length <= 16" },
-        "tag": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)" },
-        "online": { ".validate": "newData.isBoolean()" },
-        "seen": { ".validate": "newData.isNumber()" }
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "tag": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+        },
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        "seen": {
+          ".validate": "newData.isNumber()"
+        }
       }
     },
     "handles": {
@@ -112,8 +120,8 @@
         },
         "results": {
           "$match": {
-            ".write": "auth != null && !data.exists()",
-            ".validate": "newData.hasChildren(['w', 't']) && newData.child('w').isNumber() && newData.child('t').val() === now"
+            ".write": "auth != null && !data.exists() && root.child('cups').child($slot).child('players').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['w', 't']) && newData.child('w').isNumber() && newData.child('w').val() >= 0 && newData.child('w').val() < 256 && newData.child('w').val() % 1 === 0 && newData.child('t').val() === now"
           }
         },
         "meta": {

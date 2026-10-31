@@ -777,6 +777,9 @@ class GameController extends ChangeNotifier {
     });
   }
 
+  /// Saves now (for example when leaving before any move).
+  void saveNow() => _save();
+
   void _save() {
     if (tournament || link != null || _state.phase == GamePhase.gameOver) return;
     settings.saveGame(jsonEncode(toJson()));

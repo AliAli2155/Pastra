@@ -71,5 +71,5 @@ class Cards {
     }
   }
 
-  static String label(int card) => '${rankLabel(card)}${suitSymbols[suit(card)]}';
+  static String label(int card) => '${rankLabel(card)}${suitSymbols[suit(card)]}\uFE0E';
 }
