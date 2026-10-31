@@ -188,14 +188,9 @@ class _GameScreenState extends State<GameScreen> {
     showQuickChat(context, social);
   }
 
-  void _hint() {
-    c.showHint();
-    if (c.hintCard == null) return;
-    final t = SocialStrings(c.settings.language);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(t.hintText), duration: const Duration(seconds: 2)));
-  }
+  /// The hinted card glows and what it takes lights up; the line under the
+  /// table already says what it does (no message over the hand).
+  void _hint() => c.showHint();
 
   /// Hints: offline games except tournament matches.
   bool get _hintsAllowed => !c.isOnline && !c.tournament;

@@ -107,34 +107,41 @@ class RoundSummaryPanel extends StatelessWidget {
       ),
     ];
 
-    final header = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (over)
-          _Trophy(won: weWon)
-        else
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-            decoration: BoxDecoration(
-              color: PastraColors.gold.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              s.round(state.round),
-              style: const TextStyle(color: PastraColors.gold, fontSize: 12, fontWeight: FontWeight.w900),
-            ),
-          ),
-        const SizedBox(height: 4),
-        if (over && weWon)
-          FittedBox(fit: BoxFit.scaleDown, child: GoldText(title, size: 26, letterSpacing: 0.5))
-        else
-          Text(
+    final titleText = over && weWon
+        ? FittedBox(fit: BoxFit.scaleDown, child: GoldText(title, size: 26, letterSpacing: 0.5))
+        : Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
-          ),
-      ],
-    );
+          );
+    // Game over: the trophy next to the title (saves height on a phone).
+    final header = over
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _Trophy(won: weWon),
+              const SizedBox(width: 10),
+              Flexible(child: titleText),
+            ],
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                decoration: BoxDecoration(
+                  color: PastraColors.gold.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  s.round(state.round),
+                  style: const TextStyle(color: PastraColors.gold, fontSize: 12, fontWeight: FontWeight.w900),
+                ),
+              ),
+              const SizedBox(height: 4),
+              titleText,
+            ],
+          );
 
     final sheet = _ScoreSheet(rows: rows, names: teamNames, totals: <int>[a.total, b.total], totalLabel: s.roundTotal);
 
@@ -601,57 +608,56 @@ class _XpLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    Widget chip({required Widget child, bool gold = false}) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: gold ? PastraColors.gold.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: gold ? PastraColors.gold : Colors.white12),
+          ),
+          child: child,
+        );
+    // One line of small chips: XP, chips / diamonds, a new level.
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 6,
       children: <Widget>[
-        Text(
-          '+${gain.amount} XP',
-          style: const TextStyle(color: PastraColors.gold, fontSize: 20, fontWeight: FontWeight.w900),
+        chip(
+          child: Text(
+            '+${gain.amount} XP',
+            style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900),
+          ),
         ),
-        if (gain.chips != 0 || gain.diamonds != 0) ...<Widget>[
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 14,
-            alignment: WrapAlignment.center,
-            children: <Widget>[
-              if (gain.chips != 0)
-                Amount(
-                  chips: gain.chips,
-                  size: 18,
-                  sign: true,
-                  color: gain.chips > 0 ? Colors.white : const Color(0xFFFFB4A9),
-                ),
-              if (gain.diamonds != 0) Amount(diamonds: gain.diamonds, size: 18, sign: true, color: diamondColor),
-            ],
-          ),
-        ],
-        if (gain.leveledUp) ...<Widget>[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: PastraColors.gold.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: PastraColors.gold),
+        if (gain.chips != 0)
+          chip(
+            child: Amount(
+              chips: gain.chips,
+              size: 15,
+              sign: true,
+              color: gain.chips > 0 ? Colors.white : const Color(0xFFFFB4A9),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  '${s.levelUp}  ${s.levelN(gain.levelAfter)}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
-                ),
-                if (gain.newColors)
+          ),
+        if (gain.diamonds != 0) chip(child: Amount(diamonds: gain.diamonds, size: 15, sign: true, color: diamondColor)),
+        if (gain.leveledUp)
+          Tooltip(
+            message: gain.newColors ? s.newColors : '',
+            child: chip(
+              gold: true,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.arrow_circle_up_rounded, color: PastraColors.gold, size: 16),
+                  const SizedBox(width: 4),
                   Text(
-                    s.newColors,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    '${s.levelUp} ${s.levelN(gain.levelAfter)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
-        ],
       ],
     );
   }
