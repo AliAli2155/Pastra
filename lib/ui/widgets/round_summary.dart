@@ -126,12 +126,12 @@ class RoundSummaryPanel extends StatelessWidget {
           ),
         const SizedBox(height: 4),
         if (over && weWon)
-          FittedBox(fit: BoxFit.scaleDown, child: GoldText(title, size: 28, letterSpacing: 0.5))
+          FittedBox(fit: BoxFit.scaleDown, child: GoldText(title, size: 26, letterSpacing: 0.5))
         else
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
           ),
       ],
     );
@@ -246,15 +246,16 @@ class RoundSummaryPanel extends StatelessWidget {
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
+                      Expanded(flex: 11, child: sheet),
+                      const SizedBox(width: 16),
                       Expanded(
-                        flex: 11,
+                        flex: 8,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[header, const SizedBox(height: 10), sheet],
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[header, const SizedBox(height: 8), side],
                         ),
                       ),
-                      const SizedBox(width: 18),
-                      Expanded(flex: 8, child: side),
                     ],
                   )
                 : Column(
@@ -316,8 +317,8 @@ class _RowBadge extends StatelessWidget {
     final red = suit == Cards.diamonds || suit == Cards.hearts;
     final ink = gold ? Colors.black : (red ? PastraColors.cardRed : PastraColors.cardBlack);
     return Container(
-      width: 26,
-      height: 32,
+      width: 22,
+      height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: gold ? PastraColors.gold : (icon != null ? Colors.white12 : PastraColors.cream),
@@ -396,7 +397,7 @@ class _ScoreSheet extends StatelessWidget {
           const SizedBox(height: 2),
           for (final r in rows)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2.5),
+              padding: const EdgeInsets.symmetric(vertical: 1.5),
               child: Row(
                 children: <Widget>[
                   Expanded(
@@ -421,7 +422,7 @@ class _ScoreSheet extends StatelessWidget {
                 ],
               ),
             ),
-          const Divider(color: Colors.white24, height: 12),
+          const Divider(color: Colors.white24, height: 10),
           Row(
             children: <Widget>[
               Expanded(
@@ -572,7 +573,7 @@ class _Trophy extends StatelessWidget {
       curve: Curves.elasticOut,
       builder: (context, v, child) => Transform.scale(scale: 0.4 + 0.6 * v, child: child),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: won
@@ -584,7 +585,7 @@ class _Trophy extends StatelessWidget {
         child: Icon(
           won ? Icons.emoji_events_rounded : Icons.sentiment_neutral_rounded,
           color: won ? Colors.black : Colors.white70,
-          size: 30,
+          size: 24,
         ),
       ),
     );

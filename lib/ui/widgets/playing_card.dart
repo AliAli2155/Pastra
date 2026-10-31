@@ -351,7 +351,7 @@ class _CourtPainter extends CustomPainter {
         ..strokeWidth = max(0.6, w * 0.012),
     );
     // Emblem at the top, the same turned round at the bottom.
-    final emblem = Rect.fromCenter(center: Offset(w / 2, h * 0.2), width: w * 0.7, height: h * 0.26);
+    final emblem = Rect.fromCenter(center: Offset(w / 2, h * 0.19), width: w * 0.78, height: h * 0.28);
     _emblem(canvas, emblem);
     canvas.save();
     canvas.translate(w, h);
@@ -360,7 +360,7 @@ class _CourtPainter extends CustomPainter {
     canvas.restore();
     // Medallion with the letter.
     final c = Offset(w / 2, h / 2);
-    final r = min(w, h) * 0.27;
+    final r = min(w, h) * 0.22;
     canvas.drawCircle(c, r, Paint()..color = Colors.white);
     canvas.drawCircle(
       c,
