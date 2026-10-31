@@ -328,9 +328,10 @@ class _RowBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final red = suit == Cards.diamonds || suit == Cards.hearts;
     final ink = gold ? Colors.black : (red ? PastraColors.cardRed : PastraColors.cardBlack);
+    final f = MediaQuery.textScalerOf(context).scale(1);
     return Container(
-      width: 22,
-      height: 26,
+      width: 22 * f,
+      height: 26 * f,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: gold ? PastraColors.gold : (icon != null ? Colors.white12 : PastraColors.cream),
@@ -341,7 +342,7 @@ class _RowBadge extends StatelessWidget {
           : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text(text ?? '', style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w900, height: 1)),
+                Text(text ?? '', maxLines: 1, softWrap: false, style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w900, height: 1)),
                 if (suit != null) SuitIcon(suit: suit!, size: 10, color: ink),
               ],
             ),
@@ -484,6 +485,8 @@ class _GameScore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fixed widths grow with the text size (big screens zoom the panel).
+    final f = MediaQuery.textScalerOf(context).scale(1);
     Widget side(int i) {
       final ours = i == 0;
       final color = ours ? PastraColors.gold : const Color(0xFF9FB4C7);
@@ -492,7 +495,7 @@ class _GameScore extends StatelessWidget {
         child: Row(
           children: <Widget>[
             SizedBox(
-              width: 64,
+              width: 64 * f,
               child: Text(
                 names[i],
                 maxLines: 1,
@@ -519,7 +522,7 @@ class _GameScore extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 44,
+              width: 56 * f,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
@@ -530,6 +533,8 @@ class _GameScore extends StatelessWidget {
                       duration: const Duration(milliseconds: 900),
                       builder: (context, v, _) => Text(
                         '$v',
+                        maxLines: 1,
+                        softWrap: false,
                         textAlign: TextAlign.right,
                         style: TextStyle(color: ours ? PastraColors.gold : Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
                       ),
