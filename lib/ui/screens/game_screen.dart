@@ -970,21 +970,44 @@ class _TopBar extends StatelessWidget {
             color: ours ? null : Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(9),
           ),
-          // The score counts up to its new value.
-          child: TweenAnimationBuilder<int>(
-            tween: IntTween(end: value),
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeOutCubic,
-            builder: (context, v, _) => Text(
-              '$v',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                height: 1.2,
-                fontWeight: FontWeight.w900,
-                color: ours ? Colors.black : Colors.white,
+          // The score counts up to its new value; the thin bar under it
+          // shows how far it is to the target.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TweenAnimationBuilder<int>(
+                tween: IntTween(end: value),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (context, v, _) => Text(
+                  '$v',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                    color: ours ? Colors.black : Colors.white,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 2),
+              SizedBox(
+                width: 34,
+                height: 3,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: (value / max(1, state.rules.targetScore)).clamp(0.0, 1.0)),
+                    duration: const Duration(milliseconds: 700),
+                    builder: (context, v, _) => LinearProgressIndicator(
+                      value: v,
+                      color: ours ? Colors.black.withValues(alpha: 0.7) : PastraColors.gold,
+                      backgroundColor: ours ? Colors.black.withValues(alpha: 0.18) : Colors.white24,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
     final board = Container(
@@ -1756,6 +1779,34 @@ class _TableZonePainter extends CustomPainter {
         ..color = Colors.black.withValues(alpha: 0.12)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
+    // A faint "Π" emblem in the middle of the cloth.
+    final c = rect.center;
+    final er = min(rect.height, rect.width) * 0.28;
+    canvas.drawCircle(
+      c,
+      er,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.05),
+    );
+    canvas.drawCircle(
+      c,
+      er * 0.86,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.white.withValues(alpha: 0.04),
+    );
+    final emblem = TextPainter(
+      text: TextSpan(
+        text: 'Π',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.06), fontSize: er * 1.1, fontWeight: FontWeight.w900, height: 1),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    emblem.paint(canvas, c - Offset(emblem.width / 2, emblem.height / 2));
+    emblem.dispose();
     // Stitched gold line.
     final stitch = Paint()
       ..style = PaintingStyle.stroke

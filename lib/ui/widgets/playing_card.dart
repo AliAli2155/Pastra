@@ -75,8 +75,14 @@ class PlayingCardView extends StatelessWidget {
             ],
           ),
           child: RepaintBoundary(
+            // Turning a card over: a short flip around the vertical axis.
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: _flip,
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.center,
+                children: <Widget>[...previous, if (current != null) current],
+              ),
               child: content,
             ),
           ),
@@ -84,6 +90,27 @@ class PlayingCardView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The old side turns away (first half), the new side turns in (second half).
+Widget _flip(Widget child, Animation<double> animation) {
+  return AnimatedBuilder(
+    animation: animation,
+    child: child,
+    builder: (context, child) {
+      final v = animation.value;
+      // Hidden while the other side is still turning.
+      if (v < 0.5) return const SizedBox.shrink();
+      final angle = (1 - v) * pi;
+      return Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.0015)
+          ..rotateY(angle),
+        child: child,
+      );
+    },
+  );
 }
 
 class CardFace extends StatelessWidget {
@@ -112,7 +139,11 @@ class CardFace extends StatelessWidget {
       width: w,
       height: h,
       decoration: BoxDecoration(
-        color: PastraColors.cream,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFFFFFDF7), PastraColors.cream, Color(0xFFF3EBDA)],
+        ),
         borderRadius: BorderRadius.circular(w * 0.09),
         border: Border.all(
           color: highlighted ? PastraColors.gold : PastraColors.cardEdge,
@@ -121,6 +152,18 @@ class CardFace extends StatelessWidget {
       ),
       child: Stack(
         children: <Widget>[
+          // A fine frame line inside the edge, like printed cards.
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.all(w * 0.035),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(w * 0.06),
+                  border: Border.all(color: color.withValues(alpha: 0.12), width: max(0.6, w * 0.008)),
+                ),
+              ),
+            ),
+          ),
           Positioned(left: w * 0.06, top: w * 0.05, child: corner),
           Positioned(
             right: w * 0.06,
@@ -179,14 +222,14 @@ class _Corner extends StatelessWidget {
           label,
           style: TextStyle(
             color: color,
-            fontSize: w * 0.2,
+            fontSize: w * 0.22,
             height: 1.0,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             letterSpacing: label.length > 1 ? -w * 0.02 : 0,
           ),
         ),
         SizedBox(height: w * 0.015),
-        SuitIcon(suit: suit, size: w * 0.14, color: color),
+        SuitIcon(suit: suit, size: w * 0.15, color: color),
       ],
     );
   }
@@ -245,7 +288,10 @@ class _CardCenter extends StatelessWidget {
   }
 }
 
-/// Simple, original artwork for J / Q / K: a framed panel with the letter.
+/// Original artwork for J / Q / K: a framed, two-ended panel (like real
+/// court cards, readable from both sides) with an emblem in each half (a
+/// crown for the king, a tiara for the queen, a plumed cap for the jack)
+/// and the letter in a medallion in the middle.
 class _FaceCardArt extends StatelessWidget {
   const _FaceCardArt({required this.card, required this.color, required this.cardWidth});
 
@@ -255,37 +301,161 @@ class _FaceCardArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = cardWidth;
-    final tint = Cards.isRed(card) ? const Color(0xFFFCE4E0) : const Color(0xFFE3E8F4);
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
+    return CustomPaint(
+      painter: _CourtPainter(Cards.rank(card), Cards.suit(card), color),
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _CourtPainter extends CustomPainter {
+  _CourtPainter(this.rank, this.suit, this.ink);
+
+  final int rank;
+  final int suit;
+  final Color ink;
+
+  static const Color gold = Color(0xFFD4A43A);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    if (w <= 0 || h <= 0) return;
+    final red = suit == Cards.diamonds || suit == Cards.hearts;
+    final tint = red ? const Color(0xFFFBE3DE) : const Color(0xFFE2E8F5);
+    final frame = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
+    // Panel: the tint at both ends, white in the middle.
+    canvas.drawRRect(
+      frame,
+      Paint()
+        ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[tint, Colors.white, tint],
-        ),
-        border: Border.all(color: color.withValues(alpha: 0.55), width: max(1.0, w * 0.018)),
-        borderRadius: BorderRadius.circular(w * 0.05),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            Cards.rankLabel(card),
-            style: TextStyle(
-              color: color,
-              fontSize: w * 0.34,
-              height: 1.0,
-              fontWeight: FontWeight.w900,
-              fontFamily: 'serif',
-            ),
-          ),
-          SizedBox(height: w * 0.03),
-          SuitIcon(suit: Cards.suit(card), size: w * 0.17, color: color),
-        ],
-      ),
+        ).createShader(Offset.zero & size),
     );
+    canvas.drawRRect(
+      frame,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, w * 0.025)
+        ..color = ink.withValues(alpha: 0.6),
+    );
+    // The diagonal line that splits the two ends.
+    canvas.drawLine(
+      Offset(w * 0.1, h * 0.62),
+      Offset(w * 0.9, h * 0.38),
+      Paint()
+        ..color = ink.withValues(alpha: 0.18)
+        ..strokeWidth = max(0.6, w * 0.012),
+    );
+    // Emblem at the top, the same turned round at the bottom.
+    final emblem = Rect.fromCenter(center: Offset(w / 2, h * 0.2), width: w * 0.7, height: h * 0.26);
+    _emblem(canvas, emblem);
+    canvas.save();
+    canvas.translate(w, h);
+    canvas.rotate(pi);
+    _emblem(canvas, emblem);
+    canvas.restore();
+    // Medallion with the letter.
+    final c = Offset(w / 2, h / 2);
+    final r = min(w, h) * 0.27;
+    canvas.drawCircle(c, r, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, w * 0.03)
+        ..color = gold,
+    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: Cards.rankLabel(Cards.make(suit, rank)),
+        style: TextStyle(color: ink, fontSize: r * 1.25, fontWeight: FontWeight.w900, fontFamily: 'serif', height: 1),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+    tp.dispose();
   }
+
+  void _emblem(Canvas canvas, Rect r) {
+    final fill = Paint()..color = gold;
+    final line = Paint()
+      ..color = ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(0.7, r.width * 0.035)
+      ..strokeJoin = StrokeJoin.round;
+    final jewel = Paint()..color = ink;
+    switch (rank) {
+      case Cards.king:
+        // Crown: three points on a band, a jewel on each point.
+        final base = r.top + r.height * 0.78;
+        final path = Path()
+          ..moveTo(r.left + r.width * 0.12, base)
+          ..lineTo(r.left + r.width * 0.06, r.top + r.height * 0.22)
+          ..lineTo(r.left + r.width * 0.32, r.top + r.height * 0.5)
+          ..lineTo(r.center.dx, r.top + r.height * 0.08)
+          ..lineTo(r.right - r.width * 0.32, r.top + r.height * 0.5)
+          ..lineTo(r.right - r.width * 0.06, r.top + r.height * 0.22)
+          ..lineTo(r.right - r.width * 0.12, base)
+          ..close();
+        canvas.drawPath(path, fill);
+        canvas.drawPath(path, line);
+        final band = Rect.fromLTRB(r.left + r.width * 0.12, base, r.right - r.width * 0.12, base + r.height * 0.16);
+        canvas.drawRect(band, fill);
+        canvas.drawRect(band, line);
+        for (final x in <double>[0.06, 0.5, 0.94]) {
+          final y = x == 0.5 ? r.top + r.height * 0.08 : r.top + r.height * 0.22;
+          canvas.drawCircle(Offset(r.left + r.width * x, y), r.width * 0.05, jewel);
+        }
+      case Cards.queen:
+        // Tiara: an arch with five small points and a gem in the middle.
+        final base = r.top + r.height * 0.82;
+        final path = Path()..moveTo(r.left + r.width * 0.1, base);
+        const peaks = 5;
+        for (var i = 0; i <= peaks * 2; i++) {
+          final t = i / (peaks * 2);
+          final x = r.left + r.width * (0.1 + 0.8 * t);
+          final arch = sin(t * pi);
+          final up = i.isOdd ? r.height * 0.14 : 0.0;
+          path.lineTo(x, base - r.height * (0.25 + 0.4 * arch) - up);
+        }
+        path
+          ..lineTo(r.right - r.width * 0.1, base)
+          ..close();
+        canvas.drawPath(path, fill);
+        canvas.drawPath(path, line);
+        final gem = Path()
+          ..moveTo(r.center.dx, r.top + r.height * 0.18)
+          ..lineTo(r.center.dx + r.width * 0.09, r.top + r.height * 0.42)
+          ..lineTo(r.center.dx, r.top + r.height * 0.62)
+          ..lineTo(r.center.dx - r.width * 0.09, r.top + r.height * 0.42)
+          ..close();
+        canvas.drawPath(gem, jewel);
+      default:
+        // Jack: a cap with a long feather.
+        final cap = Rect.fromLTRB(r.left + r.width * 0.2, r.top + r.height * 0.3, r.right - r.width * 0.2, r.bottom + r.height * 0.3);
+        final capPath = Path()
+          ..addArc(cap, pi, pi)
+          ..close();
+        canvas.drawPath(capPath, fill);
+        canvas.drawPath(capPath, line);
+        final band = Rect.fromLTRB(r.left + r.width * 0.16, r.top + r.height * 0.74, r.right - r.width * 0.16, r.top + r.height * 0.92);
+        canvas.drawRRect(RRect.fromRectAndRadius(band, Radius.circular(r.height * 0.05)), jewel);
+        final feather = Path()
+          ..moveTo(r.center.dx + r.width * 0.05, r.top + r.height * 0.4)
+          ..quadraticBezierTo(r.right + r.width * 0.05, r.top - r.height * 0.1, r.right - r.width * 0.02, r.top + r.height * 0.05)
+          ..quadraticBezierTo(r.right - r.width * 0.2, r.top + r.height * 0.12, r.center.dx + r.width * 0.05, r.top + r.height * 0.4)
+          ..close();
+        canvas.drawPath(feather, Paint()..color = ink.withValues(alpha: 0.85));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CourtPainter old) => old.rank != rank || old.suit != suit || old.ink != ink;
 }
 
 /// Card back: a lattice, a frame and a "Π" emblem in the chosen colours.
@@ -342,6 +512,35 @@ class CardBackPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.8, w * 0.02),
     );
+    // A Greek key (meander) band at the top and the bottom.
+    if (w >= 40) {
+      final band = inner.deflate(w * 0.045).outerRect;
+      final unit = w * 0.1;
+      final key = Paint()
+        ..color = style.accent.withValues(alpha: 0.7)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.7, w * 0.012)
+        ..strokeJoin = StrokeJoin.miter;
+      for (final top in <bool>[true, false]) {
+        final y0 = top ? band.top + w * 0.035 : band.bottom - w * 0.035 - unit;
+        final count = ((band.width - w * 0.08) / unit).floor();
+        final x0 = band.center.dx - count * unit / 2;
+        for (var i = 0; i < count; i++) {
+          final x = x0 + i * unit;
+          final u = unit;
+          final path = Path()
+            ..moveTo(x, y0 + u)
+            ..lineTo(x, y0)
+            ..lineTo(x + u * 0.8, y0)
+            ..lineTo(x + u * 0.8, y0 + u * 0.6)
+            ..lineTo(x + u * 0.35, y0 + u * 0.6)
+            ..lineTo(x + u * 0.35, y0 + u * 0.3)
+            ..moveTo(x, y0 + u)
+            ..lineTo(x + u, y0 + u);
+          canvas.drawPath(path, key);
+        }
+      }
+    }
     if (w >= 28) {
       final center = Offset(w / 2, h / 2);
       final r = w * 0.2;
