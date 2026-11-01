@@ -964,7 +964,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: <Widget>[
-                              Expanded(flex: 4, child: Center(child: codeCard)),
+                              // Shrinks when the screen is short, so the buttons
+                              // never stick out of the card.
+                              Expanded(
+                                flex: 4,
+                                child: Center(
+                                  child: FittedBox(fit: BoxFit.scaleDown, child: SizedBox(width: 330, child: codeCard)),
+                                ),
+                              ),
                               const SizedBox(width: 16),
                               Expanded(
                                 flex: 5,

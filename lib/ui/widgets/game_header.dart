@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -65,7 +67,13 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Tabs under the title.
   final PreferredSizeWidget? bottom;
 
-  static const double height = 56;
+  /// Slimmer on a phone held sideways, where every pixel of height counts.
+  static double get height {
+    final views = PlatformDispatcher.instance.views;
+    if (views.isEmpty) return 56;
+    final v = views.first;
+    return v.physicalSize.height / v.devicePixelRatio < 460 ? 46 : 56;
+  }
 
   @override
   Size get preferredSize => Size.fromHeight(height + (bottom == null ? 0 : bottom!.preferredSize.height + 8));
