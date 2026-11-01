@@ -495,7 +495,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           if (state.phase != GamePhase.playing && !c.busy && !c.onlineClosed)
+            // A key, so that toasts or chat bubbles appearing before it in the
+            // stack do not rebuild the panel (it would open a second time).
             Positioned.fill(
+              key: const ValueKey<String>('round-summary'),
               child: RoundSummaryPanel(
                 state: state,
                 teamNames: _teamNames(s),
@@ -1040,8 +1043,13 @@ class _TopBar extends StatelessWidget {
     final roomForInfo = MediaQuery.sizeOf(context).width >= 760;
     // Width of the buttons (and text) on the right; the left gets the same,
     // so the board is centred. The full screen button is only on the web.
-    final extra = (showHint ? 44.0 : 0) + (onChat != null ? 44.0 : 0);
-    final sideRoom = (roomForInfo ? 150.0 : 0.0) + 48 + (kIsWeb ? 48 : 0) + extra;
+    // Phones: compact buttons and a left side that only holds the back button,
+    // so the scoreboard keeps its size instead of being scaled down.
+    final btn = roomForInfo ? 48.0 : 40.0;
+    final buttons = (showHint ? btn : 0) + (onChat != null ? btn : 0) + btn + (kIsWeb ? 48.0 : 0);
+    final rightRoom = (roomForInfo ? 150.0 : 0.0) + buttons;
+    final leftRoom = roomForInfo ? rightRoom : 52.0;
+    final sideRoom = rightRoom;
     return Container(
       height: 48,
       decoration: BoxDecoration(
@@ -1078,7 +1086,7 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: sideRoom),
+            padding: EdgeInsets.only(left: leftRoom, right: sideRoom),
             child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: board)),
           ),
           Align(
@@ -1094,20 +1102,26 @@ class _TopBar extends StatelessWidget {
                 if (onChat != null)
                   IconButton(
                     onPressed: onChat,
-                    iconSize: 26,
+                    iconSize: roomForInfo ? 26 : 23,
+                    padding: roomForInfo ? null : EdgeInsets.zero,
+                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
                     icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
                     tooltip: SocialStrings(s.lang).quickChat,
                   ),
                 if (showHint)
                   IconButton(
                     onPressed: onHint,
-                    iconSize: 26,
+                    iconSize: roomForInfo ? 26 : 23,
+                    padding: roomForInfo ? null : EdgeInsets.zero,
+                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
                     icon: Icon(Icons.lightbulb_outline_rounded, color: onHint == null ? Colors.white38 : PastraColors.gold),
                     tooltip: SocialStrings(s.lang).hint,
                   ),
                 IconButton(
                   onPressed: onRules,
-                  iconSize: 26,
+                  iconSize: roomForInfo ? 26 : 23,
+                    padding: roomForInfo ? null : EdgeInsets.zero,
+                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
                   icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
                   tooltip: s.rules,
                 ),
