@@ -104,6 +104,15 @@
         }
       }
     },
+    "friendAdds": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['t']) && newData.child('t').val() === now)"
+        }
+      }
+    },
     "cups": {
       "$slot": {
         ".read": "auth != null",

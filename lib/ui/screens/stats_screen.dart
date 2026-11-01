@@ -150,6 +150,7 @@ class StatsScreen extends StatelessWidget {
         body: Felt(
           child: SafeArea(
             top: false,
+            bottom: false,
             child: TabBarView(children: <Widget>[statsBody, achievementsBody, const SeasonView()]),
           ),
         ),

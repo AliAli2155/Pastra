@@ -23,6 +23,7 @@ class TablesScreen extends StatelessWidget {
       body: Felt(
         child: SafeArea(
           top: false,
+          bottom: false,
           child: StreamBuilder<List<OpenTable>>(
             stream: Lobby.watch(),
             builder: (context, snap) {

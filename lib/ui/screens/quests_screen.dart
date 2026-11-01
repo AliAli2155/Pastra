@@ -393,7 +393,8 @@ class _QuestCard extends StatelessWidget {
     final body = tall
         ? LayoutBuilder(
             builder: (context, box) {
-              final ring = (box.maxHeight * 0.3).clamp(46.0, 96.0);
+              // What is left under the fixed parts (stars, title, count, button).
+              final ring = (box.maxHeight - 150).clamp(34.0, 84.0);
               return Column(
                 children: <Widget>[
                   Row(children: <Widget>[Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: stars)), reroll]),

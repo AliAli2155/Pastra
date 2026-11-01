@@ -85,6 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: Felt(
         child: SafeArea(
           top: false,
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, box) {
               Widget card(String title, IconData icon, List<Widget> children) =>

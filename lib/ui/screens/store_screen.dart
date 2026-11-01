@@ -31,6 +31,7 @@ class StoreScreen extends StatelessWidget {
       body: Felt(
         child: SafeArea(
           top: false,
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, box) {
               final wide = box.maxWidth >= 760;

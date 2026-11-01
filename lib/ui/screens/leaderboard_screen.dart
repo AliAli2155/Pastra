@@ -63,6 +63,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         body: Felt(
           child: SafeArea(
             top: false,
+            bottom: false,
             child: TabBarView(
               children: <Widget>[
                 _Board(

@@ -45,6 +45,7 @@ class RulesScreen extends StatelessWidget {
       body: Felt(
         child: SafeArea(
           top: false,
+          bottom: false,
           child: ListView(
             padding: _listPadding(context),
             children: <Widget>[

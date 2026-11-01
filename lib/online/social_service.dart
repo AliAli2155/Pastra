@@ -35,6 +35,7 @@ class SocialService {
   bool _starting = false;
   bool _started = false;
   StreamSubscription<DatabaseEvent>? _presence;
+  StreamSubscription<DatabaseEvent>? _adds;
   Timer? _debounce;
   String _syncedName = '';
   String _syncedFrame = '';
@@ -62,11 +63,38 @@ class SocialService {
         } catch (_) {}
       });
       settings.addListener(_onSettings);
+      _listenAdds(settings);
       _started = true;
     } catch (_) {
     } finally {
       _starting = false;
     }
+  }
+
+  /// Somebody added this player by code: they appear in the friends list
+  /// too (`friendAdds/<me>/<them>`, removed once read).
+  void _listenAdds(AppSettings s) {
+    final me = OnlineService.uid;
+    _adds = OnlineService.ref('friendAdds/$me').onChildAdded.listen((e) async {
+      final from = e.snapshot.key;
+      if (from == null || from == me) return;
+      try {
+        final u = await OnlineService.ref('users/$from').once().timeout(const Duration(seconds: 8));
+        final st = _status(from, u.snapshot.value);
+        if (st != null && st.name.isNotEmpty && !s.friends.any((f) => f.uid == from)) {
+          s.addFriend(uid: from, name: st.name, tag: st.tag);
+        }
+        await OnlineService.ref('friendAdds/$me/$from').remove();
+      } catch (_) {}
+    });
+  }
+
+  /// Tells [uid] that this player added them, so they get this player in
+  /// their list as well.
+  static Future<void> tellAdded(String uid) async {
+    try {
+      await OnlineService.ref('friendAdds/$uid/${OnlineService.uid}').set(<String, Object?>{'t': ServerValue.timestamp});
+    } catch (_) {}
   }
 
   static String _nameOf(AppSettings s) {
@@ -79,6 +107,8 @@ class SocialService {
   void stop() {
     _presence?.cancel();
     _presence = null;
+    _adds?.cancel();
+    _adds = null;
     _debounce?.cancel();
     _settings?.removeListener(_onSettings);
     _started = false;
