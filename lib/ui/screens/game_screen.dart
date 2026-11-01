@@ -1040,7 +1040,7 @@ class _TopBar extends StatelessWidget {
     );
     // Phones: the round / target text only when there is room next to the
     // scoreboard; the two buttons are big enough for a thumb.
-    final roomForInfo = MediaQuery.sizeOf(context).width >= 760;
+    final roomForInfo = MediaQuery.sizeOf(context).width >= 1000;
     // Width of the buttons (and text) on the right; the left gets the same,
     // so the board is centred. The full screen button is only on the web.
     // Phones: compact buttons and a left side that only holds the back button,
