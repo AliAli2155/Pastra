@@ -24,6 +24,11 @@ class PastraAI {
   static const int hardSamples = 24;
   static const double hardBlend = 0.5;
 
+  /// Time budget for the Monte Carlo search so a full hand never stalls the
+  /// UI (on the web this runs on the main thread).
+  static const int hardBudgetMs = 35;
+  static const int hardMinSamples = 4;
+
   static double _captureValue(PastraRules rules, Iterable<int> cards) {
     var v = 0.0;
     for (final c in cards) {
@@ -236,7 +241,11 @@ class PastraAI {
     final hand = s.hands[seat];
     final team = GameState.teamOf(seat);
     final totals = List<double>.filled(hand.length, 0);
+    final clock = Stopwatch()..start();
+    var done = 0;
     for (var k = 0; k < hardSamples; k++) {
+      if (k >= hardMinSamples && clock.elapsedMilliseconds > hardBudgetMs) break;
+      done++;
       final world = _sampleWorld(s, seat, rng);
       for (var i = 0; i < hand.length; i++) {
         final w = world.copy();
@@ -253,7 +262,7 @@ class PastraAI {
     var best = hand.first;
     var bestScore = double.negativeInfinity;
     for (var i = 0; i < hand.length; i++) {
-      final score = totals[i] / hardSamples +
+      final score = totals[i] / done +
           hardBlend * evaluate(s, seat, hand[i], AiLevel.hard, unseen);
       if (score > bestScore) {
         bestScore = score;

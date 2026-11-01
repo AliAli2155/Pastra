@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../game/app_settings.dart';
 import '../game/friends.dart';
+import '../notifications/notification_service.dart';
 import 'online_service.dart';
 
 /// A player found by their code, or a friend's live status.
@@ -90,13 +91,27 @@ class SocialService {
           await OnlineService.ref('friendAdds/$me/$from').remove();
           return;
         }
-        if (requests.value.every((r) => r.uid != from)) requests.value = <PlayerStatus>[...requests.value, st];
+        final isNew = requests.value.every((r) => r.uid != from);
+        requests.value = withRequest(requests.value, st);
+        if (isNew) {
+          NotificationService.instance.friendRequest(from: st.name, title: 'Pastra', body: '${st.name} #${st.tag}');
+        }
       } catch (_) {}
     });
     _addsGone = OnlineService.ref('friendAdds/$me').onChildRemoved.listen((e) {
-      requests.value = <PlayerStatus>[for (final r in requests.value) if (r.uid != e.snapshot.key) r];
+      requests.value = withoutRequest(requests.value, e.snapshot.key);
     });
   }
+
+  /// [list] with [r] added (once per player).
+  @visibleForTesting
+  static List<PlayerStatus> withRequest(List<PlayerStatus> list, PlayerStatus r) =>
+      list.any((x) => x.uid == r.uid) ? list : <PlayerStatus>[...list, r];
+
+  /// [list] without the request of [uid].
+  @visibleForTesting
+  static List<PlayerStatus> withoutRequest(List<PlayerStatus> list, String? uid) =>
+      <PlayerStatus>[for (final r in list) if (r.uid != uid) r];
 
   /// Accepts a friend request: the player joins the friends list.
   Future<void> acceptRequest(AppSettings s, PlayerStatus r) async {
@@ -108,7 +123,7 @@ class SocialService {
   Future<void> declineRequest(PlayerStatus r) => _clearRequest(r.uid);
 
   Future<void> _clearRequest(String uid) async {
-    requests.value = <PlayerStatus>[for (final r in requests.value) if (r.uid != uid) r];
+    requests.value = withoutRequest(requests.value, uid);
     try {
       await OnlineService.ref('friendAdds/${OnlineService.uid}/$uid').remove();
     } catch (_) {}

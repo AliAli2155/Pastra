@@ -504,7 +504,7 @@ class GameController extends ChangeNotifier {
     if (pv.isCapture) {
       pending = PendingPlay(seat, card, pv.captured);
       _notify();
-      await _wait(650);
+      await _wait(380);
       if (_disposed) return;
     }
     final result = PastraEngine.applyMove(_state, card);
@@ -534,7 +534,7 @@ class GameController extends ChangeNotifier {
       }
     }
     _notify();
-    await _wait(result.isCapture ? 450 : 380);
+    await _wait(result.isCapture ? 300 : 300);
     if (_disposed) return;
     if (landing != null) {
       landing = null;
@@ -545,7 +545,7 @@ class GameController extends ChangeNotifier {
 
   Future<void> _afterMove() async {
     if (PastraEngine.needsDeal(_state)) {
-      await _wait(250);
+      await _wait(200);
       if (_disposed) return;
       PastraEngine.dealHands(_state);
       stateVersion++;
@@ -553,7 +553,7 @@ class GameController extends ChangeNotifier {
       _notify();
       await _showQuads();
       if (_disposed) return;
-      await _wait(700);
+      await _wait(450);
       if (_disposed) return;
     } else if (PastraEngine.roundCardsExhausted(_state)) {
       await _wait(300);

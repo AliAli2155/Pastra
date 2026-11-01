@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../game/app_settings.dart';
 import '../game/progression.dart';
@@ -138,13 +139,25 @@ class Leaderboard {
 
   static int _int(Map<Object?, Object?>? row, String key) => (row?[key] as num?)?.toInt() ?? 0;
 
-  static bool _tooSoon(Map<Object?, Object?>? old) =>
-      old != null && OnlineService.serverNow - _int(old, 'updated') < minGap.inMilliseconds + 500;
+  static bool _tooSoon(Map<Object?, Object?>? old) => isTooSoon(old, OnlineService.serverNow);
 
-  static int _clampGames(int local, Map<Object?, Object?>? old) =>
+  /// True when the last update is younger than [minGap] (server time [now]).
+  @visibleForTesting
+  static bool isTooSoon(Map<Object?, Object?>? old, int now) =>
+      old != null && now - _int(old, 'updated') < minGap.inMilliseconds + 500;
+
+  static int _clampGames(int local, Map<Object?, Object?>? old) => clampGames(local, old);
+
+  static int _clampXp(int local, int games, Map<Object?, Object?>? old) => clampXp(local, games, old);
+
+  /// Games to publish: at most [maxGameStep] more than the stored row.
+  @visibleForTesting
+  static int clampGames(int local, Map<Object?, Object?>? old) =>
       old == null ? local : min(local, _int(old, 'games') + maxGameStep);
 
-  static int _clampXp(int local, int games, Map<Object?, Object?>? old) {
+  /// XP to publish: believable for the games played and a limited step up.
+  @visibleForTesting
+  static int clampXp(int local, int games, Map<Object?, Object?>? old) {
     var xp = min(local, games * xpPerGame + xpBase);
     if (old != null) xp = min(xp, _int(old, 'xp') + maxXpStep);
     return max(0, xp);

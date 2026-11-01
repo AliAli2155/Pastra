@@ -394,7 +394,7 @@ class _GameScreenState extends State<GameScreen> {
       _updateStagger(state);
       int zOf(MapEntry<int, CardPlacement> e) => e.key == _dragCard ? 10000 : e.value.z;
       final entries = layout.cards.entries.toList()..sort((a, b) => zOf(a).compareTo(zOf(b)));
-      final duration = Duration(milliseconds: settings.fastAnimations ? 240 : 420);
+      final duration = Duration(milliseconds: settings.fastAnimations ? 200 : 320);
       final event = c.pastraEvent;
 
       return _Shake(
@@ -680,7 +680,7 @@ class _GameScreenState extends State<GameScreen> {
     final gatheredIndex = _gathered[card];
     final inHand = dealtIndex != null && state.hands.any((h) => h.contains(card));
     final inPile = gatheredIndex != null && state.piles.any((pile) => pile.contains(card));
-    final delay = inHand ? dealtIndex * (fast ? 35 : 70) : (inPile ? min(gatheredIndex, 20) * (fast ? 12 : 25) : 0);
+    final delay = inHand ? dealtIndex * (fast ? 25 : 45) : (inPile ? min(gatheredIndex, 12) * (fast ? 6 : 10) : 0);
     final total = duration.inMilliseconds + delay;
     final curve = delay == 0 ? Curves.easeOutCubic : Interval(delay / total, 1, curve: Curves.easeOutCubic);
     return AnimatedPositioned(
