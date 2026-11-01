@@ -8,6 +8,7 @@ import 'l10n/strings.dart';
 import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/widgets/invite_banner.dart';
+import 'ui/widgets/ui_scale.dart';
 import 'ui/theme.dart';
 
 class PastraApp extends StatelessWidget {
@@ -40,7 +41,8 @@ class PastraApp extends StatelessWidget {
             data: _withWebSafeArea(MediaQuery.of(context)).copyWith(
               textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.15),
             ),
-            child: CallbackShortcuts(
+            child: UiScale(
+              child: CallbackShortcuts(
               bindings: <ShortcutActivator, VoidCallback>{
                 const SingleActivator(LogicalKeyboardKey.escape): () => _navigator.currentState?.maybePop(),
               },
@@ -59,6 +61,7 @@ class PastraApp extends StatelessWidget {
                   if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
                 ],
               ),
+            ),
             ),
           ),
           // Invite links (#/oda/1234) are taken out of the address by
