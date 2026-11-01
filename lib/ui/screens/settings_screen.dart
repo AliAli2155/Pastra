@@ -256,6 +256,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         <Widget>[profile, gap, language, gap, aboutCard],
                         <Widget>[appearance, gap, gameplay],
                       ];
+                Widget row(double width) => SizedBox(
+                      width: width,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          for (var i = 0; i < columns.length; i++) ...<Widget>[
+                            if (i > 0) const SizedBox(width: 14),
+                            Expanded(child: Column(children: columns[i])),
+                          ],
+                        ],
+                      ),
+                    );
+                // Big desktop windows: the whole page is scaled up to fill
+                // the window instead of leaving it empty at the bottom.
+                if (three && box.maxHeight >= 620) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      alignment: Alignment.topCenter,
+                      child: row(1200),
+                    ),
+                  );
+                }
                 return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
                   child: Center(
