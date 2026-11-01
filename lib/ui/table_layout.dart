@@ -94,7 +94,7 @@ class TableLayout {
   static const double margin = 8;
 
   /// Big screens (a desktop browser) get bigger cards: 1 on a phone, up to 2.
-  static double scaleFor(Size size) => min(size.width / 844, size.height / 390).clamp(1.0, 1.5).toDouble();
+  static double scaleFor(Size size) => min(size.width / 844, size.height / 390).clamp(1.0, 2.0).toDouble();
 
   /// Opening cards side by side: each starts this far (in card widths) to
   /// the right of the previous one.
