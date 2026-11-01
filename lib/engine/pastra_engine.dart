@@ -58,7 +58,25 @@ class PastraEngine {
   /// * Sum game: four cards side by side; a jack is buried back in the deck
   ///   and replaced.
   static void startRound(GameState s) {
-    final rng = Random(s.seed * 7919 + s.round);
+    // A player dealt four of a kind voids the whole deal: everything (every
+    // hand and the table cards) is shuffled and dealt again.
+    final quads = <QuadEvent>[];
+    for (var attempt = 0;; attempt++) {
+      _setupRound(s, attempt);
+      dealHands(s, redeal: false);
+      final found = <QuadEvent>[
+        for (var p = 0; p < s.numPlayers; p++)
+          if (hasFourOfAKind(s.hands[p])) QuadEvent(p, List<int>.of(s.hands[p])..sort()),
+      ];
+      if (found.isEmpty || attempt >= maxRedeals) break;
+      quads.addAll(found);
+    }
+    s.quads = quads;
+    s.current = (s.dealer + 1) % s.numPlayers;
+  }
+
+  static void _setupRound(GameState s, int attempt) {
+    final rng = Random(s.seed * 7919 + s.round + attempt * 1000003);
     final deck = List<int>.generate(Cards.deckSize, (i) => i)..shuffle(rng);
     final table = <int>[];
     final exposed = <int>[];
@@ -103,8 +121,6 @@ class PastraEngine {
     s.phase = GamePhase.playing;
     s.winner = -1;
     s.lastResult = null;
-    dealHands(s);
-    s.current = (s.dealer + 1) % s.numPlayers;
   }
 
   /// Deals [PastraRules.cardsPerDeal] cards to everybody, starting after the
@@ -115,9 +131,9 @@ class PastraEngine {
   /// bottom cards stay where they are, see [GameState.exposed]) and the same
   /// dealer deals again. Each void deal is recorded in [GameState.quads].
   /// In the later deals of the round four of a kind is simply played.
-  static void dealHands(GameState s) {
+  static void dealHands(GameState s, {bool redeal = true}) {
     s.quads = <QuadEvent>[];
-    final first = s.dealNumber == 0;
+    final first = s.dealNumber == 0 && redeal;
     for (var attempt = 0;; attempt++) {
       if (!_dealOnce(s)) return;
       if (!first || attempt >= maxRedeals) break;

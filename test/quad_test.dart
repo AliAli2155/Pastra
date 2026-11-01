@@ -65,4 +65,17 @@ void main() {
     expect(PastraEngine.hasFourOfAKind(s.hands[0]), isTrue);
     expect(s.dealNumber, 2);
   });
+
+  test('a new round never starts with four of a kind and keeps every card', () {
+    for (var seed = 0; seed < 300; seed++) {
+      final s = GameState(rules: PastraRules.pileDefaults, numPlayers: 2, seed: seed, dealer: 0);
+      PastraEngine.startRound(s);
+      for (final h in s.hands) {
+        expect(PastraEngine.hasFourOfAKind(h), isFalse, reason: 'seed $seed');
+      }
+      final all = <int>{...s.deck, ...s.table, ...s.hands.expand((h) => h)};
+      expect(all.length, Cards.deckSize, reason: 'seed $seed');
+      expect(s.dealNumber, 1);
+    }
+  });
 }

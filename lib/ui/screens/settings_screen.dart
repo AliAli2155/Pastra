@@ -243,17 +243,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const gap = SizedBox(height: 14);
               // Sideways / wide: two columns of cards; upright: one.
               if (box.maxWidth >= 760) {
+                // Very wide screens: three columns, so nothing is left empty
+                // at the bottom.
+                final three = box.maxWidth >= 1250;
+                final columns = three
+                    ? <List<Widget>>[
+                        <Widget>[profile, gap, language],
+                        <Widget>[gameplay, gap, aboutCard],
+                        <Widget>[appearance],
+                      ]
+                    : <List<Widget>>[
+                        <Widget>[profile, gap, language, gap, aboutCard],
+                        <Widget>[appearance, gap, gameplay],
+                      ];
                 return SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
+                      constraints: BoxConstraints(maxWidth: three ? 1600 : 1100),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Expanded(child: Column(children: <Widget>[profile, gap, language, gap, gameplay])),
-                          const SizedBox(width: 14),
-                          Expanded(child: Column(children: <Widget>[appearance, gap, aboutCard])),
+                          for (var i = 0; i < columns.length; i++) ...<Widget>[
+                            if (i > 0) const SizedBox(width: 14),
+                            Expanded(child: Column(children: columns[i])),
+                          ],
                         ],
                       ),
                     ),
