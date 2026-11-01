@@ -108,6 +108,25 @@
         return true;
       } catch (e) { return false; }
     };
+    // Vibration: navigator.vibrate (Android); iPhone Safari has none, but
+    // toggling a "switch" checkbox gives a small haptic tap (iOS 18+).
+    var buzzBox = null;
+    window.pastraBuzz = function (ms) {
+      try {
+        if (navigator.vibrate) { navigator.vibrate(ms); return; }
+        if (!buzzBox) {
+          var label = document.createElement('label');
+          label.setAttribute('aria-hidden', 'true');
+          label.style.cssText = 'position:fixed;left:-100px;top:-100px;opacity:0;pointer-events:none';
+          buzzBox = document.createElement('input');
+          buzzBox.type = 'checkbox';
+          buzzBox.setAttribute('switch', '');
+          label.appendChild(buzzBox);
+          document.body.appendChild(label);
+        }
+        buzzBox.click();
+      } catch (e) {}
+    };
     window.pastraOpen = function (url) {
       try { window.open(url, '_blank', 'noopener'); } catch (e) {}
     };

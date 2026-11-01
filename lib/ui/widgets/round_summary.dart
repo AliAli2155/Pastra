@@ -250,7 +250,11 @@ class RoundSummaryPanel extends StatelessWidget {
             // buttons on the right.
             final wide = box.maxWidth > box.maxHeight && box.maxWidth >= 560;
             // Big screens: the whole panel grows (text and width) up to 1.6x.
-            final zoom = min(box.maxWidth / 844, box.maxHeight / 390).clamp(1.0, 1.6).toDouble();
+            // A phone held sideways grows a little too, as far as it still fits
+            // (the game-over panel is taller than the round panel).
+            final zoom = wide
+                ? min(box.maxWidth / 700, box.maxHeight / (over ? 350 : 310)).clamp(1.0, 1.6).toDouble()
+                : (box.maxWidth / 400).clamp(1.0, 1.4).toDouble();
             final content = wide
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.center,

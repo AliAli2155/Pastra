@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 import '../engine/cards.dart';
 import '../engine/game_state.dart';
@@ -14,6 +13,7 @@ import '../engine/move_review.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
 import 'economy.dart';
+import 'haptics.dart';
 import 'online_link.dart';
 import 'progression.dart';
 import 'quests.dart';
@@ -282,6 +282,9 @@ class GameController extends ChangeNotifier {
   /// Online host: seat whose move we are waiting for.
   int? _awaitingRemote;
   Timer? _offlineTimer;
+
+  /// Host: seats whose player lost the connection (shown on the name plate).
+  final Set<int> offlineSeats = <int>{};
   int _offlineTicks = 0;
   Timer? _autoNextTimer;
   final Map<int, int> _queuedMoves = <int, int>{};
@@ -377,7 +380,7 @@ class GameController extends ChangeNotifier {
       quadAlert = QuadAlert(++_eventCounter, q.seat, q.cards);
       stateVersion++;
       SoundFx.instance.play(Sfx.pastra);
-      if (settings.haptics) HapticFeedback.heavyImpact();
+      if (settings.haptics) Haptics.big();
       _notify();
       await _wait(4200);
       quadAlert = null;
@@ -429,7 +432,7 @@ class GameController extends ChangeNotifier {
       return;
     }
     selected = card;
-    if (settings.haptics) HapticFeedback.selectionClick();
+    if (settings.haptics) Haptics.tick();
     _notify();
   }
 
@@ -437,7 +440,7 @@ class GameController extends ChangeNotifier {
   void select(int card) {
     if (!isHumanTurn || !_state.hands[humanSeat].contains(card) || selected == card) return;
     selected = card;
-    if (settings.haptics) HapticFeedback.selectionClick();
+    if (settings.haptics) Haptics.tick();
     _notify();
   }
 
@@ -466,7 +469,7 @@ class GameController extends ChangeNotifier {
     hintsUsed++;
     hintCard = card;
     selected = card;
-    if (settings.haptics) HapticFeedback.selectionClick();
+    if (settings.haptics) Haptics.tick();
     _notify();
   }
 
@@ -513,7 +516,7 @@ class GameController extends ChangeNotifier {
       final event = PastraEvent(++_eventCounter, seat, result.pastraPoints);
       pastraEvent = event;
       SoundFx.instance.play(Sfx.pastra);
-      if (settings.haptics) HapticFeedback.heavyImpact();
+      if (settings.haptics) Haptics.big();
       if (seat == humanSeat) {
         _roundPastras++;
         _gamePastras++;
@@ -522,6 +525,13 @@ class GameController extends ChangeNotifier {
       _clearEventLater(event.id);
     } else {
       SoundFx.instance.play(result.isCapture ? Sfx.capture : Sfx.play);
+      if (settings.haptics) {
+        if (result.isCapture) {
+          Haptics.capture();
+        } else {
+          Haptics.play();
+        }
+      }
     }
     _notify();
     await _wait(result.isCapture ? 450 : 380);
@@ -606,6 +616,7 @@ class GameController extends ChangeNotifier {
           maxDeficit: _maxDeficit,
         );
         SoundFx.instance.play(won ? Sfx.win : Sfx.lose);
+        if (settings.haptics && won) Haptics.big();
         settings.clearSavedGame();
       }
       final over = gameFacts != null;
@@ -807,6 +818,7 @@ class GameController extends ChangeNotifier {
       _queuedMoves[seat] = card;
       return;
     }
+    offlineSeats.remove(seat);
     _stopWaiting();
     _busy = true;
     _play(card);
@@ -823,7 +835,16 @@ class GameController extends ChangeNotifier {
     _offlineTimer?.cancel();
     _offlineTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_disposed || _awaitingRemote != seat) return;
-      if (link?.isRemoteOnline(seat) ?? true) {
+      final online = link?.isRemoteOnline(seat) ?? true;
+      if (online == offlineSeats.contains(seat)) {
+        if (online) {
+          offlineSeats.remove(seat);
+        } else {
+          offlineSeats.add(seat);
+        }
+        _notify();
+      }
+      if (online) {
         _offlineTicks = 0;
         return;
       }
@@ -1014,7 +1035,7 @@ class GameController extends ChangeNotifier {
         final event = PastraEvent(id, (pa['seat'] as num).toInt(), (pa['pts'] as num).toInt());
         pastraEvent = event;
         SoundFx.instance.play(Sfx.pastra);
-        if (settings.haptics) HapticFeedback.heavyImpact();
+        if (settings.haptics) Haptics.big();
         _clearEventLater(event.id);
         // An online guest earns pastra XP like the host does.
         if (isGuest && event.seat == humanSeat) {
@@ -1037,7 +1058,7 @@ class GameController extends ChangeNotifier {
       if (quadAlert?.id != id) {
         quadAlert = QuadAlert(id, (qd['seat'] as num).toInt(), <int>[for (final x in qd['cards'] as List) (x as num).toInt()]);
         SoundFx.instance.play(Sfx.pastra);
-        if (settings.haptics) HapticFeedback.heavyImpact();
+        if (settings.haptics) Haptics.big();
       }
     } else {
       quadAlert = null;

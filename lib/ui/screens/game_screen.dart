@@ -408,7 +408,7 @@ class _GameScreenState extends State<GameScreen> {
           Positioned.fromRect(
             rect: layout.tableRect.inflate(6),
             child: IgnorePointer(
-              child: CustomPaint(painter: _TableZonePainter(highlight: _overTable)),
+              child: RepaintBoundary(child: CustomPaint(painter: _TableZonePainter(highlight: _overTable))),
             ),
           ),
           for (final e in entries) _card(e.key, e.value, duration),
@@ -798,6 +798,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
+          if (c.offlineSeats.contains(seat)) ...<Widget>[
+            const SizedBox(width: 4),
+            const Icon(Icons.wifi_off_rounded, size: 13, color: Color(0xFFFF8A80)),
+          ],
           if (isPartner) ...<Widget>[
             const SizedBox(width: 4),
             const Icon(Icons.handshake_outlined, size: 13, color: Color(0xFF7FD3A8)),
