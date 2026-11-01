@@ -318,11 +318,16 @@ class _OnlineScreenState extends State<OnlineScreen> {
             onPressed: _busy
                 ? null
                 : () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())),
-            icon: Badge(
-              isLabelVisible: settings.friends.any((f) => f.favorite),
-              smallSize: 8,
-              backgroundColor: PastraColors.gold,
-              child: const Icon(Icons.people_alt_rounded),
+            icon: ValueListenableBuilder<List<PlayerStatus>>(
+              valueListenable: SocialService.instance.requests,
+              builder: (context, requests, _) => Badge(
+                isLabelVisible: requests.isNotEmpty || settings.friends.any((f) => f.favorite),
+                label: requests.isEmpty ? null : Text('${requests.length}'),
+                smallSize: 8,
+                backgroundColor: PastraColors.gold,
+                textColor: Colors.black,
+                child: const Icon(Icons.people_alt_rounded),
+              ),
             ),
           ),
           if (Economy.enabled)

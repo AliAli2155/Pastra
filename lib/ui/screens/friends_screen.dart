@@ -135,7 +135,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
         settings.addFriend(uid: found.uid, name: found.name, tag: found.tag);
         if (!already) SocialService.tellAdded(found.uid);
         final handle = PlayerHandle.format(found.name, found.tag);
-        messenger.showSnackBar(SnackBar(content: Text(already ? t.alreadyFriend(handle) : t.friendAdded(handle))));
+        messenger.showSnackBar(SnackBar(content: Text(already ? t.alreadyFriend(handle) : t.requestSent(handle))));
       }
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(o.error('network'))));
@@ -203,6 +203,18 @@ class _FriendsScreenState extends State<FriendsScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                           children: <Widget>[
                             const _MyCodeCard(),
+                            ValueListenableBuilder<List<PlayerStatus>>(
+                              valueListenable: SocialService.instance.requests,
+                              builder: (context, list, _) => list.isEmpty
+                                  ? const SizedBox.shrink()
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        section(t.friendRequests, Icons.person_add_alt_1_rounded),
+                                        for (final r in list) _RequestRow(request: r),
+                                      ],
+                                    ),
+                            ),
                             if (friends.isEmpty)
                               Padding(
                                 padding: const EdgeInsets.all(24),
@@ -552,6 +564,58 @@ class _InviteSheetState extends State<_InviteSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Somebody added this player: accept or decline.
+class _RequestRow extends StatelessWidget {
+  const _RequestRow({required this.request});
+
+  final PlayerStatus request;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final t = SocialStrings(settings.language);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.7), width: 1.4),
+      ),
+      child: Row(
+        children: <Widget>[
+          PlayerAvatar(name: request.name, size: 42),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: <InlineSpan>[
+                  TextSpan(text: request.name, style: const TextStyle(color: Colors.white)),
+                  TextSpan(text: ' #${request.tag}', style: const TextStyle(color: PastraColors.gold)),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+          ),
+          TextButton(
+            onPressed: () => SocialService.instance.declineRequest(request),
+            child: Text(t.decline, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 4),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: PastraColors.gold, foregroundColor: Colors.black),
+            onPressed: () => SocialService.instance.acceptRequest(settings, request),
+            child: Text(t.accept, style: const TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
       ),
     );
   }

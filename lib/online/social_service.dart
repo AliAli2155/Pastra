@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 
 import '../game/app_settings.dart';
 import '../game/friends.dart';
@@ -36,6 +37,10 @@ class SocialService {
   bool _started = false;
   StreamSubscription<DatabaseEvent>? _presence;
   StreamSubscription<DatabaseEvent>? _adds;
+  StreamSubscription<DatabaseEvent>? _addsGone;
+
+  /// Friend requests waiting for an answer (people who added this player).
+  final ValueNotifier<List<PlayerStatus>> requests = ValueNotifier<List<PlayerStatus>>(const <PlayerStatus>[]);
   Timer? _debounce;
   String _syncedName = '';
   String _syncedFrame = '';
@@ -71,8 +76,8 @@ class SocialService {
     }
   }
 
-  /// Somebody added this player by code: they appear in the friends list
-  /// too (`friendAdds/<me>/<them>`, removed once read).
+  /// Somebody added this player by code: it shows up as a friend request
+  /// (`friendAdds/<me>/<them>`) that the player accepts or declines.
   void _listenAdds(AppSettings s) {
     final me = OnlineService.uid;
     _adds = OnlineService.ref('friendAdds/$me').onChildAdded.listen((e) async {
@@ -81,12 +86,32 @@ class SocialService {
       try {
         final u = await OnlineService.ref('users/$from').once().timeout(const Duration(seconds: 8));
         final st = _status(from, u.snapshot.value);
-        if (st != null && st.name.isNotEmpty && !s.friends.any((f) => f.uid == from)) {
-          s.addFriend(uid: from, name: st.name, tag: st.tag);
+        if (st == null || st.name.isEmpty || s.friends.any((f) => f.uid == from && f.favorite)) {
+          await OnlineService.ref('friendAdds/$me/$from').remove();
+          return;
         }
-        await OnlineService.ref('friendAdds/$me/$from').remove();
+        if (requests.value.every((r) => r.uid != from)) requests.value = <PlayerStatus>[...requests.value, st];
       } catch (_) {}
     });
+    _addsGone = OnlineService.ref('friendAdds/$me').onChildRemoved.listen((e) {
+      requests.value = <PlayerStatus>[for (final r in requests.value) if (r.uid != e.snapshot.key) r];
+    });
+  }
+
+  /// Accepts a friend request: the player joins the friends list.
+  Future<void> acceptRequest(AppSettings s, PlayerStatus r) async {
+    s.addFriend(uid: r.uid, name: r.name, tag: r.tag);
+    await _clearRequest(r.uid);
+  }
+
+  /// Declines a friend request.
+  Future<void> declineRequest(PlayerStatus r) => _clearRequest(r.uid);
+
+  Future<void> _clearRequest(String uid) async {
+    requests.value = <PlayerStatus>[for (final r in requests.value) if (r.uid != uid) r];
+    try {
+      await OnlineService.ref('friendAdds/${OnlineService.uid}/$uid').remove();
+    } catch (_) {}
   }
 
   /// Tells [uid] that this player added them, so they get this player in
@@ -109,6 +134,9 @@ class SocialService {
     _presence = null;
     _adds?.cancel();
     _adds = null;
+    _addsGone?.cancel();
+    _addsGone = null;
+    requests.value = const <PlayerStatus>[];
     _debounce?.cancel();
     _settings?.removeListener(_onSettings);
     _started = false;
