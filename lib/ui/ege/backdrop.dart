@@ -11,12 +11,15 @@ import '../palette.dart';
 /// and (on the home screen) lantern sparks rising. In low quality it is one
 /// still picture.
 class AegeanBackdrop extends StatefulWidget {
-  const AegeanBackdrop({super.key, required this.child, this.ambient = false});
+  const AegeanBackdrop({super.key, required this.child, this.ambient = false, this.animated = true});
 
   final Widget child;
 
   /// Lantern sparks rising (home screen).
   final bool ambient;
+
+  /// False: one still picture (the game screen, where the cards are the show).
+  final bool animated;
 
   @override
   State<AegeanBackdrop> createState() => _AegeanBackdropState();
@@ -43,8 +46,14 @@ class _AegeanBackdropState extends State<AegeanBackdrop> with SingleTickerProvid
     _clock.value = (elapsed.inMilliseconds / 60000.0) % 1.0;
   }
 
+  @override
+  void didUpdateWidget(AegeanBackdrop oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animated != widget.animated) _sync();
+  }
+
   void _sync() {
-    if (Fx.low.value) {
+    if (Fx.low.value || !widget.animated) {
       if (_ticker.isActive) _ticker.stop();
     } else if (!_ticker.isActive) {
       _last = Duration.zero;

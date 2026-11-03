@@ -270,15 +270,18 @@ BoxDecoration get feltDecoration => Look.table.decoration;
 /// The background of the menu screens: the Aegean night (see
 /// [AegeanBackdrop]).
 class Felt extends StatelessWidget {
-  const Felt({super.key, required this.child, this.ambient = false});
+  const Felt({super.key, required this.child, this.ambient = false, this.animated = true});
 
   final Widget child;
 
   /// Lantern sparks rising (home screen).
   final bool ambient;
 
+  /// False: a still picture (the game screen).
+  final bool animated;
+
   @override
-  Widget build(BuildContext context) => AegeanBackdrop(ambient: ambient, child: child);
+  Widget build(BuildContext context) => AegeanBackdrop(ambient: ambient, animated: animated, child: child);
 }
 
 /// The table cloth of the game screen: the chosen colour, a fine woven

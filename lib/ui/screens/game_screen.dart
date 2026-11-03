@@ -17,6 +17,10 @@ import '../../l10n/strings.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../../online/room_social.dart';
+import '../ege/fly_card.dart';
+import '../ege/table_stage.dart';
+import '../ege/widgets.dart';
+import '../fx/fx.dart';
 import '../table_layout.dart';
 import '../theme.dart';
 import '../widgets/fullscreen_button.dart';
@@ -243,12 +247,15 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  Widget _tutorialOverlay(Strings s, TableLayout layout, Size size) {
+  Widget _tutorialOverlay(Strings s, TableLayout layout, StageGeometry geo) {
     final index = _tutorialStep!;
     final step = _tutorialSteps[index];
+    final focus = _tutorialFocus(step, layout, geo.size);
     return Positioned.fill(
       child: _TutorialOverlay(
-        focus: _tutorialFocus(step, layout, size),
+        // Drawn flat over the whole area: the highlight is where the thing
+        // is seen on the screen.
+        focus: focus == null ? null : geo.projectRect(focus),
         title: s.tutorialTitle(step),
         body: s.tutorialBody(step),
         step: index,
@@ -335,7 +342,9 @@ class _GameScreenState extends State<GameScreen> {
         if (!didPop) _requestLeave();
       },
       child: Scaffold(
-        body: TableFelt(
+        body: Felt(
+          // The cards are the show here: the sky stands still.
+          animated: false,
           child: SafeArea(
             child: AnimatedBuilder(
               animation: Listenable.merge(<Listenable?>[c, c.link?.social]),
@@ -373,149 +382,178 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildTable(BuildContext context, Strings s) {
     final settings = SettingsScope.of(context);
     final state = c.state;
-    return LayoutBuilder(builder: (context, box) {
-      final layout = TableLayout.compute(
-        size: Size(box.maxWidth, box.maxHeight),
-        state: state,
-        selected: c.selected,
-        pending: c.pending,
-        highlighted: c.highlighted,
-        tableShown: c.tableShown,
-        landing: c.landing,
-        scale: TableLayout.scaleFor(Size(box.maxWidth, box.maxHeight)),
-      );
-      _dropLine = layout.dropLine;
-      if (_dragCard != null && !c.isHumanTurn) {
-        // The turn changed under the finger (should not happen): let go.
-        _dragCard = null;
-        _dragDelta = Offset.zero;
-        _overTable = false;
-      }
-      _updateStagger(state);
-      int zOf(MapEntry<int, CardPlacement> e) => e.key == _dragCard ? 10000 : e.value.z;
-      final entries = layout.cards.entries.toList()..sort((a, b) => zOf(a).compareTo(zOf(b)));
-      final duration = Duration(milliseconds: settings.fastAnimations ? 200 : 320);
-      final event = c.pastraEvent;
+    // Low graphics quality: the table is shown flat instead of leaning back.
+    return ValueListenableBuilder<bool>(
+      valueListenable: Fx.low,
+      builder: (context, low, _) => LayoutBuilder(builder: (context, box) {
+        final area = Size(box.maxWidth, box.maxHeight);
+        final geo = StageGeometry.fit(area, tilted: !low);
+        final layout = TableLayout.compute(
+          size: geo.size,
+          state: state,
+          selected: c.selected,
+          pending: c.pending,
+          highlighted: c.highlighted,
+          tableShown: c.tableShown,
+          landing: c.landing,
+          scale: TableLayout.scaleFor(geo.size),
+        );
+        _dropLine = layout.dropLine;
+        if (_dragCard != null && !c.isHumanTurn) {
+          // The turn changed under the finger (should not happen): let go.
+          _dragCard = null;
+          _dragDelta = Offset.zero;
+          _overTable = false;
+        }
+        _updateStagger(state);
+        int zOf(MapEntry<int, CardPlacement> e) => e.key == _dragCard ? 10000 : e.value.z;
+        final entries = layout.cards.entries.toList()..sort((a, b) => zOf(a).compareTo(zOf(b)));
+        final duration = Duration(milliseconds: settings.fastAnimations ? 200 : 320);
+        final event = c.pastraEvent;
+        // Name plates, counters and messages are not part of the tilted
+        // table: they are drawn flat on top of it, where the place they
+        // belong to appears on the screen.
+        Rect screen(Rect r) => geo.projectRect(r);
 
-      return _Shake(
-        trigger: event?.id ?? 0,
-        child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned.fill(
-            child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: c.clearSelection),
-          ),
-          Positioned.fromRect(
-            rect: layout.tableRect.inflate(6),
-            child: IgnorePointer(
-              child: RepaintBoundary(child: CustomPaint(painter: _TableZonePainter(highlight: _overTable))),
-            ),
-          ),
-          for (final e in entries) _card(e.key, e.value, duration),
-          if (state.deck.isNotEmpty)
-            // At the top right of the tilted deck: the face-up cards under it
-            // go to the bottom right, and a side hand may be below it.
-            _badge(layout.deckRect, '${state.deck.length}', Icons.layers_outlined, topRight: true),
-          for (var t = 0; t < 2; t++)
-            if (state.piles[t].isNotEmpty)
-              _badge(
-                layout.pileRects[t],
-                state.pastraCards[t].isEmpty
-                    ? '${state.piles[t].length}'
-                    : '${state.piles[t].length} · Π${state.pastraCards[t].length}',
-                Icons.style_outlined,
+        return _Shake(
+          trigger: event?.id ?? 0,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              Positioned.fill(
+                child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: c.clearSelection),
               ),
-          for (final entry in layout.seatRects.entries)
-            _seatLabel(s, entry.key, entry.value, layout.seatSides[entry.key] ?? SeatSide.top),
-          if (c.lastMove != null && layout.seatRects.containsKey(c.lastMove!.seat)) _lastMoveChip(layout, c.lastMove!),
-          if (event != null)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: _PastraBurst(key: ValueKey<int>(event.id), center: layout.playCenter),
-              ),
-            ),
-          // Our pastra: confetti over the whole table.
-          if (event != null && (event.seat == 0 || (c.isTeamGame && event.seat == 2)))
-            Positioned.fill(
-              child: IgnorePointer(child: _Confetti(key: ValueKey<int>(event.id))),
-            ),
-          Positioned.fromRect(
-            rect: layout.infoRect,
-            child: IgnorePointer(child: _infoLine(s)),
-          ),
-          if (event != null)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: _PastraBanner(
-                    key: ValueKey<int>(event.id),
-                    title: s.pastraBanner,
-                    subtitle: '${_seatName(s, event.seat)}  ${s.plusPoints(event.points)}',
+              // The table with its cards, leaned back.
+              Positioned.fill(
+                child: TableStage(
+                  geometry: geo,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: RepaintBoundary(
+                            child: CustomPaint(painter: StageFeltPainter(table: Look.table, rim: geo.rim)),
+                          ),
+                        ),
+                      ),
+                      Positioned.fromRect(
+                        rect: layout.tableRect.inflate(6),
+                        child: IgnorePointer(
+                          child: RepaintBoundary(child: CustomPaint(painter: TableZonePainter(highlight: _overTable))),
+                        ),
+                      ),
+                      for (final e in entries) _card(e.key, e.value, duration),
+                    ],
                   ),
                 ),
               ),
-            ),
-          if (c.quadAlert != null)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  child: _QuadBanner(
-                    key: ValueKey<int>(c.quadAlert!.id),
-                    cards: c.quadAlert!.cards,
-                    subtitle: s.quadBy(_seatName(s, c.quadAlert!.seat)),
-                    footer: s.quadRedeal,
-                    cardWidth: min(64.0 * TableLayout.scaleFor(box.biggest), max(36.0, box.maxWidth / 11)),
+              if (state.deck.isNotEmpty)
+                // At the top right of the tilted deck: the face-up cards under it
+                // go to the bottom right, and a side hand may be below it.
+                _badge(screen(layout.deckRect), '${state.deck.length}', Icons.layers_outlined, topRight: true),
+              for (var t = 0; t < 2; t++)
+                if (state.piles[t].isNotEmpty)
+                  _badge(
+                    screen(layout.pileRects[t]),
+                    state.pastraCards[t].isEmpty
+                        ? '${state.piles[t].length}'
+                        : '${state.piles[t].length} · Π${state.pastraCards[t].length}',
+                    Icons.style_outlined,
+                  ),
+              for (final entry in layout.seatRects.entries)
+                _seatLabel(s, entry.key, screen(entry.value), layout.seatSides[entry.key] ?? SeatSide.top, area),
+              if (c.lastMove != null && layout.seatRects.containsKey(c.lastMove!.seat))
+                _lastMoveChip(layout, c.lastMove!, geo),
+              if (event != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _PastraBurst(key: ValueKey<int>(event.id), center: geo.project(layout.playCenter)),
                   ),
                 ),
-              ),
-            ),
-          if (_tutorialStep != null) _tutorialOverlay(s, layout, Size(box.maxWidth, box.maxHeight)),
-          if (c.achievementToast != null)
-            Positioned(
-              top: 6,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Center(
-                  child: _AchievementToast(key: ValueKey<String>(c.achievementToast!), id: c.achievementToast!),
+              // Our pastra: confetti over the whole table.
+              if (event != null && (event.seat == 0 || (c.isTeamGame && event.seat == 2)))
+                Positioned.fill(
+                  child: IgnorePointer(child: _Confetti(key: ValueKey<int>(event.id))),
                 ),
+              Positioned.fromRect(
+                rect: screen(layout.infoRect),
+                child: IgnorePointer(child: _infoLine(s)),
               ),
-            ),
-          for (final b in c.link?.social.bubbles.values ?? const <ChatBubble>[]) _chatBubble(s, layout, b, box.biggest),
-          if (c.onlineClosed)
-            Positioned.fill(
-              child: _OnlineClosedOverlay(
-                text: c.link?.social.nextCode != null
-                    ? SocialStrings(c.settings.language).rematchReady
-                    : OnlineStrings(c.settings.language).hostLeft,
-                button: OnlineStrings(c.settings.language).back,
-                onBack: () => Navigator.of(context).pop(),
-                action: c.link?.social.nextCode != null ? SocialStrings(c.settings.language).join : null,
-                onAction: _joinRematch,
-              ),
-            ),
-          if (state.phase != GamePhase.playing && !c.busy && !c.onlineClosed)
-            // A key, so that toasts or chat bubbles appearing before it in the
-            // stack do not rebuild the panel (it would open a second time).
-            Positioned.fill(
-              key: const ValueKey<String>('round-summary'),
-              child: RoundSummaryPanel(
-                state: state,
-                teamNames: _teamNames(s),
-                onNextRound: c.nextRound,
-                onMainMenu: () => Navigator.of(context).pop(),
-                onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
-                playAgainLabel: c.isOnline ? _rematchLabel() : null,
-                xpGain: c.xpGain,
-                tournament: c.tournament,
-                onReview: () => showGameReview(context, c.misses),
-                reviewCount: c.misses.length,
-              ),
-            ),
-        ],
-      ),
-      );
-    });
+              if (event != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: _PastraBanner(
+                        key: ValueKey<int>(event.id),
+                        title: s.pastraBanner,
+                        subtitle: '${_seatName(s, event.seat)}  ${s.plusPoints(event.points)}',
+                      ),
+                    ),
+                  ),
+                ),
+              if (c.quadAlert != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: _QuadBanner(
+                        key: ValueKey<int>(c.quadAlert!.id),
+                        cards: c.quadAlert!.cards,
+                        subtitle: s.quadBy(_seatName(s, c.quadAlert!.seat)),
+                        footer: s.quadRedeal,
+                        cardWidth: min(64.0 * TableLayout.scaleFor(box.biggest), max(36.0, box.maxWidth / 11)),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_tutorialStep != null) _tutorialOverlay(s, layout, geo),
+              if (c.achievementToast != null)
+                Positioned(
+                  top: 6,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: _AchievementToast(key: ValueKey<String>(c.achievementToast!), id: c.achievementToast!),
+                    ),
+                  ),
+                ),
+              for (final b in c.link?.social.bubbles.values ?? const <ChatBubble>[]) _chatBubble(s, layout, b, geo),
+              if (c.onlineClosed)
+                Positioned.fill(
+                  child: _OnlineClosedOverlay(
+                    text: c.link?.social.nextCode != null
+                        ? SocialStrings(c.settings.language).rematchReady
+                        : OnlineStrings(c.settings.language).hostLeft,
+                    button: OnlineStrings(c.settings.language).back,
+                    onBack: () => Navigator.of(context).pop(),
+                    action: c.link?.social.nextCode != null ? SocialStrings(c.settings.language).join : null,
+                    onAction: _joinRematch,
+                  ),
+                ),
+              if (state.phase != GamePhase.playing && !c.busy && !c.onlineClosed)
+                // A key, so that toasts or chat bubbles appearing before it in the
+                // stack do not rebuild the panel (it would open a second time).
+                Positioned.fill(
+                  key: const ValueKey<String>('round-summary'),
+                  child: RoundSummaryPanel(
+                    state: state,
+                    teamNames: _teamNames(s),
+                    onNextRound: c.nextRound,
+                    onMainMenu: () => Navigator.of(context).pop(),
+                    onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
+                    playAgainLabel: c.isOnline ? _rematchLabel() : null,
+                    xpGain: c.xpGain,
+                    tournament: c.tournament,
+                    onReview: () => showGameReview(context, c.misses),
+                    reviewCount: c.misses.length,
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
   }
 
   /// Online: rematch is possible while the table is still there.
@@ -539,16 +577,17 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// A quick chat message next to the seat that sent it.
-  Widget _chatBubble(Strings s, TableLayout layout, ChatBubble b, Size size) {
+  Widget _chatBubble(Strings s, TableLayout layout, ChatBubble b, StageGeometry geo) {
     final text = SocialStrings(s.lang).chat(b.message);
     if (text.isEmpty) return const SizedBox.shrink();
-    final rect = layout.seatRects[b.seat];
+    final seatRect = layout.seatRects[b.seat];
+    final rect = seatRect == null ? null : geo.projectRect(seatRect);
     final side = layout.seatSides[b.seat];
     Offset anchor;
     Offset shift;
     if (rect == null || side == null) {
       // Me: above my hand.
-      anchor = Offset(size.width / 2, layout.dropLine - 8);
+      anchor = geo.project(Offset(geo.size.width / 2, layout.dropLine - 8));
       shift = const Offset(-0.5, -1);
     } else {
       switch (side) {
@@ -580,10 +619,11 @@ class _GameScreenState extends State<GameScreen> {
 
   /// The card a bot just played, shown small next to it for a moment
   /// (with a tick when it took the pile).
-  Widget _lastMoveChip(TableLayout layout, LastMove move) {
-    final rect = layout.seatRects[move.seat]!;
+  Widget _lastMoveChip(TableLayout layout, LastMove move, StageGeometry geo) {
+    final seatRect = layout.seatRects[move.seat]!;
+    final rect = geo.projectRect(seatRect);
     final side = layout.seatSides[move.seat] ?? SeatSide.top;
-    final w = layout.smallCardWidth * 0.8;
+    final w = layout.smallCardWidth * 0.8 * geo.scaleAt(seatRect.center);
     final h = w * TableLayout.cardRatio;
     final topLeft = switch (side) {
       SeatSide.top => Offset(rect.left - w - 12, rect.top + (rect.height - h) / 2),
@@ -684,39 +724,39 @@ class _GameScreenState extends State<GameScreen> {
     final inHand = dealtIndex != null && state.hands.any((h) => h.contains(card));
     final inPile = gatheredIndex != null && state.piles.any((pile) => pile.contains(card));
     final delay = inHand ? dealtIndex * (fast ? 25 : 45) : (inPile ? min(gatheredIndex, 12) * (fast ? 6 : 10) : 0);
-    final total = duration.inMilliseconds + delay;
-    final curve = delay == 0 ? Curves.easeOutCubic : Interval(delay / total, 1, curve: Curves.easeOutCubic);
-    return AnimatedPositioned(
+    // The card glides to its place (with a little arc on a long way); a card
+    // held by a finger follows it at once.
+    return FlyCard(
       key: ValueKey<int>(card),
-      duration: dragging ? Duration.zero : Duration(milliseconds: total),
-      curve: curve,
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
+      rect: rect,
+      angle: p.angle,
+      duration: duration,
+      delay: Duration(milliseconds: delay),
+      still: dragging,
+      hop: !Fx.low.value,
       child: RepaintBoundary(
-        child: Transform.rotate(
-          angle: p.angle,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: p.interactive ? () => c.tapHandCard(card) : null,
-            onPanStart: canDrag ? (_) => _dragStart(card) : null,
-            onPanUpdate: p.interactive ? (d) => _dragUpdate(card, d.delta, p.rect) : null,
-            onPanEnd: p.interactive ? (_) => _dragEnd(card) : null,
-            onPanCancel: p.interactive ? () => _dragEnd(card) : null,
-            child: PlayingCardView(
-              card: card,
-              faceUp: p.faceUp,
-              covered: p.covered,
-              highlighted: p.highlighted || (card == c.hintCard && p.interactive),
-              selected: p.selected,
-            ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: p.interactive ? () => c.tapHandCard(card) : null,
+          onPanStart: canDrag ? (_) => _dragStart(card) : null,
+          onPanUpdate: p.interactive ? (d) => _dragUpdate(card, d.delta, p.rect) : null,
+          onPanEnd: p.interactive ? (_) => _dragEnd(card) : null,
+          onPanCancel: p.interactive ? () => _dragEnd(card) : null,
+          child: PlayingCardView(
+            card: card,
+            faceUp: p.faceUp,
+            covered: p.covered,
+            simple: p.simple,
+            highlighted: p.highlighted || (card == c.hintCard && p.interactive),
+            selected: p.selected,
           ),
         ),
       ),
     );
   }
 
+  /// A small counter (cards in the deck or in a pile) next to a place on the
+  /// table. [anchor] is where that place is seen on the screen.
   Widget _badge(Rect anchor, String text, IconData icon, {bool topRight = false}) {
     return Positioned(
       left: topRight ? anchor.right - 4 : anchor.left - 14,
@@ -725,13 +765,8 @@ class _GameScreenState extends State<GameScreen> {
       child: IgnorePointer(
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xE6101814),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: PastraColors.gold.withValues(alpha: 0.45)),
-              boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 6)],
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: plateDecoration(radius: 10, edge: 0.55),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
@@ -746,7 +781,9 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _seatLabel(Strings s, int seat, Rect rect, SeatSide side) {
+  /// The name plate of a seat, centred under the place of the player on the
+  /// screen ([rect]) and never outside the [area].
+  Widget _seatLabel(Strings s, int seat, Rect rect, SeatSide side, Size area) {
     final state = c.state;
     final active = state.phase == GamePhase.playing && state.current == seat;
     final thinking = active && c.botThinking;
@@ -761,29 +798,24 @@ class _GameScreenState extends State<GameScreen> {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: active ? PastraColors.gold : (isPartner ? const Color(0xFF2E7D5B) : const Color(0xFF3A3F47)),
+        color: active ? PastraColors.gold : (isPartner ? const Color(0xFF1F7A6B) : PastraColors.nightLight),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: active ? 0.0 : 0.35)),
       ),
       child: info.isBot
-          ? Icon(Icons.smart_toy_rounded, size: 13, color: active ? Colors.black : Colors.white)
+          ? Icon(Icons.smart_toy_rounded, size: 13, color: active ? Colors.black : PastraColors.foam)
           : Text(
               name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: active ? Colors.black : Colors.white),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: active ? Colors.black : PastraColors.foam,
+              ),
             ),
     );
     final tag = AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.fromLTRB(3, 3, 9, 3),
-      decoration: BoxDecoration(
-        color: active ? const Color(0xE6261E08) : Colors.black.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: active ? PastraColors.gold : (isPartner ? const Color(0x802E7D5B) : Colors.white12),
-          width: active ? 1.6 : 1,
-        ),
-        boxShadow: <BoxShadow>[
-          if (active) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.45), blurRadius: 14),
-        ],
-      ),
+      decoration: plateDecoration(radius: 14, glow: active, edge: 0.35),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -796,7 +828,7 @@ class _GameScreenState extends State<GameScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12.5,
-                color: active ? PastraColors.gold : Colors.white,
+                color: active ? PastraColors.gold : PastraColors.marble,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -823,29 +855,14 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
     );
-    switch (side) {
-      case SeatSide.top:
-        return Positioned(
-          left: rect.center.dx - 90,
-          width: 180,
-          top: rect.bottom + 2,
-          child: IgnorePointer(child: Center(child: tag)),
-        );
-      case SeatSide.right:
-        return Positioned(
-          right: TableLayout.margin - 4,
-          width: 120,
-          top: rect.bottom + 3,
-          child: IgnorePointer(child: Align(alignment: Alignment.centerRight, child: tag)),
-        );
-      default:
-        return Positioned(
-          left: TableLayout.margin - 4,
-          width: 120,
-          top: rect.bottom + 3,
-          child: IgnorePointer(child: Align(alignment: Alignment.centerLeft, child: tag)),
-        );
-    }
+    final width = side == SeatSide.top ? 180.0 : 120.0;
+    final left = min(max(rect.center.dx - width / 2, 0.0), max(0.0, area.width - width));
+    return Positioned(
+      left: left,
+      width: width,
+      top: rect.bottom + 2,
+      child: IgnorePointer(child: Center(child: tag)),
+    );
   }
 
   Widget _infoLine(Strings s) {
@@ -888,11 +905,7 @@ class _GameScreenState extends State<GameScreen> {
         fit: BoxFit.scaleDown,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.42),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: gold ? PastraColors.gold.withValues(alpha: 0.6) : Colors.white12),
-          ),
+          decoration: plateDecoration(radius: 14, glow: gold, edge: 0.3),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -968,11 +981,16 @@ class _TopBar extends StatelessWidget {
                 ? const LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0xFFFFD873), Color(0xFFD09A2C)],
+                    colors: <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)],
+                    stops: <double>[0.0, 0.5, 1.0],
                   )
-                : null,
-            color: ours ? null : Colors.white.withValues(alpha: 0.12),
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0xFF26407F), Color(0xFF162B60)],
+                  ),
             borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: ours ? PastraColors.goldLight.withValues(alpha: 0.8) : Colors.white24),
           ),
           // The score counts up to its new value; the thin bar under it
           // shows how far it is to the target.
@@ -1016,12 +1034,7 @@ class _TopBar extends StatelessWidget {
         );
     final board = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0xD9101814),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
-        boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
+      decoration: plateDecoration(radius: 16, edge: 0.6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -1052,13 +1065,13 @@ class _TopBar extends StatelessWidget {
     final sideRoom = rightRoom;
     return Container(
       height: 48,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[Colors.black.withValues(alpha: 0.45), Colors.black.withValues(alpha: 0.12)],
+          colors: <Color>[Color(0xB3040817), Color(0x1F040817)],
         ),
-        border: Border(bottom: BorderSide(color: PastraColors.gold.withValues(alpha: 0.18))),
+        border: Border(bottom: BorderSide(color: Color(0x40F2C14E))),
       ),
       // The scoreboard stays exactly in the middle: the buttons sit on both
       // sides over it, and the board keeps clear of the wider (right) side.
@@ -1071,8 +1084,8 @@ class _TopBar extends StatelessWidget {
               child: Tooltip(
                 message: s.leave,
                 child: Material(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+                  color: const Color(0xD90A1636),
+                  shape: const CircleBorder(side: BorderSide(color: Color(0x66F2C14E))),
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: onBack,
@@ -1221,14 +1234,7 @@ class _QuadBanner extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.78),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: PastraColors.gold, width: 2),
-          boxShadow: <BoxShadow>[
-            BoxShadow(color: PastraColors.gold.withValues(alpha: 0.45), blurRadius: 30),
-          ],
-        ),
+        decoration: tabletDecoration(radius: 20, glow: true),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -1279,14 +1285,7 @@ class _PastraBanner extends StatelessWidget {
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: PastraColors.gold, width: 2),
-          boxShadow: <BoxShadow>[
-            BoxShadow(color: PastraColors.gold.withValues(alpha: 0.45), blurRadius: 30),
-          ],
-        ),
+        decoration: tabletDecoration(radius: 20, glow: true),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -1297,8 +1296,13 @@ class _PastraBanner extends StatelessWidget {
                 fontWeight: FontWeight.w900,
                 color: PastraColors.gold,
                 letterSpacing: 2,
+                height: 1.1,
+                shadows: <Shadow>[Shadow(color: Color(0xFF7A5210), offset: Offset(0, 3))],
               ),
             ),
+            const SizedBox(height: 4),
+            const SizedBox(width: 150, child: MeanderBand(height: 8)),
+            const SizedBox(height: 6),
             Text(subtitle, style: const TextStyle(fontSize: 16, color: Colors.white)),
           ],
         ),
@@ -1497,11 +1501,7 @@ class _AchievementToast extends StatelessWidget {
       },
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PastraColors.gold, width: 1.5),
-        ),
+        decoration: plateDecoration(radius: 16, glow: true),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -1559,11 +1559,7 @@ class _TutorialOverlay extends StatelessWidget {
       final f = focus;
       final bubble = Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
-        decoration: BoxDecoration(
-          color: PastraColors.panel,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PastraColors.gold, width: 1.5),
-        ),
+        decoration: tabletDecoration(radius: 18, glow: true),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1690,10 +1686,19 @@ class _DimPainter extends CustomPainter {
       dim.addRRect(RRect.fromRectAndRadius(f, const Radius.circular(14)));
       dim.fillType = PathFillType.evenOdd;
     }
-    canvas.drawPath(dim, Paint()..color = Colors.black.withValues(alpha: 0.62));
+    canvas.drawPath(dim, Paint()..color = PastraColors.night.withValues(alpha: 0.7));
     if (f != null) {
+      final ring = RRect.fromRectAndRadius(f, const Radius.circular(14));
+      // A wide faint ring under a thin bright one: a glow without a blur.
       canvas.drawRRect(
-        RRect.fromRectAndRadius(f, const Radius.circular(14)),
+        ring,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..color = PastraColors.gold.withValues(alpha: 0.2),
+      );
+      canvas.drawRRect(
+        ring,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5
@@ -1728,7 +1733,7 @@ class _OnlineClosedOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: Colors.black87,
+      color: const Color(0xEB040817),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1760,86 +1765,6 @@ class _OnlineClosedOverlay extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The playing area in the middle: a slightly lighter cloth with a gold
-/// stitched edge (gold and brighter while a card is dragged over it).
-class _TableZonePainter extends CustomPainter {
-  _TableZonePainter({required this.highlight});
-
-  final bool highlight;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(26));
-    // Lighter cloth in the middle.
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..shader = RadialGradient(
-          colors: <Color>[
-            Colors.white.withValues(alpha: highlight ? 0.10 : 0.06),
-            Colors.white.withValues(alpha: 0.0),
-          ],
-        ).createShader(rect),
-    );
-    // A soft dark rim inside the edge.
-    canvas.drawRRect(
-      rrect.deflate(1),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6
-        ..color = Colors.black.withValues(alpha: 0.12)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    // A faint "Π" emblem in the middle of the cloth.
-    final c = rect.center;
-    final er = min(rect.height, rect.width) * 0.28;
-    canvas.drawCircle(
-      c,
-      er,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = Colors.white.withValues(alpha: 0.05),
-    );
-    canvas.drawCircle(
-      c,
-      er * 0.86,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: 0.04),
-    );
-    final emblem = TextPainter(
-      text: TextSpan(
-        text: 'Π',
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.06), fontSize: er * 1.1, fontWeight: FontWeight.w900, height: 1),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    emblem.paint(canvas, c - Offset(emblem.width / 2, emblem.height / 2));
-    emblem.dispose();
-    // Stitched gold line.
-    final stitch = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = highlight ? 2.2 : 1.4
-      ..strokeCap = StrokeCap.round
-      ..color = PastraColors.gold.withValues(alpha: highlight ? 0.95 : 0.32);
-    final path = Path()..addRRect(rrect.deflate(5));
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        canvas.drawPath(metric.extractPath(d, d + 7), stitch);
-        d += 12;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_TableZonePainter old) => old.highlight != highlight;
 }
 
 /// Colourful paper pieces falling over the table (our pastra).

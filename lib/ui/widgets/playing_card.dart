@@ -21,6 +21,7 @@ class PlayingCardView extends StatelessWidget {
     this.highlighted = false,
     this.selected = false,
     this.covered = false,
+    this.simple = false,
     this.backStyle,
   });
 
@@ -36,6 +37,10 @@ class PlayingCardView extends StatelessWidget {
   /// Face up but under other cards: drawn as a blank card.
   final bool covered;
 
+  /// Face down deep in a stack, where nobody can see it: the back is drawn
+  /// without its pattern (much less to paint for a deck of 36 cards).
+  final bool simple;
+
   /// Gold glow: this table card is (about to be) captured.
   final bool highlighted;
 
@@ -50,7 +55,13 @@ class PlayingCardView extends StatelessWidget {
     final glow = highlighted || selected;
     final glowColor = highlighted ? PastraColors.gold : Colors.white;
     final Widget content = !faceUp
-        ? CardBack(key: const ValueKey<String>('back'), width: w, height: h, style: backStyle ?? Look.back)
+        ? CardBack(
+            key: const ValueKey<String>('back'),
+            width: w,
+            height: h,
+            style: backStyle ?? Look.back,
+            simple: simple,
+          )
         // Face and blank share one key, so covering a card (another one lands
         // on it) swaps the picture without a flip; only back <-> front flips.
         : KeyedSubtree(
@@ -152,6 +163,20 @@ class CardFace extends StatelessWidget {
         border: Border.all(
           color: highlighted ? PastraColors.gold : PastraColors.cardEdge,
           width: highlighted ? max(1.5, w * 0.035) : 1.0,
+        ),
+      ),
+      // The gloss of a coated card: light from the top left.
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(w * 0.09),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            Colors.white.withValues(alpha: 0.24),
+            Colors.white.withValues(alpha: 0.0),
+            Colors.black.withValues(alpha: 0.05),
+          ],
+          stops: const <double>[0.0, 0.5, 1.0],
         ),
       ),
       child: Stack(
@@ -464,22 +489,32 @@ class _CourtPainter extends CustomPainter {
 
 /// Card back: a lattice, a frame and a "Π" emblem in the chosen colours.
 class CardBack extends StatelessWidget {
-  const CardBack({super.key, required this.width, required this.height, this.style = CardBackStyle.aegean});
+  const CardBack({
+    super.key,
+    required this.width,
+    required this.height,
+    this.style = CardBackStyle.aegean,
+    this.simple = false,
+  });
 
   final double width;
   final double height;
   final CardBackStyle style;
 
+  /// Only the colours, no pattern (a card nobody can see).
+  final bool simple;
+
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: Size(width, height), painter: CardBackPainter(style));
+    return CustomPaint(size: Size(width, height), painter: CardBackPainter(style, simple));
   }
 }
 
 class CardBackPainter extends CustomPainter {
-  const CardBackPainter([this.style = CardBackStyle.aegean]);
+  const CardBackPainter([this.style = CardBackStyle.aegean, this.simple = false]);
 
   final CardBackStyle style;
+  final bool simple;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -497,6 +532,7 @@ class CardBackPainter extends CustomPainter {
           colors: <Color>[style.dark, style.light],
         ).createShader(inner.outerRect),
     );
+    if (simple) return;
     canvas.save();
     canvas.clipRRect(inner);
     final line = Paint()
@@ -567,8 +603,23 @@ class CardBackPainter extends CustomPainter {
       tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
       tp.dispose();
     }
+    // The gloss of a coated card: light from the top left.
+    canvas.drawRRect(
+      outer,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            Colors.white.withValues(alpha: 0.2),
+            Colors.white.withValues(alpha: 0.0),
+            Colors.black.withValues(alpha: 0.12),
+          ],
+          stops: const <double>[0.0, 0.5, 1.0],
+        ).createShader(outer.outerRect),
+    );
   }
 
   @override
-  bool shouldRepaint(CardBackPainter oldDelegate) => oldDelegate.style != style;
+  bool shouldRepaint(CardBackPainter oldDelegate) => oldDelegate.style != style || oldDelegate.simple != simple;
 }

@@ -24,6 +24,10 @@ class CardPlacement {
   /// corner never gives it away.
   final bool covered;
 
+  /// Face down deep in the deck or a pile, where nobody can see it: the back
+  /// is drawn without its pattern.
+  final bool simple;
+
   const CardPlacement({
     required this.rect,
     required this.faceUp,
@@ -33,6 +37,7 @@ class CardPlacement {
     this.selected = false,
     this.interactive = false,
     this.covered = false,
+    this.simple = false,
   });
 }
 
@@ -92,6 +97,10 @@ class TableLayout {
 
   static const double cardRatio = 1.42;
   static const double margin = 8;
+
+  /// How many cards at the top of a stack are drawn in full; the ones below
+  /// them are covered anyway.
+  static const int _visibleInStack = 6;
 
   /// Big screens (a desktop browser) get bigger cards: 1 on a phone, up to 2.
   static double scaleFor(Size size) => min(size.width / 844, size.height / 390).clamp(1.0, 2.0).toDouble();
@@ -227,6 +236,7 @@ class TableLayout {
         faceUp: false,
         z: i,
         angle: deckTilt,
+        simple: i < state.deck.length - _visibleInStack,
       );
     }
 
@@ -251,7 +261,12 @@ class TableLayout {
           k++;
         } else {
           final o = (i ~/ 4) * 0.5;
-          placements[c] = CardPlacement(rect: r.shift(Offset(-o, -o)), faceUp: false, z: 100 + i);
+          placements[c] = CardPlacement(
+            rect: r.shift(Offset(-o, -o)),
+            faceUp: false,
+            z: 100 + i,
+            simple: i < pile.length - _visibleInStack,
+          );
         }
       }
     }
@@ -353,12 +368,19 @@ class TableLayout {
       final step = hw * spacing;
       final total = hw + (myHand.length - 1) * step;
       final left0 = (w - total) / 2;
+      final mid = (myHand.length - 1) / 2;
       for (var i = 0; i < myHand.length; i++) {
         final c = myHand[i];
         final isSel = c == selected;
+        // A gentle fan: the outer cards turn away a little and sit lower.
+        // The chosen card stands up straight.
+        final off = i - mid;
+        final fan = isSel ? 0.0 : off * 0.035;
+        final drop = isSel ? 0.0 : off * off * hh * 0.004;
         placements[c] = CardPlacement(
-          rect: Rect.fromLTWH(left0 + i * step, handTop - (isSel ? raise : 0), hw, hh),
+          rect: Rect.fromLTWH(left0 + i * step, handTop - (isSel ? raise : 0) + drop, hw, hh),
           faceUp: true,
+          angle: fan,
           z: isSel ? 480 : 400 + i,
           selected: isSel,
           interactive: true,

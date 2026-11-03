@@ -1,0 +1,324 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../theme.dart';
+
+/// How the table is seen on the screen.
+///
+/// The cards are laid out on a flat table ([size]). The table is then leaned
+/// back like a real one seen from the player's seat: the near edge fills the
+/// bottom of the screen and the far edge is smaller and higher. [TableStage]
+/// draws it that way, and [project] tells where a point of the flat table
+/// ends up (for name plates and messages, which are drawn flat on top).
+///
+/// In low graphics quality the table stays flat ([tilted] is false) and
+/// every point ends up where it is.
+class StageGeometry {
+  const StageGeometry._({
+    required this.area,
+    required this.size,
+    required this.tilted,
+    required double distance,
+  }) : _distance = distance;
+
+  /// The part of the screen the table is shown in.
+  final Size area;
+
+  /// The flat table the cards are laid out on. As wide as [area]; when
+  /// [tilted] it is taller, because its far part is drawn smaller.
+  final Size size;
+
+  /// False in low graphics quality.
+  final bool tilted;
+
+  final double _distance;
+
+  /// How far the table leans back, in radians.
+  static const double lean = 0.42;
+
+  /// Distance of the eye from the table, in table heights (smaller = a
+  /// stronger perspective).
+  static const double eye = 2.1;
+
+  /// Fits the table into [area]: the bottom edge of the table is the bottom
+  /// edge of the area, the far edge ends a little below the top (the rim of
+  /// the table shows there).
+  factory StageGeometry.fit(Size area, {bool tilted = true}) {
+    if (!tilted || area.width < 200 || area.height < 140) {
+      return StageGeometry._(area: area, size: area, tilted: false, distance: 1);
+    }
+    final far = farMarginFor(area);
+    final target = area.height - far;
+    final height = target * (1 + math.sin(lean) / eye) / math.cos(lean);
+    return StageGeometry._(
+      area: area,
+      size: Size(area.width, height),
+      tilted: true,
+      distance: eye * height,
+    );
+  }
+
+  /// Room above the far edge of the table.
+  static double farMarginFor(Size area) => math.max(14.0, area.height * 0.04);
+
+  /// Thickness of the rim around the cloth, on the flat table.
+  double get rim => math.max(12.0, size.height * 0.032);
+
+  /// The turn and the perspective, about the bottom centre of the table.
+  Matrix4 get matrix => Matrix4.identity()
+    ..setEntry(3, 2, 1 / _distance)
+    ..rotateX(-lean);
+
+  double _w(double y) => 1 - math.sin(lean) * (y - size.height) / _distance;
+
+  /// Where the point [p] of the flat table is on the screen area.
+  Offset project(Offset p) {
+    if (!tilted) return p;
+    final w = _w(p.dy);
+    return Offset(
+      area.width / 2 + (p.dx - size.width / 2) / w,
+      area.height + math.cos(lean) * (p.dy - size.height) / w,
+    );
+  }
+
+  /// The smallest rectangle on the screen that holds [r].
+  Rect projectRect(Rect r) {
+    if (!tilted) return r;
+    final a = project(r.topLeft);
+    final b = project(r.topRight);
+    final c = project(r.bottomLeft);
+    final d = project(r.bottomRight);
+    return Rect.fromLTRB(
+      math.min(math.min(a.dx, b.dx), math.min(c.dx, d.dx)),
+      math.min(math.min(a.dy, b.dy), math.min(c.dy, d.dy)),
+      math.max(math.max(a.dx, b.dx), math.max(c.dx, d.dx)),
+      math.max(math.max(a.dy, b.dy), math.max(c.dy, d.dy)),
+    );
+  }
+
+  /// How large things are drawn at [p] compared with the flat table (1 at the
+  /// near edge, smaller further away).
+  double scaleAt(Offset p) => tilted ? 1 / _w(p.dy) : 1.0;
+}
+
+/// Shows its child (the flat table with all its cards) leaned back as
+/// described by [geometry]. Touches are turned back by the same amount, so
+/// cards can be tapped and dragged where they are seen.
+class TableStage extends StatelessWidget {
+  const TableStage({super.key, required this.geometry, required this.child});
+
+  final StageGeometry geometry;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = geometry;
+    final flat = SizedBox(width: g.size.width, height: g.size.height, child: child);
+    if (!g.tilted) return flat;
+    return OverflowBox(
+      alignment: Alignment.bottomCenter,
+      minWidth: g.size.width,
+      maxWidth: g.size.width,
+      minHeight: g.size.height,
+      maxHeight: g.size.height,
+      child: Transform(
+        alignment: Alignment.bottomCenter,
+        transform: g.matrix,
+        child: flat,
+      ),
+    );
+  }
+}
+
+/// The table itself: a rim of polished gold around the cloth in the colour
+/// the player chose, a pool of lantern light and dark edges. It is drawn on
+/// the flat table and may go beyond its edges (the rim).
+class StageFeltPainter extends CustomPainter {
+  const StageFeltPainter({required this.table, required this.rim});
+
+  final TableTheme table;
+  final double rim;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final w = size.width;
+    final h = size.height;
+    final short = math.min(w, h);
+    final felt = RRect.fromLTRBR(0, 0, w, h, Radius.circular(short * 0.11));
+    final outer = felt.inflate(rim);
+
+    // The rim: polished gold, lighter on the far side.
+    canvas.drawRRect(
+      outer,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[PastraColors.goldLight, Color(0xFFD9A234), Color(0xFF7A5210)],
+          stops: <double>[0.0, 0.2, 1.0],
+        ).createShader(outer.outerRect),
+    );
+    canvas.drawRRect(
+      outer.deflate(1.2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = Colors.white.withValues(alpha: 0.5),
+    );
+    // A dark groove between the rim and the cloth.
+    canvas.drawRRect(felt.inflate(2.5), Paint()..color = const Color(0xFF1C1204));
+
+    // The cloth, lit from the middle.
+    canvas.drawRRect(
+      felt,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, -0.05),
+          radius: (w * 0.6) / short,
+          colors: <Color>[table.light, table.mid, table.dark],
+          stops: const <double>[0.0, 0.55, 1.0],
+        ).createShader(felt.outerRect),
+    );
+
+    canvas.save();
+    canvas.clipRRect(felt);
+    // The warm light of the lantern hanging over the table.
+    canvas.drawRect(
+      felt.outerRect,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, 0.05),
+          radius: (w * 0.4) / short,
+          colors: <Color>[
+            PastraColors.lantern.withValues(alpha: 0.2),
+            PastraColors.lantern.withValues(alpha: 0.0),
+          ],
+        ).createShader(felt.outerRect),
+    );
+    // The cloth falls into the dark towards the edges.
+    canvas.drawRect(
+      felt.outerRect,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, -0.05),
+          radius: (w * 0.62) / short,
+          colors: <Color>[Colors.transparent, Colors.black.withValues(alpha: 0.42)],
+          stops: const <double>[0.6, 1.0],
+        ).createShader(felt.outerRect),
+    );
+    // A soft shadow just inside the rim, as if the cloth lay a little lower.
+    for (var i = 0; i < 4; i++) {
+      canvas.drawRRect(
+        felt.deflate(i * 2.0),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..color = Colors.black.withValues(alpha: 0.18 - i * 0.04),
+      );
+    }
+    canvas.restore();
+
+    // A thin gold line inlaid in the cloth.
+    canvas.drawRRect(
+      felt.deflate(rim * 0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = PastraColors.gold.withValues(alpha: 0.3),
+    );
+  }
+
+  @override
+  bool shouldRepaint(StageFeltPainter old) => old.table != table || old.rim != rim;
+}
+
+/// The playing area in the middle of the table: a slightly lighter panel with
+/// a stitched gold edge (gold and brighter while a card is dragged over it).
+class TableZonePainter extends CustomPainter {
+  const TableZonePainter({required this.highlight});
+
+  final bool highlight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(26));
+    // Lighter cloth in the middle.
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..shader = RadialGradient(
+          colors: <Color>[
+            Colors.white.withValues(alpha: highlight ? 0.11 : 0.06),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(rect),
+    );
+    // A shadow just inside the edge.
+    for (var i = 0; i < 3; i++) {
+      canvas.drawRRect(
+        rrect.deflate(1 + i * 2.0),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = Colors.black.withValues(alpha: 0.12 - i * 0.03),
+      );
+    }
+    // A faint "Π" emblem in the middle of the cloth.
+    final c = rect.center;
+    final er = math.min(rect.height, rect.width) * 0.28;
+    canvas.drawCircle(
+      c,
+      er,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.05),
+    );
+    canvas.drawCircle(
+      c,
+      er * 0.86,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = Colors.white.withValues(alpha: 0.04),
+    );
+    final emblem = TextPainter(
+      text: TextSpan(
+        text: 'Π',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.06),
+          fontSize: er * 1.1,
+          fontWeight: FontWeight.w900,
+          height: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    emblem.paint(canvas, c - Offset(emblem.width / 2, emblem.height / 2));
+    emblem.dispose();
+    // The stitched gold line, drawn as one path.
+    final stitches = Path();
+    for (final metric in (Path()..addRRect(rrect.deflate(5))).computeMetrics()) {
+      var d = 0.0;
+      while (d < metric.length) {
+        stitches.addPath(metric.extractPath(d, d + 7), Offset.zero);
+        d += 12;
+      }
+    }
+    canvas.drawPath(
+      stitches,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = highlight ? 2.2 : 1.4
+        ..strokeCap = StrokeCap.round
+        ..color = PastraColors.gold.withValues(alpha: highlight ? 0.95 : 0.32),
+    );
+  }
+
+  @override
+  bool shouldRepaint(TableZonePainter old) => old.highlight != highlight;
+}

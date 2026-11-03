@@ -8,6 +8,8 @@ import '../../engine/rules.dart';
 import '../../game/progression.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
+import '../ege/widgets.dart';
+import '../fx/fx.dart';
 import '../theme.dart';
 import 'suit_icon.dart';
 import 'wallet_bar.dart';
@@ -115,7 +117,7 @@ class RoundSummaryPanel extends StatelessWidget {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
           );
     // Game over: the trophy next to the title (saves height on a phone).
-    final header = over
+    final titleRow = over
         ? Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -142,6 +144,14 @@ class RoundSummaryPanel extends StatelessWidget {
               titleText,
             ],
           );
+    final header = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        titleRow,
+        const SizedBox(height: 6),
+        const SizedBox(width: 150, child: MeanderBand(height: 8, opacity: 0.45)),
+      ],
+    );
 
     final sheet = _ScoreSheet(rows: rows, names: teamNames, totals: <int>[a.total, b.total], totalLabel: s.roundTotal);
 
@@ -156,42 +166,60 @@ class RoundSummaryPanel extends StatelessWidget {
 
     final Widget buttons;
     if (!over) {
-      buttons = SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: FilledButton.icon(
-          onPressed: onNextRound,
-          icon: const Icon(Icons.arrow_forward_rounded),
-          label: Text(s.nextRound),
+      buttons = BevelButton(
+        onPressed: onNextRound,
+        height: 46,
+        fontSize: 17,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.arrow_forward_rounded, size: 22),
+            const SizedBox(width: 8),
+            Flexible(child: Text(s.nextRound, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ],
         ),
       );
     } else if (tournament) {
-      buttons = SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: FilledButton(onPressed: onMainMenu, child: Text(s.continueGame)),
+      buttons = BevelButton(
+        onPressed: onMainMenu,
+        height: 46,
+        fontSize: 17,
+        child: Text(s.continueGame, maxLines: 1, overflow: TextOverflow.ellipsis),
       );
     } else {
       buttons = Row(
         children: <Widget>[
           Expanded(
-            child: SizedBox(
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: onMainMenu,
-                icon: const Icon(Icons.home_rounded, size: 20),
-                label: Text(s.mainMenu, maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: BevelButton(
+              gold: false,
+              height: 44,
+              fontSize: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              onPressed: onMainMenu,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.home_rounded, size: 20),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(s.mainMenu, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
               ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: SizedBox(
-              height: 50,
-              child: FilledButton.icon(
-                onPressed: onPlayAgain,
-                icon: const Icon(Icons.replay_rounded, size: 20),
-                label: Text(playAgainLabel ?? s.playAgain, maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: BevelButton(
+              height: 44,
+              fontSize: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              onPressed: onPlayAgain,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(Icons.replay_rounded, size: 20),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text(playAgainLabel ?? s.playAgain, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
               ),
             ),
           ),
@@ -241,7 +269,7 @@ class RoundSummaryPanel extends StatelessWidget {
         child: Transform.scale(scale: 0.9 + 0.1 * t, child: child),
       ),
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: const Color(0x9E040817),
         alignment: Alignment.center,
         padding: const EdgeInsets.all(10),
         child: LayoutBuilder(
@@ -279,27 +307,17 @@ class RoundSummaryPanel extends StatelessWidget {
             return MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(zoom)),
               child: SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: (wide ? 820 : 460) * zoom),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: <Color>[Color(0xF51A4433), Color(0xF50A1F17)],
-                    ),
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(color: PastraColors.gold.withValues(alpha: over && weWon ? 0.9 : 0.5), width: 1.5),
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 30, offset: const Offset(0, 10)),
-                      if (over && weWon) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.25), blurRadius: 40),
-                    ],
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: (wide ? 820 : 460) * zoom),
+                  // A stone tablet; golden while we celebrate a win.
+                  child: Tablet(
+                    radius: 26,
+                    glow: over && weWon,
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    child: content,
                   ),
-                  child: content,
                 ),
               ),
-            ),
             );
           },
         ),
@@ -387,12 +405,43 @@ class _ScoreSheet extends StatelessWidget {
       );
     }
 
-    Widget name(String n) => Text(
+    Widget name(String n, bool ours) => Text(
           n,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: ours ? PastraColors.gold : PastraColors.foam,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        );
+
+    Widget line(_ScoreRow r) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1.5),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                flex: 5,
+                child: Row(
+                  children: <Widget>[
+                    r.badge,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        r.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13.5, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(flex: 3, child: value(r.ours, r.theirs, r.oursNote)),
+              Expanded(flex: 3, child: value(r.theirs, r.ours, r.theirsNote)),
+            ],
+          ),
         );
 
     return Container(
@@ -400,6 +449,7 @@ class _ScoreSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -407,39 +457,14 @@ class _ScoreSheet extends StatelessWidget {
           Row(
             children: <Widget>[
               const Expanded(flex: 5, child: SizedBox()),
-              Expanded(flex: 3, child: name(names[0])),
-              Expanded(flex: 3, child: name(names[1])),
+              Expanded(flex: 3, child: name(names[0], true)),
+              Expanded(flex: 3, child: name(names[1], false)),
             ],
           ),
           const SizedBox(height: 2),
-          for (final r in rows)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1.5),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 5,
-                    child: Row(
-                      children: <Widget>[
-                        r.badge,
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            r.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13.5, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(flex: 3, child: value(r.ours, r.theirs, r.oursNote)),
-                  Expanded(flex: 3, child: value(r.theirs, r.ours, r.theirsNote)),
-                ],
-              ),
-            ),
-          const Divider(color: Colors.white24, height: 10),
+          // The rows come in one after the other, like dealt cards.
+          for (var i = 0; i < rows.length; i++) Fx.low.value ? line(rows[i]) : DealIn(order: i, child: line(rows[i])),
+          const Divider(color: Color(0x4DF2C14E), height: 10),
           Row(
             children: <Widget>[
               Expanded(
@@ -449,13 +474,19 @@ class _ScoreSheet extends StatelessWidget {
               for (var i = 0; i < 2; i++)
                 Expanded(
                   flex: 3,
-                  child: Text(
-                    '${totals[i]}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: totals[i] >= totals[1 - i] ? PastraColors.gold : Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
+                  // The total counts up.
+                  child: TweenAnimationBuilder<int>(
+                    tween: IntTween(begin: 0, end: totals[i]),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, v, _) => Text(
+                      '$v',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: totals[i] >= totals[1 - i] ? PastraColors.gold : Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
@@ -493,7 +524,7 @@ class _GameScore extends StatelessWidget {
     final f = MediaQuery.textScalerOf(context).scale(1);
     Widget side(int i) {
       final ours = i == 0;
-      final color = ours ? PastraColors.gold : const Color(0xFF9FB4C7);
+      final color = ours ? PastraColors.gold : PastraColors.seaLight;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(
@@ -557,7 +588,7 @@ class _GameScore extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

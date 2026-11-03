@@ -23,6 +23,25 @@ BoxDecoration tabletDecoration({double radius = 20, bool glow = false}) {
   );
 }
 
+/// A small plate (name plates, counters, short messages on the table): navy
+/// with a gold hairline. With [glow] the edge is brighter and a gold light
+/// shines around the plate.
+BoxDecoration plateDecoration({double radius = 12, bool glow = false, double edge = 0.4}) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(radius),
+    gradient: const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: <Color>[Color(0xF01A2F63), Color(0xF00B1634)],
+    ),
+    border: Border.all(color: PastraColors.gold.withValues(alpha: glow ? 0.9 : edge), width: glow ? 1.5 : 1),
+    boxShadow: <BoxShadow>[
+      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 2)),
+      if (glow) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.4), blurRadius: 14),
+    ],
+  );
+}
+
 /// A panel in the look of an inscribed tablet (with gold corner brackets).
 class Tablet extends StatelessWidget {
   const Tablet({
