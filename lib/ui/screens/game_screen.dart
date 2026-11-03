@@ -335,7 +335,7 @@ class _GameScreenState extends State<GameScreen> {
         if (!didPop) _requestLeave();
       },
       child: Scaffold(
-        body: Felt(
+        body: TableFelt(
           child: SafeArea(
             child: AnimatedBuilder(
               animation: Listenable.merge(<Listenable?>[c, c.link?.social]),

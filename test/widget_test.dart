@@ -3,12 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/game/app_settings.dart';
 import 'package:pastra/online/social_service.dart';
+import 'package:pastra/ui/fx/fx.dart';
 import 'package:pastra/ui/widgets/invite_banner.dart';
 import 'package:pastra/ui/widgets/playing_card.dart';
 import 'package:pastra/ui/widgets/wallet_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // No endless background animations in the tests.
+  Fx.forceLow();
   // The daily bonus dialog would cover the home screen.
   dailyBonusAutoShow = false;
   // No Firebase in the tests.

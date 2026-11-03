@@ -15,6 +15,7 @@ import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
+import '../ege/widgets.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/fullscreen_button.dart';
@@ -233,19 +234,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = SettingsScope.of(context);
     final name = settings.playerName.isEmpty ? s.you : settings.playerName;
 
-    final hero = Column(
+    final details = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        const _Logo(),
-        const SizedBox(height: 10),
-        GoldText(s.appTitle, size: 64, letterSpacing: 2),
-        const SizedBox(height: 4),
-        Text(
-          s.appSubtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, color: Colors.white70, letterSpacing: 0.4),
-        ),
-        const SizedBox(height: 18),
         _PlayerCard(
           name: settings.playerTag != null ? settings.handleName : name,
           tag: settings.playerTag,
@@ -260,63 +251,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
 
-    final menu = FocusTraversalGroup(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _SlideIn(
-            order: 0,
-            child: _MenuButton(
-              icon: Icons.play_arrow_rounded,
-              label: s.play,
-              primary: true,
-              autofocus: true,
-              onTap: _openPlay,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (Economy.enabled) ...<Widget>[
-            _SlideIn(
-              order: 1,
-              child: _MenuButton(
-                icon: Icons.storefront_rounded,
-                label: ShopStrings(settings.language).store,
-                onTap: _openStore,
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-          _SlideIn(
-            order: 1,
-            child: _MenuButton(icon: Icons.menu_book_rounded, label: s.rules, onTap: () => _open(const RulesScreen())),
-          ),
-          const SizedBox(height: 10),
-          _SlideIn(
-            order: 2,
-            child: _MenuButton(icon: Icons.insights_rounded, label: s.statistics, onTap: () => _open(const StatsScreen())),
-          ),
-          const SizedBox(height: 10),
-          _SlideIn(
-            order: 3,
-            child: _MenuButton(icon: Icons.tune_rounded, label: s.settings, onTap: () => _open(const SettingsScreen())),
-          ),
-        ],
-      ),
-    );
+    final entries = <_MenuEntry>[
+      if (Economy.enabled)
+        _MenuEntry(Icons.storefront_rounded, ShopStrings(settings.language).store, _openStore),
+      _MenuEntry(Icons.menu_book_rounded, s.rules, () => _open(const RulesScreen())),
+      _MenuEntry(Icons.insights_rounded, s.statistics, () => _open(const StatsScreen())),
+      _MenuEntry(Icons.tune_rounded, s.settings, () => _open(const SettingsScreen())),
+    ];
 
     return Scaffold(
       body: Felt(
+        ambient: true,
         child: Stack(
           children: <Widget>[
-            const Positioned.fill(child: IgnorePointer(child: _SuitWatermark())),
             Positioned.fill(
               child: SafeArea(
                 child: LayoutBuilder(
                   builder: (context, box) {
-                    final wide = box.maxWidth > box.maxHeight;
+                    // A big window: everything is drawn a little larger.
+                    final zoom = min(box.maxWidth / 1000, box.maxHeight / 600).clamp(1.0, 1.35).toDouble();
+                    final w = box.maxWidth / zoom;
+                    final h = box.maxHeight / zoom;
+                    final wide = w > h;
+                    // A phone held sideways is low.
+                    final compact = h < 460;
+                    final hero = _Hero(compact: compact, details: details);
+                    final menu = _Menu(compact: compact, onPlay: _openPlay, entries: entries);
+                    final Widget layout;
                     if (!wide) {
-                      return Center(
+                      layout = Center(
                         child: SingleChildScrollView(
                           padding: EdgeInsets.fromLTRB(24, Economy.enabled ? 60 : 24, 24, 80),
                           child: ConstrainedBox(
@@ -328,37 +291,44 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       );
-                    }
-                    // Landscape (phones held sideways, tablets, computers):
-                    // the title on the left, the menu on the right.
-                    return Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1080),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              flex: 11,
-                              // Bounded (no scrolling) so the hero shrinks to fit.
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                                child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: hero)),
+                    } else {
+                      // Landscape (phones held sideways, tablets, computers):
+                      // the stage and the title on the left, the menu on the
+                      // right.
+                      layout = Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1100),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                flex: 11,
+                                // Bounded (no scrolling) so the hero shrinks to fit.
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                                  child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: hero)),
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 9,
-                              child: Center(
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(8, 16, 28, 16),
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(maxWidth: 420),
-                                    child: menu,
+                              Expanded(
+                                flex: 9,
+                                child: Center(
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.fromLTRB(8, 16, 28, 16),
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 420),
+                                      child: menu,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+                      );
+                    }
+                    if (zoom == 1.0) return layout;
+                    return Transform.scale(
+                      scale: zoom,
+                      child: SizedBox(width: w, height: h, child: layout),
                     );
                   },
                 ),
@@ -366,13 +336,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             // Chips and diamonds in the top-left corner (opens the store).
             if (Economy.enabled)
-            Positioned(
-              top: 0,
-              left: 0,
-              child: SafeArea(
-                child: Padding(padding: const EdgeInsets.all(8), child: WalletBar(onTap: _openStore)),
+              Positioned(
+                top: 0,
+                left: 0,
+                child: SafeArea(
+                  child: Padding(padding: const EdgeInsets.all(8), child: WalletBar(onTap: _openStore)),
+                ),
               ),
-            ),
             // Top right: friends and (web) full screen.
             Positioned(
               top: 0,
@@ -402,129 +372,332 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Three cards that fan out when the home screen opens (a single short
-/// animation, not an endless one).
-class _Logo extends StatefulWidget {
-  const _Logo();
+/// One of the smaller buttons of the menu.
+class _MenuEntry {
+  const _MenuEntry(this.icon, this.label, this.onTap);
 
-  @override
-  State<_Logo> createState() => _LogoState();
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 }
 
-class _LogoState extends State<_Logo> with SingleTickerProviderStateMixin {
-  late final AnimationController _float = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-    ..forward();
+/// The left half of the home screen: the stage with the cards on the table,
+/// the title and the player.
+class _Hero extends StatelessWidget {
+  const _Hero({required this.compact, required this.details});
 
-  @override
-  void dispose() {
-    _float.dispose();
-    super.dispose();
-  }
+  final bool compact;
+  final Widget details;
 
   @override
   Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _HeroStage(width: compact ? 270 : 340, height: compact ? 128 : 170),
+        SizedBox(height: compact ? 2 : 6),
+        GoldText(s.appTitle, size: compact ? 44 : 60, letterSpacing: 3, depth: compact ? 3 : 4),
+        const SizedBox(height: 6),
+        const SizedBox(width: 190, child: MeanderBand(height: 10)),
+        if (!compact) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            s.appSubtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 15, color: Colors.white70, letterSpacing: 0.4),
+          ),
+        ],
+        SizedBox(height: compact ? 10 : 16),
+        details,
+      ],
+    );
+  }
+}
+
+/// Three cards floating above a table seen from a low angle. They turn
+/// towards the mouse (or a finger) and rock gently by themselves.
+class _HeroStage extends StatelessWidget {
+  const _HeroStage({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardWidth = height * 0.5;
+    final cardHeight = cardWidth * 1.42;
     final cards = <int>[
       Cards.twoOfClubs,
       Cards.make(Cards.hearts, Cards.jack),
       Cards.tenOfDiamonds,
     ];
     return SizedBox(
-      width: 250,
-      height: 160,
-      child: AnimatedBuilder(
-        animation: _float,
-        builder: (context, _) {
-          final t = Curves.easeOutBack.transform(_float.value);
-          return Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              // Soft gold glow behind the cards.
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      colors: <Color>[PastraColors.gold.withValues(alpha: 0.22), Colors.transparent],
-                    ),
-                  ),
-                ),
-              ),
-              for (var i = 0; i < cards.length; i++)
-                Positioned(
-                  left: 85 + (i - 1) * 56.0 * t,
-                  top: i == 1 ? 6.0 : 6.0 + 12 * t,
-                  width: 82,
-                  height: 117,
-                  child: Transform.rotate(
-                    angle: (i - 1) * 0.27 * t,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 8)),
-                        ],
-                      ),
-                      child: PlayingCardView(card: cards[i], faceUp: true),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: height * 0.52,
+            child: CustomPaint(painter: _TablePainter(Look.table)),
+          ),
+          Positioned.fill(
+            child: Tilt3D(
+              maxAngle: 0.3,
+              idleSway: 0.55,
+              child: _CardFan(width: width, cardWidth: cardWidth, cardHeight: cardHeight, cards: cards),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Slides in from the right and fades in once, a little after the ones
-/// above it ([order]).
-class _SlideIn extends StatelessWidget {
-  const _SlideIn({required this.order, required this.child});
+/// The cards fan out once when the home screen opens.
+class _CardFan extends StatelessWidget {
+  const _CardFan({required this.width, required this.cardWidth, required this.cardHeight, required this.cards});
 
-  final int order;
-  final Widget child;
+  final double width;
+  final double cardWidth;
+  final double cardHeight;
+  final List<int> cards;
 
   @override
   Widget build(BuildContext context) {
-    final delay = 0.12 * order;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 520 + 90 * order),
-      builder: (context, t, child) {
-        // Each button waits its turn, then moves in.
-        final p = Curves.easeOutCubic.transform(((t - delay) / (1 - delay)).clamp(0.0, 1.0));
-        return Opacity(
-          opacity: p,
-          child: Transform.translate(offset: Offset(40 * (1 - p), 0), child: child),
+      duration: const Duration(milliseconds: 1000),
+      curve: Curves.easeOutBack,
+      builder: (context, t, _) {
+        // The middle card is drawn last, on top.
+        const order = <int>[0, 2, 1];
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            // A soft gold glow behind the cards.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.2),
+                    radius: 0.6,
+                    colors: <Color>[PastraColors.gold.withValues(alpha: 0.2), Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
+            for (final i in order)
+              Positioned(
+                left: width / 2 - cardWidth / 2 + (i - 1) * cardWidth * 0.68 * t,
+                top: i == 1 ? 0.0 : cardHeight * 0.08 * t,
+                width: cardWidth,
+                height: cardHeight,
+                child: Transform.rotate(
+                  angle: (i - 1) * 0.3 * t,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(cardWidth * 0.09),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 16, offset: const Offset(0, 10)),
+                        if (i == 1) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.35), blurRadius: 22),
+                      ],
+                    ),
+                    child: PlayingCardView(card: cards[i], faceUp: true),
+                  ),
+                ),
+              ),
+          ],
         );
       },
-      child: child,
     );
   }
 }
 
-/// Large, very faint card suits in the corners of the home screen.
-class _SuitWatermark extends StatelessWidget {
-  const _SuitWatermark();
+/// An oval table in the colour the player chose: a gold rim, the cloth and
+/// the shadows of the cards.
+class _TablePainter extends CustomPainter {
+  const _TablePainter(this.table);
+
+  final TableTheme table;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final oval = Rect.fromLTWH(w * 0.04, h * 0.06, w * 0.92, h * 0.86);
+    // The shadow on the floor.
+    canvas.drawOval(
+      oval.shift(Offset(0, h * 0.12)).inflate(4),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
+    );
+    // The rim.
+    canvas.drawOval(
+      oval,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xFFFFE6A0), Color(0xFFB9821E), Color(0xFF5A3A08)],
+        ).createShader(oval),
+    );
+    // The cloth.
+    final cloth = oval.deflate(h * 0.07);
+    canvas.drawOval(
+      cloth,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, -0.25),
+          radius: 0.95,
+          colors: <Color>[table.light, table.mid, table.dark],
+          stops: const <double>[0.0, 0.6, 1.0],
+        ).createShader(cloth),
+    );
+    canvas.drawOval(
+      cloth.deflate(h * 0.045),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = PastraColors.gold.withValues(alpha: 0.45),
+    );
+    // The shadows of the three cards.
+    final shade = Paint()
+      ..color = Colors.black.withValues(alpha: 0.38)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    for (var i = 0; i < 3; i++) {
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(w * (0.5 + (i - 1) * 0.17), h * 0.5), width: w * 0.17, height: h * 0.1),
+        shade,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TablePainter old) => old.table != table;
+}
+
+/// The play button and the other buttons of the home screen. They are dealt
+/// in one after the other.
+class _Menu extends StatelessWidget {
+  const _Menu({required this.compact, required this.onPlay, required this.entries});
+
+  final bool compact;
+  final VoidCallback onPlay;
+  final List<_MenuEntry> entries;
 
   @override
   Widget build(BuildContext context) {
-    final c = Colors.white.withValues(alpha: 0.035);
-    Widget suit(String text, double size, double angle) => Transform.rotate(
-          angle: angle,
-          child: Text(text, style: TextStyle(fontSize: size, color: c, height: 1)),
-        );
-    return Stack(
-      children: <Widget>[
-        Positioned(left: -40, top: -50, child: suit('♠', 260, -0.3)),
-        Positioned(right: -30, top: -40, child: suit('♥', 200, 0.25)),
-        Positioned(right: 40, bottom: -70, child: suit('♦', 240, -0.15)),
-        Positioned(left: 120, bottom: -90, child: suit('♣', 220, 0.2)),
-      ],
+    final s = Strings.of(context);
+    final gap = compact ? 8.0 : 12.0;
+    final rows = <Widget>[];
+    for (var i = 0; i < entries.length; i += 2) {
+      final a = entries[i];
+      final b = i + 1 < entries.length ? entries[i + 1] : null;
+      rows.add(SizedBox(height: gap));
+      rows.add(
+        Row(
+          children: <Widget>[
+            Expanded(child: DealIn(order: 1 + i, child: _MenuTablet(entry: a, compact: compact))),
+            if (b != null) ...<Widget>[
+              SizedBox(width: gap),
+              Expanded(child: DealIn(order: 2 + i, child: _MenuTablet(entry: b, compact: compact))),
+            ],
+          ],
+        ),
+      );
+    }
+    return FocusTraversalGroup(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          DealIn(order: 0, child: _PlayButton(compact: compact, label: s.play, onTap: onPlay)),
+          ...rows,
+        ],
+      ),
     );
   }
 }
 
-/// The player's card on the home screen: initial, name, level and stats.
+class _PlayButton extends StatelessWidget {
+  const _PlayButton({required this.compact, required this.label, required this.onTap});
+
+  final bool compact;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BevelButton(
+      height: compact ? 62 : 78,
+      radius: 22,
+      shimmer: true,
+      autofocus: true,
+      fontSize: compact ? 24 : 30,
+      onPressed: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.play_arrow_rounded, size: compact ? 36 : 46),
+          const SizedBox(width: 8),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, maxLines: 1, style: const TextStyle(letterSpacing: 1.2)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuTablet extends StatelessWidget {
+  const _MenuTablet({required this.entry, required this.compact});
+
+  final _MenuEntry entry;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(entry.label, maxLines: 1),
+    );
+    return BevelButton(
+      gold: false,
+      height: compact ? 54 : 88,
+      radius: 18,
+      fontSize: 17,
+      onPressed: entry.onTap,
+      child: compact
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(entry.icon, size: 24, color: PastraColors.gold),
+                const SizedBox(width: 8),
+                Flexible(child: label),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(entry.icon, size: 32, color: PastraColors.gold),
+                const SizedBox(height: 4),
+                label,
+              ],
+            ),
+    );
+  }
+}
+
+/// The player's plaque on the home screen: initial, name, level and stats.
 class _PlayerCard extends StatelessWidget {
   const _PlayerCard({
     required this.name,
@@ -548,159 +721,67 @@ class _PlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Ink(
-          width: 360,
-          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.black.withValues(alpha: 0.32),
-            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: <Widget>[
-              PlayerAvatar(name: name, frame: frame, size: 52),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: Text.rich(
-                            TextSpan(
-                              children: <InlineSpan>[
-                                TextSpan(text: name),
-                                if (tag != null)
-                                  TextSpan(text: ' #$tag', style: const TextStyle(color: PastraColors.gold, fontSize: 13)),
-                              ],
+    return HoverLift(
+      scale: 1.015,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Ink(
+            width: 360,
+            padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+            decoration: tabletDecoration(radius: 18),
+            child: Row(
+              children: <Widget>[
+                PlayerAvatar(name: name, frame: frame, size: 52),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Flexible(
+                            child: Text.rich(
+                              TextSpan(
+                                children: <InlineSpan>[
+                                  TextSpan(text: name),
+                                  if (tag != null)
+                                    TextSpan(text: ' #$tag', style: const TextStyle(color: PastraColors.gold, fontSize: 13)),
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
+                            ),
+                            child: Text(
+                              title,
+                              style: const TextStyle(color: PastraColors.gold, fontSize: 11, fontWeight: FontWeight.w800),
+                            ),
                           ),
-                          child: Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 11, fontWeight: FontWeight.w800)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    LevelBadge(xp: xp, width: 232),
-                    if (stats != null) ...<Widget>[
-                      const SizedBox(height: 6),
-                      Text(stats!, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                    ],
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A big home-screen button. The main one is gold with a soft glow; on a
-/// computer the buttons lift a little under the mouse.
-class _MenuButton extends StatefulWidget {
-  const _MenuButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.primary = false,
-    this.autofocus = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool primary;
-  final bool autofocus;
-
-  @override
-  State<_MenuButton> createState() => _MenuButtonState();
-}
-
-class _MenuButtonState extends State<_MenuButton> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = widget.primary;
-    final fg = primary ? Colors.black : Colors.white;
-    final radius = BorderRadius.circular(18);
-    return AnimatedScale(
-      scale: _hover ? 1.025 : 1,
-      duration: const Duration(milliseconds: 140),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        height: primary ? 66 : 56,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          gradient: primary
-              ? const LinearGradient(colors: <Color>[Color(0xFFFFD873), Color(0xFFF2C14E), Color(0xFFD09A2C)])
-              : LinearGradient(
-                  colors: <Color>[
-                    Colors.white.withValues(alpha: _hover ? 0.14 : 0.09),
-                    Colors.white.withValues(alpha: _hover ? 0.07 : 0.03),
-                  ],
-                ),
-          border: Border.all(
-            color: primary ? const Color(0xFFFFE9A8) : Colors.white.withValues(alpha: _hover ? 0.35 : 0.16),
-            width: 1.2,
-          ),
-          boxShadow: <BoxShadow>[
-            if (primary)
-              BoxShadow(color: PastraColors.gold.withValues(alpha: _hover ? 0.55 : 0.35), blurRadius: _hover ? 26 : 18),
-            BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: radius,
-            autofocus: widget.autofocus,
-            onTap: widget.onTap,
-            onHover: (v) => setState(() => _hover = v),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: <Widget>[
-                  Icon(widget.icon, color: fg, size: primary ? 34 : 26),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        widget.label,
-                        style: TextStyle(
-                          fontSize: primary ? 24 : 19,
-                          fontWeight: primary ? FontWeight.w900 : FontWeight.w700,
-                          color: fg,
-                          letterSpacing: primary ? 0.6 : 0.2,
-                        ),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 6),
+                      LevelBadge(xp: xp, width: 232),
+                      if (stats != null) ...<Widget>[
+                        const SizedBox(height: 6),
+                        Text(stats!, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                      ],
+                    ],
                   ),
-                  Icon(Icons.chevron_right_rounded, color: fg.withValues(alpha: 0.7), size: 28),
-                ],
-              ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+              ],
             ),
           ),
         ),
@@ -832,7 +913,10 @@ class _CenteredDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: PastraColors.panel,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.4)),
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: child,
@@ -855,62 +939,61 @@ class _QuestsBar extends StatelessWidget {
     final quests = settings.quests;
     final ready = settings.questsReady;
     final done = quests.where((q) => q.claimed).length;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Ink(
-          width: 360,
-          padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: ready > 0 ? PastraColors.gold.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.32),
-            border: Border.all(color: PastraColors.gold.withValues(alpha: ready > 0 ? 0.9 : 0.35)),
-          ),
-          child: Row(
-            children: <Widget>[
-              Badge(
-                isLabelVisible: ready > 0,
-                label: Text('$ready'),
-                child: const Icon(Icons.task_alt_rounded, color: PastraColors.gold, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(p.quests, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: <Widget>[
-                        for (final q in quests)
-                          Expanded(
-                            child: Container(
-                              height: 6,
-                              margin: const EdgeInsetsDirectional.only(end: 4),
-                              decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: Colors.white12),
-                              child: FractionallySizedBox(
-                                alignment: AlignmentDirectional.centerStart,
-                                widthFactor: (q.progress / q.def.goal).clamp(0.0, 1.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(3),
-                                    color: q.done ? PastraColors.gold : Colors.white54,
+    return HoverLift(
+      scale: 1.015,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Ink(
+            width: 360,
+            padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+            decoration: tabletDecoration(radius: 16, glow: ready > 0),
+            child: Row(
+              children: <Widget>[
+                Badge(
+                  isLabelVisible: ready > 0,
+                  label: Text('$ready'),
+                  child: const Icon(Icons.task_alt_rounded, color: PastraColors.gold, size: 26),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(p.quests, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: <Widget>[
+                          for (final q in quests)
+                            Expanded(
+                              child: Container(
+                                height: 6,
+                                margin: const EdgeInsetsDirectional.only(end: 4),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(3), color: Colors.white12),
+                                child: FractionallySizedBox(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  widthFactor: (q.progress / q.def.goal).clamp(0.0, 1.0),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(3),
+                                      color: q.done ? PastraColors.gold : Colors.white54,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Text(p.questsCount(done), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              const Icon(Icons.chevron_right_rounded, color: Colors.white54),
-            ],
+                const SizedBox(width: 10),
+                Text(p.questsCount(done), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+              ],
+            ),
           ),
         ),
       ),
@@ -931,12 +1014,12 @@ class _CornerButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: Colors.black.withValues(alpha: 0.3),
-        shape: const CircleBorder(side: BorderSide(color: Colors.white24)),
+        color: PastraColors.nightMid.withValues(alpha: 0.7),
+        shape: CircleBorder(side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.5))),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: Padding(padding: const EdgeInsets.all(9), child: Icon(icon, color: Colors.white, size: 22)),
+          child: Padding(padding: const EdgeInsets.all(9), child: Icon(icon, color: PastraColors.goldLight, size: 22)),
         ),
       ),
     );

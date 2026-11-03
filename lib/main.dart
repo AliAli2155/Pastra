@@ -7,6 +7,7 @@ import 'game/app_settings.dart';
 import 'game/game_controller.dart';
 import 'game/sound.dart';
 import 'online/leaderboard.dart';
+import 'ui/fx/fx.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,5 +23,7 @@ Future<void> main() async {
   // Load the sounds in the background so the first ones are not late.
   SoundFx.instance.preload();
   GameController.onGameFinished = (s) => Leaderboard.submit(s);
+  // Automatic graphics quality: switches decoration off on slow devices.
+  Fx.watch();
   runApp(PastraApp(settings: settings));
 }

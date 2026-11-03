@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../engine/pastra_ai.dart';
 import '../engine/rules.dart';
+import '../ui/fx/fx.dart';
 import '../ui/theme.dart';
 import 'achievements.dart';
 import 'economy.dart';
@@ -150,6 +151,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kName = 'playerName';
   static const String _kFast = 'fastAnimations';
   static const String _kHaptics = 'haptics';
+  static const String _kFx = 'fxMode';
   static const String _kTurnSeconds = 'turnSeconds';
 
   /// Time per move (0 = no limit).
@@ -209,6 +211,7 @@ class AppSettings extends ChangeNotifier {
   String _playerName = '';
   bool _fastAnimations = false;
   bool _haptics = true;
+  FxMode _fxMode = FxMode.auto;
   int _turnSeconds = 15;
   double _volume = 1.0;
   bool _tutorialDone = false;
@@ -253,6 +256,9 @@ class AppSettings extends ChangeNotifier {
     _playerName = _prefs.getString(_kName) ?? '';
     _fastAnimations = _prefs.getBool(_kFast) ?? false;
     _haptics = _prefs.getBool(_kHaptics) ?? true;
+    final fx = _prefs.getInt(_kFx);
+    _fxMode = fx != null && fx >= 0 && fx < FxMode.values.length ? FxMode.values[fx] : FxMode.auto;
+    Fx.setMode(_fxMode);
     final turn = _prefs.getInt(_kTurnSeconds);
     _turnSeconds = turn != null && turnSecondsOptions.contains(turn) ? turn : 15;
     // Older versions only had an on/off switch.
@@ -526,6 +532,9 @@ class AppSettings extends ChangeNotifier {
   String get playerName => _playerName;
   bool get fastAnimations => _fastAnimations;
   bool get haptics => _haptics;
+
+  /// Graphics quality (automatic by default, see [Fx]).
+  FxMode get fxMode => _fxMode;
   int get turnSeconds => _turnSeconds;
   int get gamesPlayed => _stats.games;
   int get gamesWon => _stats.wins;
@@ -570,6 +579,13 @@ class AppSettings extends ChangeNotifier {
   set turnSeconds(int value) {
     _turnSeconds = turnSecondsOptions.contains(value) ? value : 15;
     _prefs.setInt(_kTurnSeconds, _turnSeconds);
+    notifyListeners();
+  }
+
+  set fxMode(FxMode value) {
+    _fxMode = value;
+    _prefs.setInt(_kFx, value.index);
+    Fx.setMode(value);
     notifyListeners();
   }
 

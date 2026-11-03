@@ -2,18 +2,20 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../ege/painters.dart';
+import '../ege/widgets.dart';
 import '../theme.dart';
 
 /// Colour pairs for the big menu tiles.
 class TileColors {
   TileColors._();
 
-  static const List<Color> green = <Color>[Color(0xFF1F9D63), Color(0xFF0A5A39)];
-  static const List<Color> blue = <Color>[Color(0xFF3A82D6), Color(0xFF15427A)];
-  static const List<Color> gold = <Color>[Color(0xFFF2C14E), Color(0xFFC08A1E)];
-  static const List<Color> purple = <Color>[Color(0xFF8A5CD0), Color(0xFF42207A)];
-  static const List<Color> teal = <Color>[Color(0xFF26A69A), Color(0xFF0E5B54)];
-  static const List<Color> red = <Color>[Color(0xFFD0505E), Color(0xFF7A1A2A)];
+  static const List<Color> green = <Color>[Color(0xFF2E9A78), Color(0xFF0F4B45)];
+  static const List<Color> blue = <Color>[Color(0xFF3E7BD8), Color(0xFF173B82)];
+  static const List<Color> gold = <Color>[Color(0xFFF2C14E), Color(0xFFB9821E)];
+  static const List<Color> purple = <Color>[Color(0xFF7B5CD0), Color(0xFF34207A)];
+  static const List<Color> teal = <Color>[Color(0xFF2BB1B1), Color(0xFF0E5560)];
+  static const List<Color> red = <Color>[Color(0xFFD0613E), Color(0xFF7A2A1A)];
 }
 
 /// A big, easy to hit tile with a gradient, an icon, a title and an optional
@@ -57,9 +59,10 @@ class MenuTile extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+              border: Border.all(color: PastraColors.goldLight.withValues(alpha: 0.5), width: 1.5),
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                BoxShadow(color: colors.last.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 8)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
               ],
             ),
             child: LayoutBuilder(
@@ -152,8 +155,9 @@ class MenuTile extends StatelessWidget {
   }
 }
 
-/// On a computer: the widget grows a little under the mouse (and the
-/// pointer becomes a hand). Nothing changes on touch screens.
+/// On a computer: the widget grows a little under the mouse, turns towards
+/// it in 3D (and the pointer becomes a hand). Nothing changes on touch
+/// screens.
 class HoverLift extends StatefulWidget {
   const HoverLift({super.key, required this.child, this.enabled = true, this.scale = 1.02});
 
@@ -178,7 +182,7 @@ class _HoverLiftState extends State<HoverLift> {
         scale: _hover && widget.enabled ? widget.scale : 1,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        child: widget.child,
+        child: Tilt3D(enabled: widget.enabled, maxAngle: 0.07, child: widget.child),
       ),
     );
   }
@@ -194,13 +198,11 @@ class BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = FilledButton.styleFrom(
-      minimumSize: const Size.fromHeight(56),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      textStyle: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return BevelButton(
+      onPressed: onPressed,
+      shimmer: true,
+      child: _ButtonLabel(label: label, icon: icon, iconSize: 26),
     );
-    return FilledButton(onPressed: onPressed, style: style, child: _ButtonLabel(label: label, icon: icon, iconSize: 26));
   }
 }
 
@@ -225,7 +227,7 @@ class _ButtonLabel extends StatelessWidget {
   }
 }
 
-/// A big outlined button for the second action of a screen.
+/// A big dark-blue button for the second action of a screen.
 class BigOutlineButton extends StatelessWidget {
   const BigOutlineButton({super.key, required this.label, required this.onPressed, this.icon});
 
@@ -235,15 +237,13 @@ class BigOutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = OutlinedButton.styleFrom(
-      minimumSize: const Size.fromHeight(52),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      foregroundColor: Colors.white,
-      side: const BorderSide(color: Colors.white54, width: 1.5),
-      textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return BevelButton(
+      onPressed: onPressed,
+      gold: false,
+      height: 52,
+      fontSize: 17,
+      child: _ButtonLabel(label: label, icon: icon, iconSize: 24),
     );
-    return OutlinedButton(onPressed: onPressed, style: style, child: _ButtonLabel(label: label, icon: icon, iconSize: 24));
   }
 }
 
@@ -267,7 +267,7 @@ class ChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? Colors.black : Colors.white;
+    final fg = selected ? const Color(0xFF2A1A00) : Colors.white;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -278,9 +278,25 @@ class ChoiceCard extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? PastraColors.gold : Colors.black.withValues(alpha: 0.28),
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[Color(0xCC1A2F63), Color(0xCC0A1636)],
+                  ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: selected ? PastraColors.gold : Colors.white24, width: 1.5),
+            border: Border.all(
+              color: selected ? PastraColors.goldLight : PastraColors.gold.withValues(alpha: 0.28),
+              width: 1.5,
+            ),
+            boxShadow: <BoxShadow>[
+              if (selected) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.35), blurRadius: 14),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -308,7 +324,7 @@ class ChoiceCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: selected ? Colors.black54 : Colors.white60, fontSize: 12),
+                  style: TextStyle(color: selected ? const Color(0xFF5A4200) : Colors.white60, fontSize: 12),
                 ),
             ],
           ),
@@ -350,7 +366,7 @@ class MenuPanel extends StatelessWidget {
                     title!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800),
+                    style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.4),
                   ),
                 ),
                 if (trailing != null) trailing!,
@@ -362,26 +378,25 @@ class MenuPanel extends StatelessWidget {
         child,
       ],
     );
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: PastraColors.panel,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          // In a fixed-size cell (the online grid) the content is centred and,
-          // on a small screen, scaled down instead of overflowing.
-          // Only when the panel is given an exact height (a grid cell).
-          if (!box.hasTightHeight || !box.maxWidth.isFinite) return content;
-          return Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: SizedBox(width: box.maxWidth, child: content),
-            ),
-          );
-        },
+    return CustomPaint(
+      foregroundPainter: CornerBracketsPainter(color: PastraColors.gold.withValues(alpha: 0.45)),
+      child: Container(
+        padding: padding,
+        decoration: tabletDecoration(radius: 22),
+        child: LayoutBuilder(
+          builder: (context, box) {
+            // In a fixed-size cell (the online grid) the content is centred
+            // and, on a small screen, scaled down instead of overflowing.
+            // Only when the panel is given an exact height (a grid cell).
+            if (!box.hasTightHeight || !box.maxWidth.isFinite) return content;
+            return Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(width: box.maxWidth, child: content),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

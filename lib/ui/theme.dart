@@ -2,59 +2,49 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-class PastraColors {
-  PastraColors._();
+import 'ege/backdrop.dart';
+import 'palette.dart';
 
-  static const Color feltDark = Color(0xFF052E1E);
-  static const Color felt = Color(0xFF0A5A39);
-  static const Color feltLight = Color(0xFF138152);
-  static const Color gold = Color(0xFFF2C14E);
-  static const Color cream = Color(0xFFFFFBF2);
-  static const Color cardEdge = Color(0xFFB9B2A4);
-  static const Color cardRed = Color(0xFFC62828);
-  static const Color cardBlack = Color(0xFF1B1B1F);
-  static const Color navy = Color(0xFF0D3B8C);
-  static const Color aegean = Color(0xFF1E6FD0);
-  static const Color panel = Color(0xF0102A1F);
-}
+export 'palette.dart';
 
 ThemeData buildPastraTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: PastraColors.felt,
+    seedColor: PastraColors.sea,
     brightness: Brightness.dark,
   ).copyWith(
     primary: PastraColors.gold,
     onPrimary: Colors.black,
     secondary: PastraColors.gold,
     onSecondary: Colors.black,
-    surface: const Color(0xFF0E2A1F),
+    surface: const Color(0xFF0B1634),
   );
   final rounded16 = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: PastraColors.feltDark,
-    // The same light fade-and-grow between screens on every platform. It is
-    // cheap (no snapshots, no shadows), so it stays smooth on phones and on
-    // the web.
+    scaffoldBackgroundColor: PastraColors.night,
+    // The same transition on every platform: the new screen is laid down
+    // like a dealt card. It is cheap (no snapshots, no shadows), so it stays
+    // smooth on phones and on the web.
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
-        TargetPlatform.android: _FadeScaleTransitions(),
-        TargetPlatform.iOS: _FadeScaleTransitions(),
-        TargetPlatform.macOS: _FadeScaleTransitions(),
-        TargetPlatform.windows: _FadeScaleTransitions(),
-        TargetPlatform.linux: _FadeScaleTransitions(),
-        TargetPlatform.fuchsia: _FadeScaleTransitions(),
+        TargetPlatform.android: _DealTransitions(),
+        TargetPlatform.iOS: _DealTransitions(),
+        TargetPlatform.macOS: _DealTransitions(),
+        TargetPlatform.windows: _DealTransitions(),
+        TargetPlatform.linux: _DealTransitions(),
+        TargetPlatform.fuchsia: _DealTransitions(),
       },
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xCC03170F),
+      backgroundColor: Color(0xCC040817),
+      shape: Border(bottom: BorderSide(color: Color(0x33F2C14E))),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
       foregroundColor: Colors.white,
-      titleTextStyle: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3),
+      titleTextStyle: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
       iconTheme: IconThemeData(color: Colors.white, size: 26),
     ),
     // Tabs: a gold pill behind the chosen one.
@@ -103,7 +93,7 @@ ThemeData buildPastraTheme() {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: const Color(0xF0101814),
+      backgroundColor: const Color(0xF0071027),
       contentTextStyle: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
@@ -111,7 +101,7 @@ ThemeData buildPastraTheme() {
       ),
     ),
     tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(color: const Color(0xF0101814), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: const Color(0xF0071027), borderRadius: BorderRadius.circular(10)),
       textStyle: const TextStyle(color: Colors.white, fontSize: 13),
       waitDuration: const Duration(milliseconds: 400),
     ),
@@ -168,12 +158,14 @@ ThemeData buildPastraTheme() {
   );
 }
 
-class _FadeScaleTransitions extends PageTransitionsBuilder {
-  const _FadeScaleTransitions();
+class _DealTransitions extends PageTransitionsBuilder {
+  const _DealTransitions();
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 260);
+  Duration get transitionDuration => const Duration(milliseconds: 340);
 
+  /// The new screen is laid down like a card: it turns up from the table
+  /// with a little perspective while it fades in.
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
@@ -183,9 +175,27 @@ class _FadeScaleTransitions extends PageTransitionsBuilder {
     Widget child,
   ) {
     final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
-    return FadeTransition(
-      opacity: curved,
-      child: ScaleTransition(scale: Tween<double>(begin: 0.97, end: 1).animate(curved), child: child),
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final t = curved.value.clamp(0.0, 1.0).toDouble();
+        // A plain (identity) matrix once it has landed, so the page is not
+        // drawn through a perspective transform for ever.
+        final turn = Matrix4.identity();
+        if (t < 1) {
+          turn
+            ..setEntry(3, 2, 0.001)
+            ..rotateX((1 - t) * 0.12);
+        }
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 22 * (1 - t)),
+            child: Transform(alignment: Alignment.center, transform: turn, child: child),
+          ),
+        );
+      },
+      child: child,
     );
   }
 }
@@ -257,10 +267,24 @@ class Look {
 /// Card-table background in the chosen colour.
 BoxDecoration get feltDecoration => Look.table.decoration;
 
-/// The table cloth behind every screen: the chosen colour, a fine woven
-/// texture and a dark edge (vignette), like a real card table.
+/// The background of the menu screens: the Aegean night (see
+/// [AegeanBackdrop]).
 class Felt extends StatelessWidget {
-  const Felt({super.key, required this.child});
+  const Felt({super.key, required this.child, this.ambient = false});
+
+  final Widget child;
+
+  /// Lantern sparks rising (home screen).
+  final bool ambient;
+
+  @override
+  Widget build(BuildContext context) => AegeanBackdrop(ambient: ambient, child: child);
+}
+
+/// The table cloth of the game screen: the chosen colour, a fine woven
+/// texture and a dark edge (vignette), like a real card table.
+class TableFelt extends StatelessWidget {
+  const TableFelt({super.key, required this.child});
 
   final Widget child;
 
@@ -332,14 +356,23 @@ class _FeltTexture extends CustomPainter {
   bool shouldRepaint(_FeltTexture old) => old.table != table;
 }
 
-/// Text painted with a gold gradient (titles).
+/// Text painted with a gold gradient (titles). With [depth] the letters
+/// get a thickness, like engraved gold lettering.
 class GoldText extends StatelessWidget {
-  const GoldText(this.text, {super.key, required this.size, this.weight = FontWeight.w900, this.letterSpacing = 1.0});
+  const GoldText(
+    this.text, {
+    super.key,
+    required this.size,
+    this.weight = FontWeight.w900,
+    this.letterSpacing = 1.0,
+    this.depth = 0,
+  });
 
   final String text;
   final double size;
   final FontWeight weight;
   final double letterSpacing;
+  final int depth;
 
   @override
   Widget build(BuildContext context) {
@@ -347,13 +380,26 @@ class GoldText extends StatelessWidget {
     return Stack(
       children: <Widget>[
         // Soft shadow under the letters.
-        Text(
-          text,
-          style: style.copyWith(
-            color: Colors.transparent,
-            shadows: <Shadow>[Shadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 6))],
+        ExcludeSemantics(
+          child: Text(
+            text,
+            style: style.copyWith(
+              color: Colors.transparent,
+              shadows: <Shadow>[Shadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 6))],
+            ),
           ),
         ),
+        // The thickness: copies of the text below it, darker the lower.
+        for (var i = depth; i >= 1; i--)
+          ExcludeSemantics(
+            child: Transform.translate(
+              offset: Offset(0, i.toDouble()),
+              child: Text(
+                text,
+                style: style.copyWith(color: Color.lerp(PastraColors.goldDeep, const Color(0xFF4A2F06), i / depth)),
+              ),
+            ),
+          ),
         ShaderMask(
           blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) => const LinearGradient(
