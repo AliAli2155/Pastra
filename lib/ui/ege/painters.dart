@@ -84,7 +84,8 @@ class CornerBracketsPainter extends CustomPainter {
   bool shouldRepaint(CornerBracketsPainter old) => old.color != color || old.inset != inset || old.length != length;
 }
 
-/// A light band that sweeps over a button now and then.
+/// A light band that sweeps over a button once while [time] runs from 0 to
+/// 1 (nothing at 0 and 1).
 class SweepPainter extends CustomPainter {
   SweepPainter(this.time) : super(repaint: time);
 
@@ -92,10 +93,8 @@ class SweepPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final v = time.value;
-    // On screen for the first part of the period, then it rests.
-    if (v > 0.4 || size.isEmpty) return;
-    final p = v / 0.4;
+    final p = time.value;
+    if (p <= 0 || p >= 1 || size.isEmpty) return;
     final bw = size.width * 0.2;
     final skew = size.height * 0.5;
     final x = -bw - skew + (size.width + bw * 2 + skew) * p;

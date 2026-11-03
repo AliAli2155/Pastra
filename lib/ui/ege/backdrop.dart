@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../fx/fx.dart';
 import '../palette.dart';
@@ -25,25 +25,31 @@ class AegeanBackdrop extends StatefulWidget {
   State<AegeanBackdrop> createState() => _AegeanBackdropState();
 }
 
-class _AegeanBackdropState extends State<AegeanBackdrop> with SingleTickerProviderStateMixin {
-  /// Time of the picture from 0 to 1 (one round takes a minute). It is
-  /// updated about 30 times a second, which is smooth enough for slow stars
-  /// and waves and half the work of a full 60.
+class _AegeanBackdropState extends State<AegeanBackdrop> {
+  /// Time of the picture from 0 to 1 (one round takes a minute).
   final ValueNotifier<double> _clock = ValueNotifier<double>(0);
-  late final Ticker _ticker = createTicker(_onTick);
-  Duration _last = Duration.zero;
+  final Stopwatch _watch = Stopwatch();
+
+  /// A new picture 20 times a second: smooth enough for slow stars and
+  /// waves. A ticker would draw the whole screen again 60 times a second
+  /// (everything on it, not only the sky), which makes phones and browsers
+  /// stutter.
+  Timer? _timer;
+
+  /// False while another screen covers this one.
+  bool _visible = true;
 
   @override
   void initState() {
     super.initState();
     Fx.low.addListener(_sync);
-    _sync();
   }
 
-  void _onTick(Duration elapsed) {
-    if ((elapsed - _last).inMilliseconds < 33) return;
-    _last = elapsed;
-    _clock.value = (elapsed.inMilliseconds / 60000.0) % 1.0;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visible = TickerMode.valuesOf(context).enabled;
+    _sync();
   }
 
   @override
@@ -53,18 +59,23 @@ class _AegeanBackdropState extends State<AegeanBackdrop> with SingleTickerProvid
   }
 
   void _sync() {
-    if (Fx.low.value || !widget.animated) {
-      if (_ticker.isActive) _ticker.stop();
-    } else if (!_ticker.isActive) {
-      _last = Duration.zero;
-      _ticker.start();
+    final run = _visible && widget.animated && !Fx.low.value;
+    if (run && _timer == null) {
+      _watch.start();
+      _timer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+        _clock.value = (_watch.elapsedMilliseconds / 60000.0) % 1.0;
+      });
+    } else if (!run && _timer != null) {
+      _timer!.cancel();
+      _timer = null;
+      _watch.stop();
     }
   }
 
   @override
   void dispose() {
     Fx.low.removeListener(_sync);
-    _ticker.dispose();
+    _timer?.cancel();
     _clock.dispose();
     super.dispose();
   }
@@ -80,7 +91,7 @@ class _AegeanBackdropState extends State<AegeanBackdrop> with SingleTickerProvid
               child: ValueListenableBuilder<bool>(
                 valueListenable: Fx.low,
                 builder: (context, low, _) => CustomPaint(
-                  painter: _SkyPainter(_clock, ambient: widget.ambient && !low),
+                  painter: _SkyPainter(_clock, ambient: widget.ambient && !low, sea: widget.animated && !low),
                 ),
               ),
             ),
@@ -111,10 +122,15 @@ class _Spark {
 }
 
 class _SkyPainter extends CustomPainter {
-  _SkyPainter(this.time, {required this.ambient}) : super(repaint: time);
+  _SkyPainter(this.time, {required this.ambient, required this.sea}) : super(repaint: time);
 
   final ValueNotifier<double> time;
   final bool ambient;
+
+  /// The moon's glitter and the waves on the sea. Left out of a still
+  /// picture (the game screen, where the table covers the sea, and low
+  /// quality): they are the most work to draw.
+  final bool sea;
 
   static final List<_Star> _stars = _makeStars();
   static final List<_Spark> _sparks = _makeSparks();
@@ -205,36 +221,38 @@ class _SkyPainter extends CustomPainter {
     canvas.drawCircle(moon, mr, Paint()..color = const Color(0xFFFFF3D2));
 
     // Glitter of the moon on the water.
-    final sea = h - horizon;
-    final glitter = Paint()
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2;
-    for (var j = 0; j < 12; j++) {
-      final f = (j + 1) / 12;
-      final y = horizon + sea * f * f * 0.85;
-      final half = mr * (0.5 + f * 4) * (0.55 + 0.45 * math.sin((t * 20 + j * 0.7) * math.pi * 2));
-      glitter.color = PastraColors.goldLight.withValues(alpha: 0.42 * (1 - f * 0.8));
-      canvas.drawLine(Offset(moon.dx - half, y), Offset(moon.dx + half, y), glitter);
-    }
-
-    // Waves in perspective: close together at the horizon, wider apart near
-    // the viewer.
-    final line = Paint()..style = PaintingStyle.stroke;
-    const lines = 9;
-    for (var i = 0; i < lines; i++) {
-      final f = (i + 1) / lines;
-      final y0 = horizon + sea * f * f;
-      final amp = 1.5 + 5 * f;
-      final length = 40 + 130 * f;
-      final shift = t * math.pi * 2 * 5 * (i.isEven ? 1 : -1);
-      final path = Path()..moveTo(0, y0 + amp * math.sin(shift));
-      for (var x = 14.0; x <= w + 14; x += 14) {
-        path.lineTo(x, y0 + amp * math.sin(x / length * math.pi * 2 + shift));
+    final seaHeight = h - horizon;
+    if (sea) {
+      final glitter = Paint()
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = 2;
+      for (var j = 0; j < 12; j++) {
+        final f = (j + 1) / 12;
+        final y = horizon + seaHeight * f * f * 0.85;
+        final half = mr * (0.5 + f * 4) * (0.55 + 0.45 * math.sin((t * 20 + j * 0.7) * math.pi * 2));
+        glitter.color = PastraColors.goldLight.withValues(alpha: 0.42 * (1 - f * 0.8));
+        canvas.drawLine(Offset(moon.dx - half, y), Offset(moon.dx + half, y), glitter);
       }
-      line
-        ..strokeWidth = 1 + f * 1.6
-        ..color = PastraColors.foam.withValues(alpha: 0.04 + 0.1 * f);
-      canvas.drawPath(path, line);
+
+      // Waves in perspective: close together at the horizon, wider apart near
+      // the viewer.
+      final line = Paint()..style = PaintingStyle.stroke;
+      const lines = 9;
+      for (var i = 0; i < lines; i++) {
+        final f = (i + 1) / lines;
+        final y0 = horizon + seaHeight * f * f;
+        final amp = 1.5 + 5 * f;
+        final length = 40 + 130 * f;
+        final shift = t * math.pi * 2 * 5 * (i.isEven ? 1 : -1);
+        final path = Path()..moveTo(0, y0 + amp * math.sin(shift));
+        for (var x = 14.0; x <= w + 14; x += 14) {
+          path.lineTo(x, y0 + amp * math.sin(x / length * math.pi * 2 + shift));
+        }
+        line
+          ..strokeWidth = 1 + f * 1.6
+          ..color = PastraColors.foam.withValues(alpha: 0.04 + 0.1 * f);
+        canvas.drawPath(path, line);
+      }
     }
 
     // Lantern sparks rising.
@@ -266,5 +284,5 @@ class _SkyPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SkyPainter old) => old.ambient != ambient;
+  bool shouldRepaint(_SkyPainter old) => old.ambient != ambient || old.sea != sea;
 }

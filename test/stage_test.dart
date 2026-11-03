@@ -64,6 +64,30 @@ void main() {
       }
     });
 
+    test('slantAt() is how the table stretches around a point', () {
+      for (final area in areas) {
+        final g = StageGeometry.fit(area);
+        for (final p in <Offset>[
+          Offset(g.size.width * 0.2, g.size.height * 0.15),
+          Offset(g.size.width * 0.5, g.size.height * 0.5),
+          Offset(g.size.width * 0.9, g.size.height * 0.95),
+        ]) {
+          final m = g.slantAt(p);
+          const e = 0.01;
+          final alongX = (g.project(p + const Offset(e, 0)) - g.project(p)) / e;
+          final alongY = (g.project(p + const Offset(0, e)) - g.project(p)) / e;
+          final mx = MatrixUtils.transformPoint(m, const Offset(1, 0));
+          final my = MatrixUtils.transformPoint(m, const Offset(0, 1));
+          expect(mx.dx, closeTo(alongX.dx, 1e-3), reason: '$area $p');
+          expect(mx.dy, closeTo(alongX.dy, 1e-3), reason: '$area $p');
+          expect(my.dx, closeTo(alongY.dx, 1e-3), reason: '$area $p');
+          expect(my.dy, closeTo(alongY.dy, 1e-3), reason: '$area $p');
+        }
+      }
+      // A flat table is not slanted.
+      expect(StageGeometry.fit(areas.first, tilted: false).slantAt(const Offset(40, 40)), Matrix4.identity());
+    });
+
     test('things are smaller further away', () {
       final g = StageGeometry.fit(areas.first);
       expect(g.scaleAt(Offset(0, g.size.height)), closeTo(1, 1e-9));
@@ -226,6 +250,40 @@ void main() {
       final end = tester.getTopLeft(find.byType(FlyCard));
       expect(end.dx, closeTo(310, 0.001));
       expect(end.dy, closeTo(210, 0.001));
+    });
+
+    testWidgets('on a tilted table it lies where the table is seen, smaller further away', (tester) async {
+      final g = StageGeometry.fit(const Size(800, 600));
+      const rect = Rect.fromLTWH(100, 60, 80, 114);
+      var taps = 0;
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Stack(
+            children: <Widget>[
+              FlyCard(
+                key: const ValueKey<int>(1),
+                rect: rect,
+                angle: 0,
+                duration: const Duration(milliseconds: 400),
+                hop: false,
+                geometry: g,
+                child: GestureDetector(onTap: () => taps++, child: const ColoredBox(color: Colors.red)),
+              ),
+            ],
+          ),
+        ),
+      );
+      final want = g.project(rect.center);
+      final center = tester.getCenter(find.byType(ColoredBox));
+      expect(center.dx, closeTo(want.dx, 0.01));
+      expect(center.dy, closeTo(want.dy, 0.01));
+      final seen = tester.getRect(find.byType(ColoredBox));
+      expect(seen.width, lessThan(rect.width));
+      expect(seen.height, lessThan(rect.height));
+      // It is touched where it is seen.
+      await tester.tapAt(want);
+      expect(taps, 1);
     });
 
     testWidgets('a card held by a finger follows it at once', (tester) async {

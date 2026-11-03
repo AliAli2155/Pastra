@@ -9,7 +9,10 @@ import '../../game/progression.dart';
 import '../../game/sound.dart';
 import '../../online/leaderboard.dart';
 import '../../l10n/progress_strings.dart';
+import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
+import '../ege/widgets.dart';
+import '../fx/fx.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/avatar.dart';
@@ -66,6 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final settings = SettingsScope.of(context);
+    final social = SocialStrings(settings.language);
 
     Widget label(String text, {String? hint}) => Padding(
           padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
@@ -233,6 +237,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => settings.volume = v,
                 onChangeEnd: (_) => SoundFx.instance.play(Sfx.play),
               ),
+              // Graphics quality: automatic lowers the effects by itself on a
+              // device that keeps missing frames.
+              label(social.graphics, hint: social.graphicsHint),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<FxMode>(
+                  showSelectedIcon: false,
+                  segments: <ButtonSegment<FxMode>>[
+                    ButtonSegment<FxMode>(value: FxMode.auto, label: Text(social.graphicsAuto)),
+                    ButtonSegment<FxMode>(value: FxMode.high, label: Text(social.graphicsHigh)),
+                    ButtonSegment<FxMode>(value: FxMode.low, label: Text(social.graphicsLow)),
+                  ],
+                  selected: <FxMode>{settings.fxMode},
+                  onSelectionChanged: (v) => settings.fxMode = v.first,
+                ),
+              ),
               ]);
               final aboutCard = card(s.about, Icons.info_outline_rounded, <Widget>[
               Padding(
@@ -388,7 +408,7 @@ class _Swatch extends StatelessWidget {
   }
 }
 
-/// One group of settings: a rounded card with a gold title and icon.
+/// One group of settings: a stone tablet with a gold title and icon.
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.title, required this.icon, required this.children});
 
@@ -398,35 +418,32 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      // Own (see-through) Material: the switches' ripples show on the card.
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
+      child: Tablet(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        // Own (see-through) Material: the switches' ripples show on the card.
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: PastraColors.gold.withValues(alpha: 0.16), shape: BoxShape.circle),
-                child: Icon(icon, color: PastraColors.gold, size: 18),
+              Row(
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: PastraColors.gold.withValues(alpha: 0.16), shape: BoxShape.circle),
+                    child: Icon(icon, color: PastraColors.gold, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
+                ],
               ),
-              const SizedBox(width: 10),
-              Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 6),
+              ...children,
             ],
           ),
-          const SizedBox(height: 6),
-          ...children,
-        ],
-      ),
+        ),
       ),
     );
   }

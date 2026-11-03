@@ -2,10 +2,16 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'table_stage.dart';
+
 /// A card on the table that glides to its new place instead of jumping
 /// there. On a long way it rises a little (an arc, with a shadow growing
 /// under it) and it turns to its new angle on the way. A dealt card can
 /// leave a moment after the one before ([delay]).
+///
+/// [rect] is a place on the flat table. With a [geometry] the card is shown
+/// where that place is seen on the screen: smaller further away and slanted
+/// like the table under it (see [StageGeometry.slantAt]).
 ///
 /// It has to be a direct child of a [Stack] (it builds a [Positioned]).
 class FlyCard extends StatefulWidget {
@@ -18,6 +24,7 @@ class FlyCard extends StatefulWidget {
     this.delay = Duration.zero,
     this.still = false,
     this.hop = true,
+    this.geometry,
   });
 
   /// Where the card belongs.
@@ -35,6 +42,9 @@ class FlyCard extends StatefulWidget {
 
   /// Rises on a long way (off in low graphics quality).
   final bool hop;
+
+  /// How the table is seen; null: [rect] is already a place on the screen.
+  final StageGeometry? geometry;
 
   final Widget child;
 
@@ -106,40 +116,50 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
           lift = math.sin(math.pi * t) * far;
         }
         final radius = BorderRadius.circular(rect.width * 0.09);
-        // The same widgets whether the card flies or not, so that a card
-        // that is being turned over keeps its state.
+        // The place on the table (a flying card is a little higher), and
+        // where it is seen on the screen.
+        final place = rect.center - Offset(0, lift * rect.height * 0.35);
+        final g = widget.geometry;
+        final center = g == null ? place : g.project(place);
+        // The same widgets whether the card flies or not, and on a flat or a
+        // tilted table, so that a card that is being turned over keeps its
+        // state.
         return Positioned(
-          left: rect.left,
-          top: rect.top - lift * rect.height * 0.35,
+          left: center.dx - rect.width / 2,
+          top: center.dy - rect.height / 2,
           width: rect.width,
           height: rect.height,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              // The shadow on the table, further away the higher the card.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Transform.translate(
-                    offset: Offset(0, lift * rect.height * 0.22),
-                    child: Transform.rotate(
-                      angle: angle,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: radius,
-                          color: Colors.black.withValues(alpha: 0.3 * lift),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: g == null ? Matrix4.identity() : g.slantAt(place),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                // The shadow on the table, further away the higher the card.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Transform.translate(
+                      offset: Offset(0, lift * rect.height * 0.22),
+                      child: Transform.rotate(
+                        angle: angle,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: radius,
+                            color: Colors.black.withValues(alpha: 0.3 * lift),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Positioned.fill(
-                child: Transform.scale(
-                  scale: 1 + 0.1 * lift,
-                  child: Transform.rotate(angle: angle, child: child),
+                Positioned.fill(
+                  child: Transform.scale(
+                    scale: 1 + 0.1 * lift,
+                    child: Transform.rotate(angle: angle, child: child),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

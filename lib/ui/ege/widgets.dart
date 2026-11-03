@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -288,7 +289,7 @@ class DealIn extends StatelessWidget {
 }
 
 /// A light band that sweeps over its parent now and then (not in low
-/// quality).
+/// quality). Between two sweeps nothing moves, so nothing has to be drawn.
 class ShimmerSweep extends StatefulWidget {
   const ShimmerSweep({super.key, required this.borderRadius});
 
@@ -299,7 +300,11 @@ class ShimmerSweep extends StatefulWidget {
 }
 
 class _ShimmerSweepState extends State<ShimmerSweep> with SingleTickerProviderStateMixin {
-  late final AnimationController _time = AnimationController(vsync: this, duration: const Duration(milliseconds: 3400));
+  late final AnimationController _time = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300));
+
+  /// Waits for the next sweep.
+  Timer? _rest;
+  bool _disposed = false;
 
   @override
   void initState() {
@@ -309,16 +314,28 @@ class _ShimmerSweepState extends State<ShimmerSweep> with SingleTickerProviderSt
   }
 
   void _sync() {
-    if (Fx.low.value) {
-      _time.stop();
-    } else if (!_time.isAnimating) {
-      _time.repeat();
-    }
+    _rest?.cancel();
+    _rest = null;
+    _time.stop();
+    _time.value = 0;
+    // The first sweep comes a moment after the button appears.
+    if (!Fx.low.value) _rest = Timer(const Duration(milliseconds: 1400), _sweep);
+  }
+
+  void _sweep() {
+    _rest = null;
+    if (_disposed || Fx.low.value) return;
+    _time.forward(from: 0).whenComplete(() {
+      if (_disposed || Fx.low.value || _rest != null) return;
+      _rest = Timer(const Duration(milliseconds: 5600), _sweep);
+    });
   }
 
   @override
   void dispose() {
+    _disposed = true;
     Fx.low.removeListener(_sync);
+    _rest?.cancel();
     _time.dispose();
     super.dispose();
   }

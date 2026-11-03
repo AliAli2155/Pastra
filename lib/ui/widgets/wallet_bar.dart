@@ -103,7 +103,7 @@ class WalletBar extends StatelessWidget {
     return Tooltip(
       message: shop.store,
       child: Material(
-        color: Colors.black.withValues(alpha: 0.35),
+        color: const Color(0xE60A1636),
         shape: StadiumBorder(side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.6))),
         child: InkWell(
           customBorder: const StadiumBorder(),

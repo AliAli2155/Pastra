@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -423,31 +424,32 @@ class _GameScreenState extends State<GameScreen> {
               Positioned.fill(
                 child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: c.clearSelection),
               ),
-              // The table with its cards, leaned back.
+              // The table itself, leaned back.
               Positioned.fill(
-                child: TableStage(
-                  geometry: geo,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      Positioned.fill(
-                        child: IgnorePointer(
+                child: IgnorePointer(
+                  child: TableStage(
+                    geometry: geo,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        Positioned.fill(
                           child: RepaintBoundary(
                             child: CustomPaint(painter: StageFeltPainter(table: Look.table, rim: geo.rim)),
                           ),
                         ),
-                      ),
-                      Positioned.fromRect(
-                        rect: layout.tableRect.inflate(6),
-                        child: IgnorePointer(
+                        Positioned.fromRect(
+                          rect: layout.tableRect.inflate(6),
                           child: RepaintBoundary(child: CustomPaint(painter: TableZonePainter(highlight: _overTable))),
                         ),
-                      ),
-                      for (final e in entries) _card(e.key, e.value, duration),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
+              // The cards lie on it. They are not drawn through the
+              // perspective (slow, above all in a browser): each one is
+              // placed, sized and slanted like the part of the table under it.
+              for (final e in entries) _card(e.key, e.value, duration, geo),
               if (state.deck.isNotEmpty)
                 // At the top right of the tilted deck: the face-up cards under it
                 // go to the bottom right, and a side hand may be below it.
@@ -711,7 +713,7 @@ class _GameScreenState extends State<GameScreen> {
     _prevTable = state.table.toSet();
   }
 
-  Widget _card(int card, CardPlacement p, Duration duration) {
+  Widget _card(int card, CardPlacement p, Duration duration, StageGeometry geo) {
     final dragging = card == _dragCard;
     final rect = dragging ? p.rect.shift(_dragDelta) : p.rect;
     final canDrag = p.interactive && c.isHumanTurn;
@@ -734,6 +736,7 @@ class _GameScreenState extends State<GameScreen> {
       delay: Duration(milliseconds: delay),
       still: dragging,
       hop: !Fx.low.value,
+      geometry: geo,
       child: RepaintBoundary(
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -846,11 +849,7 @@ class _GameScreenState extends State<GameScreen> {
             if (c.turnLimit != null)
               _Countdown(key: ValueKey<int>(c.turnId), duration: c.turnLimit!, size: 18)
             else
-              const SizedBox(
-                width: 10,
-                height: 10,
-                child: CircularProgressIndicator(strokeWidth: 1.6, color: PastraColors.gold),
-              ),
+              const _ThinkingDots(),
           ],
         ],
       ),
@@ -1149,43 +1148,124 @@ class _TopBar extends StatelessWidget {
 }
 
 /// Ring that empties while a player thinks; shows the seconds left.
-class _Countdown extends StatelessWidget {
+///
+/// It moves five times a second, not with every frame: anything that moves
+/// makes the whole table be drawn again, and a turn is long.
+class _Countdown extends StatefulWidget {
   const _Countdown({super.key, required this.duration, this.size = 20});
 
   final Duration duration;
   final double size;
 
   @override
+  State<_Countdown> createState() => _CountdownState();
+}
+
+class _CountdownState extends State<_Countdown> {
+  static const Duration _step = Duration(milliseconds: 200);
+
+  final Stopwatch _watch = Stopwatch()..start();
+  Timer? _timer;
+  int _steps = 0;
+
+  /// Time gone: the clock, or the steps taken when they are ahead of it
+  /// (tests run on a fake clock).
+  int get _gone => max(_watch.elapsedMilliseconds, _steps * _step.inMilliseconds);
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(_step, (_) {
+      _steps++;
+      if (_gone >= widget.duration.inMilliseconds) {
+        _timer?.cancel();
+        _timer = null;
+      }
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = widget.size;
+    final total = widget.duration.inMilliseconds;
+    final v = total <= 0 ? 0.0 : (1 - _gone / total).clamp(0.0, 1.0).toDouble();
+    final left = (v * widget.duration.inSeconds).ceil();
+    final color = v > 0.3 ? PastraColors.gold : const Color(0xFFFF6B5B);
+    return RepaintBoundary(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: <Widget>[
+            SizedBox.expand(
+              child: CircularProgressIndicator(
+                value: v,
+                strokeWidth: 2.4,
+                color: color,
+                backgroundColor: Colors.white24,
+              ),
+            ),
+            Text(
+              '$left',
+              style: TextStyle(fontSize: size * 0.48, color: color, fontWeight: FontWeight.w800, height: 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Three dots that light up one after the other while a player thinks
+/// (three steps a second, not an endless spinner).
+class _ThinkingDots extends StatefulWidget {
+  const _ThinkingDots();
+
+  @override
+  State<_ThinkingDots> createState() => _ThinkingDotsState();
+}
+
+class _ThinkingDotsState extends State<_ThinkingDots> {
+  Timer? _timer;
+  int _lit = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 330), (_) => setState(() => _lit = (_lit + 1) % 3));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: 1, end: 0),
-        duration: duration,
-        builder: (context, v, _) {
-          final left = (v * duration.inSeconds).ceil();
-          final color = v > 0.3 ? PastraColors.gold : const Color(0xFFFF6B5B);
-          return SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: v,
-                    strokeWidth: 2.4,
-                    color: color,
-                    backgroundColor: Colors.white24,
-                  ),
-                ),
-                Text(
-                  '$left',
-                  style: TextStyle(fontSize: size * 0.48, color: color, fontWeight: FontWeight.w800, height: 1),
-                ),
-              ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (var i = 0; i < 3; i++)
+            Container(
+              width: 4,
+              height: 4,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: PastraColors.gold.withValues(alpha: i == _lit ? 1.0 : 0.35),
+              ),
             ),
-          );
-        },
+        ],
       ),
     );
   }
@@ -1445,26 +1525,50 @@ class _Spark {
   const _Spark({required this.angle, required this.speed, required this.size, required this.hue});
 }
 
-/// Pops in, stays for a moment, then fades out.
-class _FadingChip extends StatelessWidget {
+/// Pops in, stays for a moment, then fades out. Only the pop and the fade
+/// are animated; in between nothing has to be drawn again.
+class _FadingChip extends StatefulWidget {
   const _FadingChip({super.key, required this.child});
 
   final Widget child;
 
   @override
+  State<_FadingChip> createState() => _FadingChipState();
+}
+
+class _FadingChipState extends State<_FadingChip> {
+  bool _shown = false;
+  bool _gone = false;
+  Timer? _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _shown = true);
+    });
+    _fade = Timer(const Duration(milliseconds: 2600), () {
+      if (mounted) setState(() => _gone = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _fade?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 3200),
-      child: child,
-      builder: (context, t, child) {
-        final opacity = t < 0.06 ? t / 0.06 : (t > 0.8 ? (1 - t) / 0.2 : 1.0);
-        final scale = t < 0.06 ? 0.6 + 0.4 * (t / 0.06) : 1.0;
-        return Opacity(
-          opacity: opacity.clamp(0.0, 1.0),
-          child: Transform.scale(scale: scale, child: child),
-        );
-      },
+    return AnimatedOpacity(
+      opacity: _shown && !_gone ? 1.0 : 0.0,
+      duration: Duration(milliseconds: _gone ? 600 : 190),
+      child: AnimatedScale(
+        scale: _shown ? 1.0 : 0.6,
+        duration: const Duration(milliseconds: 190),
+        curve: Curves.easeOutBack,
+        child: widget.child,
+      ),
     );
   }
 }

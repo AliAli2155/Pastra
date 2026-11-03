@@ -446,9 +446,10 @@ class _HeroStage extends StatelessWidget {
             child: CustomPaint(painter: _TablePainter(Look.table)),
           ),
           Positioned.fill(
+            // It turns towards the pointer, but does not rock by itself: a
+            // card fan turning in 3D all the time makes slow devices stutter.
             child: Tilt3D(
               maxAngle: 0.3,
-              idleSway: 0.55,
               child: _CardFan(width: width, cardWidth: cardWidth, cardHeight: cardHeight, cards: cards),
             ),
           ),

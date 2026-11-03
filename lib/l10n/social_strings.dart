@@ -79,6 +79,11 @@ class SocialStrings {
   String lastSeen(Object when) => _t('lastSeen', <String, Object>{'when': when});
   String get removeFriend => _t('removeFriend');
   String get codeWait => _t('codeWait');
+  String get graphics => _t('graphics');
+  String get graphicsAuto => _t('graphicsAuto');
+  String get graphicsHigh => _t('graphicsHigh');
+  String get graphicsLow => _t('graphicsLow');
+  String get graphicsHint => _t('graphicsHint');
 
   /// A chat message: a message id (`m:<id>`) or an emoji (`e:<emoji>`).
   String chat(String raw) {
@@ -165,6 +170,11 @@ class SocialStrings {
       'lastSeen': 'Seen {when}',
       'removeFriend': 'Remove',
       'codeWait': 'Your code is being created…',
+      'graphics': 'Graphics quality',
+      'graphicsAuto': 'Automatic',
+      'graphicsHigh': 'High',
+      'graphicsLow': 'Low',
+      'graphicsHint': 'Low: a flat table and a still sky, for slow phones and computers.',
     },
     'el': <String, String>{
       'shareInvite': 'Κοινοποίηση πρόσκλησης',
@@ -235,6 +245,11 @@ class SocialStrings {
       'lastSeen': 'Τελευταία φορά: {when}',
       'removeFriend': 'Αφαίρεση',
       'codeWait': 'Δημιουργείται ο κωδικός σου…',
+      'graphics': 'Ποιότητα γραφικών',
+      'graphicsAuto': 'Αυτόματη',
+      'graphicsHigh': 'Υψηλή',
+      'graphicsLow': 'Χαμηλή',
+      'graphicsHint': 'Χαμηλή: επίπεδο τραπέζι και ακίνητος ουρανός, για αργά κινητά και υπολογιστές.',
     },
     'tr': <String, String>{
       'shareInvite': 'Daveti paylaş',
@@ -305,6 +320,11 @@ class SocialStrings {
       'lastSeen': 'Son görülme: {when}',
       'removeFriend': 'Kaldır',
       'codeWait': 'Kodun oluşturuluyor…',
+      'graphics': 'Grafik kalitesi',
+      'graphicsAuto': 'Otomatik',
+      'graphicsHigh': 'Yüksek',
+      'graphicsLow': 'Düşük',
+      'graphicsHint': 'Düşük: düz masa ve hareketsiz gökyüzü; yavaş telefon ve bilgisayarlar için.',
     },
     'de': <String, String>{
       'shareInvite': 'Einladung teilen',
@@ -375,6 +395,11 @@ class SocialStrings {
       'lastSeen': 'Zuletzt gesehen: {when}',
       'removeFriend': 'Entfernen',
       'codeWait': 'Dein Code wird erstellt…',
+      'graphics': 'Grafikqualität',
+      'graphicsAuto': 'Automatisch',
+      'graphicsHigh': 'Hoch',
+      'graphicsLow': 'Niedrig',
+      'graphicsHint': 'Niedrig: flacher Tisch und ruhiger Himmel, für langsame Handys und Computer.',
     },
     'fr': <String, String>{
       'shareInvite': 'Partager l\'invitation',
@@ -445,6 +470,11 @@ class SocialStrings {
       'lastSeen': 'Vu : {when}',
       'removeFriend': 'Retirer',
       'codeWait': 'Création de ton code…',
+      'graphics': 'Qualité graphique',
+      'graphicsAuto': 'Automatique',
+      'graphicsHigh': 'Élevée',
+      'graphicsLow': 'Basse',
+      'graphicsHint': 'Basse : table à plat et ciel immobile, pour les téléphones et ordinateurs lents.',
     },
     'es': <String, String>{
       'shareInvite': 'Compartir invitación',
@@ -515,6 +545,11 @@ class SocialStrings {
       'lastSeen': 'Visto: {when}',
       'removeFriend': 'Quitar',
       'codeWait': 'Creando tu código…',
+      'graphics': 'Calidad gráfica',
+      'graphicsAuto': 'Automática',
+      'graphicsHigh': 'Alta',
+      'graphicsLow': 'Baja',
+      'graphicsHint': 'Baja: mesa plana y cielo quieto, para móviles y ordenadores lentos.',
     },
     'it': <String, String>{
       'shareInvite': 'Condividi invito',
@@ -585,6 +620,11 @@ class SocialStrings {
       'lastSeen': 'Visto: {when}',
       'removeFriend': 'Rimuovi',
       'codeWait': 'Creazione del tuo codice…',
+      'graphics': 'Qualità grafica',
+      'graphicsAuto': 'Automatica',
+      'graphicsHigh': 'Alta',
+      'graphicsLow': 'Bassa',
+      'graphicsHint': 'Bassa: tavolo piatto e cielo fermo, per telefoni e computer lenti.',
     },
     'pt': <String, String>{
       'shareInvite': 'Partilhar convite',
@@ -655,6 +695,11 @@ class SocialStrings {
       'lastSeen': 'Visto: {when}',
       'removeFriend': 'Remover',
       'codeWait': 'A criar o teu código…',
+      'graphics': 'Qualidade gráfica',
+      'graphicsAuto': 'Automática',
+      'graphicsHigh': 'Alta',
+      'graphicsLow': 'Baixa',
+      'graphicsHint': 'Baixa: mesa plana e céu parado, para telemóveis e computadores lentos.',
     },
     'ru': <String, String>{
       'shareInvite': 'Поделиться приглашением',
@@ -725,6 +770,11 @@ class SocialStrings {
       'lastSeen': 'Был(а): {when}',
       'removeFriend': 'Удалить',
       'codeWait': 'Создаём твой код…',
+      'graphics': 'Качество графики',
+      'graphicsAuto': 'Авто',
+      'graphicsHigh': 'Высокое',
+      'graphicsLow': 'Низкое',
+      'graphicsHint': 'Низкое: плоский стол и неподвижное небо — для медленных телефонов и компьютеров.',
     },
     'bg': <String, String>{
       'shareInvite': 'Сподели поканата',
@@ -795,6 +845,11 @@ class SocialStrings {
       'lastSeen': 'Видян: {when}',
       'removeFriend': 'Премахни',
       'codeWait': 'Създава се твоят код…',
+      'graphics': 'Качество на графиката',
+      'graphicsAuto': 'Автоматично',
+      'graphicsHigh': 'Високо',
+      'graphicsLow': 'Ниско',
+      'graphicsHint': 'Ниско: плоска маса и неподвижно небе – за бавни телефони и компютри.',
     },
     'ar': <String, String>{
       'shareInvite': 'مشاركة الدعوة',
@@ -865,6 +920,11 @@ class SocialStrings {
       'lastSeen': 'آخر ظهور: {when}',
       'removeFriend': 'إزالة',
       'codeWait': 'جارٍ إنشاء رمزك…',
+      'graphics': 'جودة الرسومات',
+      'graphicsAuto': 'تلقائي',
+      'graphicsHigh': 'عالية',
+      'graphicsLow': 'منخفضة',
+      'graphicsHint': 'منخفضة: طاولة مسطحة وسماء ثابتة، للهواتف والحواسيب البطيئة.',
     },
     'zh': <String, String>{
       'shareInvite': '分享邀请',
@@ -935,6 +995,11 @@ class SocialStrings {
       'lastSeen': '上次在线：{when}',
       'removeFriend': '移除',
       'codeWait': '正在生成你的代码…',
+      'graphics': '画质',
+      'graphicsAuto': '自动',
+      'graphicsHigh': '高',
+      'graphicsLow': '低',
+      'graphicsHint': '低：平面牌桌和静止的夜空，适合较慢的手机和电脑。',
     },
   };
 }

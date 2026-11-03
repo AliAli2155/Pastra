@@ -123,6 +123,21 @@ class StageGeometry {
   /// How large things are drawn at [p] compared with the flat table (1 at the
   /// near edge, smaller further away).
   double scaleAt(Offset p) => tilted ? 1 / _w(p.dy) : 1.0;
+
+  /// How a small thing lying at [p] looks on the screen, about its own
+  /// centre: narrower and shorter further away, and slanted like the sides
+  /// of the table. Cards are drawn with this instead of through the
+  /// perspective itself: at their size it looks the same, and it is much
+  /// cheaper to draw (above all in a browser). Nothing on a flat table.
+  Matrix4 slantAt(Offset p) {
+    if (!tilted) return Matrix4.identity();
+    final w = _w(p.dy);
+    final sx = 1 / w;
+    final sy = math.cos(lean) / (w * w);
+    final k = (p.dx - size.width / 2) * math.sin(lean) / (_distance * w * w);
+    // Columns: where (1, 0) and (0, 1) of the table end up.
+    return Matrix4(sx, 0, 0, 0, k, sy, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  }
 }
 
 /// Shows its child (the flat table with all its cards) leaned back as
