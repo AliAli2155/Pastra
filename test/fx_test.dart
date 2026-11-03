@@ -14,6 +14,32 @@ void main() {
     expect(Fx.low.value, isFalse);
   });
 
+  test('a short heavy moment keeps full quality, a slow device gets low quality', () {
+    Fx.setMode(FxMode.auto);
+    const fast = Duration(milliseconds: 12);
+    const slow = Duration(milliseconds: 60);
+    void frames(int n, Duration span) {
+      for (var i = 0; i < n; i++) {
+        Fx.addFrame(span);
+      }
+    }
+
+    // Start-up, then a pastra with confetti: two and a half seconds of
+    // slow frames, then smooth again.
+    frames(200, fast);
+    frames(150, slow);
+    frames(400, fast);
+    expect(Fx.low.value, isFalse);
+
+    // A device that keeps missing frames.
+    frames(600, slow);
+    expect(Fx.low.value, isTrue);
+
+    // Choosing a quality again starts over with full quality.
+    Fx.setMode(FxMode.auto);
+    expect(Fx.low.value, isFalse);
+  });
+
   test('the graphics quality is saved with the settings', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final settings = await AppSettings.load();

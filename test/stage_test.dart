@@ -85,18 +85,25 @@ void main() {
       }
     });
 
-    test('a flat table (low quality, tiny areas) is not moved at all', () {
+    test('a flat table (low quality, tiny areas) lies in the area with room for its rim', () {
       for (final g in <StageGeometry>[
         StageGeometry.fit(areas.first, tilted: false),
         StageGeometry.fit(const Size(180, 120)),
       ]) {
         expect(g.tilted, isFalse);
-        expect(g.size, g.area);
+        final inset = g.rim;
+        expect(inset, greaterThanOrEqualTo(10));
+        // Room at the top and the sides; the near edge is the bottom of the area.
+        expect(g.size, Size(g.area.width - 2 * inset, g.area.height - inset));
         const p = Offset(33, 21);
-        expect(g.project(p), p);
+        expect(g.project(p), p + Offset(inset, inset));
+        final nearRight = g.project(Offset(g.size.width, g.size.height));
+        expect(nearRight.dx, closeTo(g.area.width - inset, 1e-9));
+        expect(nearRight.dy, closeTo(g.area.height, 1e-9));
         expect(g.scaleAt(p), 1);
         const r = Rect.fromLTWH(3, 4, 50, 70);
-        expect(g.projectRect(r), r);
+        expect(g.projectRect(r), r.shift(Offset(inset, inset)));
+        expect(g.matrix, Matrix4.identity());
       }
     });
   });
@@ -150,9 +157,11 @@ void main() {
       expect(taps, 2);
     });
 
-    testWidgets('a flat stage does not move anything', (tester) async {
+    testWidgets('a flat stage is where project() says', (tester) async {
       final g = StageGeometry.fit(const Size(600, 400), tilted: false);
+      const card = Rect.fromLTWH(60, 20, 100, 60);
       var taps = 0;
+      Offset? local;
       await tester.pumpWidget(
         host(
           g,
@@ -161,9 +170,10 @@ void main() {
             child: Stack(
               children: <Widget>[
                 Positioned.fromRect(
-                  rect: const Rect.fromLTWH(60, 20, 100, 60),
+                  rect: card,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    onTapDown: (d) => local = d.localPosition,
                     onTap: () => taps++,
                     child: const ColoredBox(color: Colors.red),
                   ),
@@ -174,8 +184,10 @@ void main() {
         ),
       );
       final origin = tester.getTopLeft(find.byType(TableStage));
-      await tester.tapAt(origin + const Offset(110, 50));
+      await tester.tapAt(origin + g.project(card.topLeft + const Offset(10, 10)));
       expect(taps, 1);
+      expect(local!.dx, closeTo(10, 0.01));
+      expect(local!.dy, closeTo(10, 0.01));
     });
   });
 

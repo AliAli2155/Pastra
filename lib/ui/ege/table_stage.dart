@@ -12,27 +12,34 @@ import '../theme.dart';
 /// draws it that way, and [project] tells where a point of the flat table
 /// ends up (for name plates and messages, which are drawn flat on top).
 ///
-/// In low graphics quality the table stays flat ([tilted] is false) and
-/// every point ends up where it is.
+/// In low graphics quality the table stays flat ([tilted] is false): it lies
+/// inside the area with room for its rim at the top and the sides, and
+/// [project] only moves a point by that room.
 class StageGeometry {
   const StageGeometry._({
     required this.area,
     required this.size,
     required this.tilted,
     required double distance,
-  }) : _distance = distance;
+    required double inset,
+  })  : _distance = distance,
+        _inset = inset;
 
   /// The part of the screen the table is shown in.
   final Size area;
 
-  /// The flat table the cards are laid out on. As wide as [area]; when
-  /// [tilted] it is taller, because its far part is drawn smaller.
+  /// The flat table the cards are laid out on. When [tilted] it is as wide
+  /// as [area] and taller, because its far part is drawn smaller; a flat one
+  /// is a little smaller than [area] (room for the rim).
   final Size size;
 
   /// False in low graphics quality.
   final bool tilted;
 
   final double _distance;
+
+  /// Flat table: the room for the rim at the top and the sides.
+  final double _inset;
 
   /// How far the table leans back, in radians.
   static const double lean = 0.42;
@@ -46,7 +53,15 @@ class StageGeometry {
   /// the table shows there).
   factory StageGeometry.fit(Size area, {bool tilted = true}) {
     if (!tilted || area.width < 200 || area.height < 140) {
-      return StageGeometry._(area: area, size: area, tilted: false, distance: 1);
+      // The near edge goes on below the screen, as on the tilted table.
+      final inset = flatInsetFor(area);
+      return StageGeometry._(
+        area: area,
+        size: Size(math.max(0.0, area.width - 2 * inset), math.max(0.0, area.height - inset)),
+        tilted: false,
+        distance: 1,
+        inset: inset,
+      );
     }
     final far = farMarginFor(area);
     final target = area.height - far;
@@ -56,25 +71,33 @@ class StageGeometry {
       size: Size(area.width, height),
       tilted: true,
       distance: eye * height,
+      inset: 0,
     );
   }
 
   /// Room above the far edge of the table.
   static double farMarginFor(Size area) => math.max(14.0, area.height * 0.04);
 
-  /// Thickness of the rim around the cloth, on the flat table.
-  double get rim => math.max(12.0, size.height * 0.032);
+  /// Room for the rim around a flat table.
+  static double flatInsetFor(Size area) => math.max(10.0, area.height * 0.03);
 
-  /// The turn and the perspective, about the bottom centre of the table.
-  Matrix4 get matrix => Matrix4.identity()
-    ..setEntry(3, 2, 1 / _distance)
-    ..rotateX(-lean);
+  /// Thickness of the rim around the cloth, on the flat table.
+  double get rim => tilted ? math.max(12.0, size.height * 0.032) : _inset;
+
+  /// The turn and the perspective, about the bottom centre of the table
+  /// (nothing on a flat table).
+  Matrix4 get matrix {
+    if (!tilted) return Matrix4.identity();
+    return Matrix4.identity()
+      ..setEntry(3, 2, 1 / _distance)
+      ..rotateX(-lean);
+  }
 
   double _w(double y) => 1 - math.sin(lean) * (y - size.height) / _distance;
 
   /// Where the point [p] of the flat table is on the screen area.
   Offset project(Offset p) {
-    if (!tilted) return p;
+    if (!tilted) return p + Offset(_inset, _inset);
     final w = _w(p.dy);
     return Offset(
       area.width / 2 + (p.dx - size.width / 2) / w,
@@ -84,7 +107,7 @@ class StageGeometry {
 
   /// The smallest rectangle on the screen that holds [r].
   Rect projectRect(Rect r) {
-    if (!tilted) return r;
+    if (!tilted) return r.shift(Offset(_inset, _inset));
     final a = project(r.topLeft);
     final b = project(r.topRight);
     final c = project(r.bottomLeft);
@@ -114,8 +137,10 @@ class TableStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = geometry;
-    final flat = SizedBox(width: g.size.width, height: g.size.height, child: child);
-    if (!g.tilted) return flat;
+    // The same widgets for a flat and a tilted table: when the graphics
+    // quality changes during a game, the cards keep their state and glide
+    // to their new places. A flat table hangs from the bottom centre too,
+    // which leaves the room for its rim at the top and the sides.
     return OverflowBox(
       alignment: Alignment.bottomCenter,
       minWidth: g.size.width,
@@ -125,7 +150,7 @@ class TableStage extends StatelessWidget {
       child: Transform(
         alignment: Alignment.bottomCenter,
         transform: g.matrix,
-        child: flat,
+        child: SizedBox(width: g.size.width, height: g.size.height, child: child),
       ),
     );
   }

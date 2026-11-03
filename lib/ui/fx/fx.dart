@@ -21,6 +21,15 @@ class Fx {
   static int _seen = 0;
   static int _window = 0;
   static int _slow = 0;
+  static int _badWindows = 0;
+
+  /// Frames judged together (about two seconds).
+  static const int _windowFrames = 120;
+
+  /// Slow stretches in a row before the quality goes down. A short heavy
+  /// moment (a pastra with confetti, a new screen) can spoil two of them at
+  /// most, so only a device that keeps missing frames gets low quality.
+  static const int _badWindowsNeeded = 3;
 
   static FxMode get mode => _mode;
 
@@ -31,6 +40,7 @@ class Fx {
     _seen = 0;
     _window = 0;
     _slow = 0;
+    _badWindows = 0;
     _apply();
   }
 
@@ -56,29 +66,36 @@ class Fx {
     _apply();
   }
 
-  /// Starts watching the frame times (used by [FxMode.auto]).
+  /// Starts watching the frame times (used by [FxMode.auto]). Not in debug
+  /// builds: they are always slow (above all on the web) and would always
+  /// end up in low quality.
   static void watch() {
-    if (_watching) return;
+    if (_watching || kDebugMode) return;
     _watching = true;
     SchedulerBinding.instance.addTimingsCallback((timings) {
-      if (_mode != FxMode.auto || _autoLow) return;
       for (final t in timings) {
-        _seen++;
-        // The start-up and the first screen changes are always a little slow.
-        if (_seen < 150) continue;
-        _window++;
-        if (t.totalSpan.inMilliseconds > 34) _slow++;
-        if (_window >= 120) {
-          // One frame in five took longer than two refreshes: too slow.
-          if (_slow >= 24) {
-            _autoLow = true;
-            _apply();
-            return;
-          }
-          _window = 0;
-          _slow = 0;
-        }
+        addFrame(t.totalSpan);
       }
     });
+  }
+
+  /// Counts one drawn frame that took [span] (automatic quality only).
+  @visibleForTesting
+  static void addFrame(Duration span) {
+    if (_mode != FxMode.auto || _autoLow) return;
+    _seen++;
+    // The start-up and the first screen changes are always a little slow.
+    if (_seen < 150) return;
+    _window++;
+    if (span.inMilliseconds > 34) _slow++;
+    if (_window < _windowFrames) return;
+    // One frame in four took longer than two refreshes: a slow stretch.
+    _badWindows = _slow >= _windowFrames ~/ 4 ? _badWindows + 1 : 0;
+    _window = 0;
+    _slow = 0;
+    if (_badWindows >= _badWindowsNeeded) {
+      _autoLow = true;
+      _apply();
+    }
   }
 }
