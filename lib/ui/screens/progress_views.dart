@@ -42,7 +42,7 @@ class SeasonView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  gradient: const LinearGradient(colors: <Color>[Color(0xFF1B5E44), Color(0xFF0B3325)]),
+                  gradient: const LinearGradient(colors: <Color>[Color(0xFF1A2F63), Color(0xFF0B1634)]),
                   border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
                 ),
                 child: Column(

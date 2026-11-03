@@ -306,7 +306,7 @@ class _Highlights extends StatelessWidget {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: <Color>[Color(0xFF1E5A43), Color(0xFF0B2A1E)],
+              colors: <Color>[Color(0xFF1A2F63), Color(0xFF0B1634)],
             ),
             border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
           ),

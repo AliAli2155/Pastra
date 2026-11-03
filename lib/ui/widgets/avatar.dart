@@ -57,7 +57,7 @@ class PlayerAvatar extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: <Color>[Color(0xFF2E7D5B), Color(0xFF0A4A30)],
+            colors: <Color>[Color(0xFF3E86D8), Color(0xFF173B82)],
           ),
         ),
         child: Text(

@@ -278,7 +278,7 @@ class _MyCodeCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(colors: <Color>[Color(0xFF1E5A43), Color(0xFF0B2A1E)]),
+        gradient: const LinearGradient(colors: <Color>[Color(0xFF1A2F63), Color(0xFF0B1634)]),
         border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
       ),
       child: Row(
@@ -446,7 +446,7 @@ class _FriendRow extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: online ? const Color(0xFF3DDC84) : const Color(0xFF6B7280),
-                    border: Border.all(color: const Color(0xFF0E2A1F), width: 2.5),
+                    border: Border.all(color: const Color(0xFF0B1634), width: 2.5),
                   ),
                 ),
               ),
@@ -499,7 +499,7 @@ Future<void> showInviteFriendsSheet(BuildContext context, String code) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF0E2A1F),
+    backgroundColor: const Color(0xFF0B1634),
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => _InviteSheet(code: code),
   );

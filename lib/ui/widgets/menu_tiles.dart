@@ -58,11 +58,21 @@ class MenuTile extends StatelessWidget {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-              border: Border.all(color: PastraColors.goldLight.withValues(alpha: 0.5), width: 1.5),
+              // A night-blue tablet tinted with the tile's colour (the gold
+              // tile stays gold: it is the main action).
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: darkText
+                    ? colors
+                    : <Color>[
+                        Color.lerp(colors.first, const Color(0xFF0B1634), 0.35)!,
+                        Color.lerp(colors.last, const Color(0xFF0B1634), 0.6)!,
+                      ],
+              ),
+              border: Border.all(color: PastraColors.gold.withValues(alpha: darkText ? 0.8 : 0.5), width: 1.5),
               boxShadow: <BoxShadow>[
-                BoxShadow(color: colors.last.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 8)),
-                BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 8)),
               ],
             ),
             child: LayoutBuilder(

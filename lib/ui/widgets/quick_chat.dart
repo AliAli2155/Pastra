@@ -11,7 +11,7 @@ Future<void> showQuickChat(BuildContext context, RoomSocial social) {
   final t = SocialStrings(SettingsScope.read(context).language);
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: const Color(0xF20E2A1F),
+    backgroundColor: const Color(0xF20B1634),
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) {
       void send(String message) {

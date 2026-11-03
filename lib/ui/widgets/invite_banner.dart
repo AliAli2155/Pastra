@@ -85,7 +85,7 @@ class _InviteBannerState extends State<InviteBanner> {
                 constraints: const BoxConstraints(maxWidth: 460),
                 padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xF2102A1F),
+                  color: const Color(0xF20B1634),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: PastraColors.gold, width: 1.5),
                   boxShadow: <BoxShadow>[BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 16)],

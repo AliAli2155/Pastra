@@ -115,14 +115,42 @@ class _PlayScreenState extends State<PlayScreen> {
   }
 }
 
+/// A night-blue tablet tinted at the top with the tile's own colour, with a
+/// gold edge.
 BoxDecoration _tileDecoration(List<Color> colors) => BoxDecoration(
       borderRadius: BorderRadius.circular(28),
-      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1.5),
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[
+          Color.lerp(colors.first, const Color(0xFF0B1634), 0.5)!,
+          const Color(0xFF14295A),
+          const Color(0xFF0B1634),
+        ],
+        stops: const <double>[0.0, 0.55, 1.0],
+      ),
+      border: Border.all(color: PastraColors.gold.withValues(alpha: 0.55), width: 1.5),
       boxShadow: <BoxShadow>[
-        BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 22, offset: const Offset(0, 10)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 22, offset: const Offset(0, 10)),
+        BoxShadow(color: colors.first.withValues(alpha: 0.18), blurRadius: 28),
       ],
     );
+
+/// The gold of the main action, lighter at the top.
+const BoxDecoration _goldDecoration = BoxDecoration(
+  borderRadius: BorderRadius.all(Radius.circular(28)),
+  gradient: LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)],
+    stops: <double>[0.0, 0.5, 1.0],
+  ),
+  border: Border.fromBorderSide(BorderSide(color: PastraColors.goldLight, width: 1.5)),
+  boxShadow: <BoxShadow>[
+    BoxShadow(color: PastraColors.goldDeep, offset: Offset(0, 5)),
+    BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 10)),
+  ],
+);
 
 /// Three cards fanned out.
 class _Fan extends StatelessWidget {
@@ -180,7 +208,13 @@ class _ModeTile extends StatelessWidget {
       fit: BoxFit.scaleDown,
       child: Text(
         title,
-        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+        style: const TextStyle(
+          color: PastraColors.gold,
+          fontSize: 32,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+          shadows: <Shadow>[Shadow(color: Color(0xCC7A5210), offset: Offset(0, 2))],
+        ),
       ),
     );
     final hintText = Text(
@@ -219,7 +253,7 @@ class _ModeTile extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: <Widget>[
-                                Icon(icon, color: Colors.white, size: 26),
+                                Icon(icon, color: PastraColors.gold, size: 26),
                                 const SizedBox(width: 8),
                                 Flexible(child: titleText),
                               ],
@@ -247,7 +281,7 @@ class _ModeTile extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Icon(icon, color: Colors.white, size: 30),
+                        Icon(icon, color: PastraColors.gold, size: 30),
                         const SizedBox(width: 10),
                         Flexible(child: titleText),
                       ],
@@ -281,19 +315,19 @@ class _ContinueTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         onTap: onTap,
         child: Ink(
-          decoration: _tileDecoration(const <Color>[Color(0xFFF2C14E), Color(0xFFD4A43A)]),
+          decoration: _goldDecoration,
           child: Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Icon(Icons.play_arrow_rounded, color: Colors.black87, size: 36),
+                const Icon(Icons.play_arrow_rounded, color: Color(0xFF2A1A00), size: 36),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.black87, fontSize: 26, fontWeight: FontWeight.w900),
+                    style: const TextStyle(color: Color(0xFF2A1A00), fontSize: 26, fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
