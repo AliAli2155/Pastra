@@ -447,6 +447,13 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               ),
+              // My own name plate at the bottom left (gold while it is my turn),
+              // under the cards so it never hides one.
+              Positioned(
+                left: 10,
+                bottom: 8,
+                child: IgnorePointer(child: _myPlate(s)),
+              ),
               // The cards lie on it. They are not drawn through the
               // perspective (slow, above all in a browser): each one is
               // placed, sized and slanted like the part of the table under it.
@@ -465,8 +472,18 @@ class _GameScreenState extends State<GameScreen> {
                     Icons.style_outlined,
                   ),
               for (final entry in layout.seatRects.entries)
-                _seatLabel(s, entry.key, screen(entry.value), layout.seatSides[entry.key] ?? SeatSide.top, area),
-              if (c.lastMove != null && layout.seatRects.containsKey(c.lastMove!.seat))
+                _seatLabel(
+                  s,
+                  entry.key,
+                  screen(entry.value),
+                  layout.seatSides[entry.key] ?? SeatSide.top,
+                  area,
+                  moveCardWidth: layout.smallCardWidth * 0.8 * geo.scaleAt(entry.value.center),
+                ),
+              // The seat across the table shows its last card in its name plate row.
+              if (c.lastMove != null &&
+                  layout.seatRects.containsKey(c.lastMove!.seat) &&
+                  layout.seatSides[c.lastMove!.seat] != SeatSide.top)
                 _lastMoveChip(layout, c.lastMove!, geo),
               if (event != null)
                 Positioned.fill(
@@ -639,26 +656,30 @@ class _GameScreenState extends State<GameScreen> {
       top: topLeft.dy,
       width: w,
       height: h,
-      child: IgnorePointer(
-        child: _FadingChip(
-          key: ValueKey<int>(move.id),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              Positioned.fill(child: PlayingCardView(card: move.card, faceUp: true)),
-              if (move.captured)
-                Positioned(
-                  right: -6,
-                  top: -6,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: PastraColors.gold, shape: BoxShape.circle),
-                    child: const Icon(Icons.check, size: 12, color: Colors.black),
-                  ),
-                ),
-            ],
-          ),
-        ),
+      child: IgnorePointer(child: _moveCard(move)),
+    );
+  }
+
+  /// The card a player has just played, shown small next to them for a
+  /// moment (a gold tick when it captured).
+  Widget _moveCard(LastMove move) {
+    return _FadingChip(
+      key: ValueKey<int>(move.id),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned.fill(child: PlayingCardView(card: move.card, faceUp: true)),
+          if (move.captured)
+            Positioned(
+              right: -6,
+              top: -6,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: PastraColors.gold, shape: BoxShape.circle),
+                child: const Icon(Icons.check, size: 12, color: PastraColors.goldInk),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -785,9 +806,54 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// My name plate: the initial in a gold ring and my name; it lights up
+  /// on my turn.
+  Widget _myPlate(Strings s) {
+    final name = _seatName(s, 0);
+    final mine = c.isHumanTurn;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.fromLTRB(3, 3, 12, 3),
+      decoration: plateDecoration(radius: 20, glow: mine, edge: 0.35),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: PastraColors.raised,
+              border: Border.all(color: PastraColors.gold, width: 2),
+            ),
+            child: Text(
+              name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: PastraColors.gold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 110),
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: mine ? PastraColors.goldLight : PastraColors.text,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// The name plate of a seat, centred under the place of the player on the
   /// screen ([rect]) and never outside the [area].
-  Widget _seatLabel(Strings s, int seat, Rect rect, SeatSide side, Size area) {
+  Widget _seatLabel(Strings s, int seat, Rect rect, SeatSide side, Size area, {double moveCardWidth = 0}) {
     final state = c.state;
     final active = state.phase == GamePhase.playing && state.current == seat;
     final thinking = active && c.botThinking;
@@ -857,14 +923,31 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
     if (side == SeatSide.top) {
-      // Beside the hand across the table, on its left: under it the plate
-      // would cover the cards in the middle on a low screen.
-      const width = 180.0;
+      // Beside the hand across the table, on its left (under it the plate
+      // would cover the cards in the middle on a low screen), with the card
+      // this player has just played next to it.
+      final last = c.lastMove;
+      final move = last != null && last.seat == seat && moveCardWidth > 0 ? last : null;
+      final cardH = moveCardWidth * TableLayout.cardRatio;
+      final width = 180.0 + (move != null ? moveCardWidth + 8 : 0.0);
+      final height = move != null ? max(34.0, cardH) : 34.0;
       return Positioned(
         left: max(0.0, rect.left - width - 8),
         width: width,
-        top: rect.center.dy - 17,
-        child: IgnorePointer(child: Align(alignment: Alignment.centerRight, child: tag)),
+        top: rect.center.dy - height / 2,
+        height: height,
+        child: IgnorePointer(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              if (move != null) ...<Widget>[
+                SizedBox(width: moveCardWidth, height: cardH, child: _moveCard(move)),
+                const SizedBox(width: 8),
+              ],
+              Flexible(child: tag),
+            ],
+          ),
+        ),
       );
     }
     const width = 120.0;
