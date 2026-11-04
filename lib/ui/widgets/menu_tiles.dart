@@ -12,7 +12,7 @@ class TileColors {
 
   static const List<Color> green = <Color>[Color(0xFF2E9A78), Color(0xFF0F4B45)];
   static const List<Color> blue = <Color>[Color(0xFF3E7BD8), Color(0xFF173B82)];
-  static const List<Color> gold = <Color>[Color(0xFFF2C14E), Color(0xFFB9821E)];
+  static const List<Color> gold = <Color>[Color(0xFFE6B54A), Color(0xFFB8862B)];
   static const List<Color> purple = <Color>[Color(0xFF7B5CD0), Color(0xFF34207A)];
   static const List<Color> teal = <Color>[Color(0xFF2BB1B1), Color(0xFF0E5560)];
   static const List<Color> red = <Color>[Color(0xFFD0613E), Color(0xFF7A2A1A)];

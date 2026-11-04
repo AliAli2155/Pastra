@@ -9,18 +9,18 @@ List<Color> frameColors(AvatarFrame f) => switch (f) {
       AvatarFrame.none => const <Color>[Color(0x33FFFFFF), Color(0x33FFFFFF)],
       AvatarFrame.bronze => const <Color>[Color(0xFFE3A869), Color(0xFF8C5523), Color(0xFFCD7F32)],
       AvatarFrame.silver => const <Color>[Color(0xFFFFFFFF), Color(0xFF9EA4AA), Color(0xFFE0E3E6)],
-      AvatarFrame.gold => const <Color>[Color(0xFFFFE9A6), Color(0xFFC9A227), Color(0xFFF2C14E)],
+      AvatarFrame.gold => const <Color>[Color(0xFFFFE9A6), Color(0xFFC9A227), Color(0xFFE6B54A)],
       AvatarFrame.jade => const <Color>[Color(0xFFA8F0CC), Color(0xFF1B8A5A), Color(0xFF5BD69A)],
       AvatarFrame.ruby => const <Color>[Color(0xFFFF8FA0), Color(0xFFA30D2A), Color(0xFFE5304F)],
       AvatarFrame.sapphire => const <Color>[Color(0xFF9CC4FF), Color(0xFF1A44A6), Color(0xFF4C7FE6)],
       AvatarFrame.diamond => const <Color>[Color(0xFFFFFFFF), Color(0xFF7FD8F0), Color(0xFFE0FBFF), Color(0xFF9BE3F5)],
       AvatarFrame.legend => const <Color>[
-          Color(0xFFF2C14E),
+          Color(0xFFE6B54A),
           Color(0xFFE5304F),
           Color(0xFF9B4DE0),
           Color(0xFF4C7FE6),
           Color(0xFF5BD69A),
-          Color(0xFFF2C14E),
+          Color(0xFFE6B54A),
         ],
     };
 

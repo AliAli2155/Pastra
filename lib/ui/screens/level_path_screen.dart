@@ -386,7 +386,7 @@ class _Node extends StatelessWidget {
         gradient: reached
             ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: <Color>[Color(0xFFFFE08A), Color(0xFFD9A21E)])
             : null,
-        color: reached ? null : const Color(0xFF14295A),
+        color: reached ? null : const Color(0xFF23272E),
         border: Border.all(color: here ? Colors.white : (reached ? const Color(0xFFFFE9A6) : Colors.white24), width: here ? 3 : 1.5),
         boxShadow: here ? <BoxShadow>[BoxShadow(color: PastraColors.gold.withValues(alpha: 0.7), blurRadius: 16)] : null,
       ),
@@ -512,7 +512,7 @@ class _RewardCard extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: reached
-              ? <Color>[const Color(0xFF1A3F80).withValues(alpha: 0.95), Colors.black.withValues(alpha: 0.55)]
+              ? <Color>[const Color(0xFF2A2E36).withValues(alpha: 0.95), Colors.black.withValues(alpha: 0.55)]
               : <Color>[Colors.black.withValues(alpha: 0.35), Colors.black.withValues(alpha: 0.5)],
         ),
         border: Border.all(
