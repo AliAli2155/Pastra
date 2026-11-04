@@ -238,8 +238,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                SizedBox(
-                                  width: box.maxWidth >= 1000 ? 340 : 290,
+                                // Two equal columns.
+                                Expanded(
                                   child: SingleChildScrollView(
                                     child: Column(children: <Widget>[const _MyCodeCard(), requests]),
                                   ),

@@ -99,12 +99,13 @@ class _TournamentScreenState extends State<TournamentScreen> {
       ),
     );
     final panel = _statusPanel(s);
-    final board = SectionPanel(
-      title: s.tournament,
-      icon: Icons.account_tree_rounded,
-      accent: PastraColors.teal,
-      child: bracket,
-    );
+    Widget board({required bool expand}) => SectionPanel(
+          title: s.tournament,
+          icon: Icons.account_tree_rounded,
+          accent: PastraColors.teal,
+          expand: expand,
+          child: Center(child: bracket),
+        );
     return Scaffold(
       appBar: GameAppBar(icon: Icons.emoji_events_rounded, title: Text(s.tournament)),
       body: Felt(
@@ -123,7 +124,8 @@ class _TournamentScreenState extends State<TournamentScreen> {
                     children: <Widget>[
                       SizedBox(width: box.maxWidth >= 1000 ? 360 : 300, child: panel),
                       const SizedBox(width: 16),
-                      Expanded(child: Center(child: SingleChildScrollView(child: board))),
+                      // As high as the match card: both end on the same line.
+                      Expanded(child: board(expand: true)),
                     ],
                   ),
                 );
@@ -132,7 +134,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[panel, const SizedBox(height: 12), board],
+                  children: <Widget>[panel, const SizedBox(height: 12), board(expand: false)],
                 ),
               );
             },

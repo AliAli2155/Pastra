@@ -660,7 +660,6 @@ class _OnlineScreenState extends State<OnlineScreen> {
       builder: (context, box) {
         final compact = box.maxHeight < 420;
         final gap = compact ? 10.0 : 14.0;
-        final tiles = _moreTiles(t, height: compact ? 62 : 74);
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1120),
@@ -669,29 +668,37 @@ class _OnlineScreenState extends State<OnlineScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Expanded(flex: 9, child: _hero(t, settings, fill: true)),
+                  Expanded(child: _hero(t, settings, fill: true)),
                   SizedBox(width: gap),
                   Expanded(
-                    flex: 11,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          _createPanel(t, s),
-                          SizedBox(height: gap),
-                          _joinPanel(t),
-                          if (error != null) error,
-                          SizedBox(height: gap),
-                          Row(
-                            children: <Widget>[
-                              for (var i = 0; i < tiles.length; i++) ...<Widget>[
-                                if (i > 0) SizedBox(width: gap),
-                                Expanded(child: tiles[i]),
-                              ],
+                    // The tiles take what is left, so both columns end on the
+                    // same line; a very low window scrolls instead.
+                    child: LayoutBuilder(
+                      builder: (context, side) {
+                        final fill = side.maxHeight >= 380;
+                        final tileRow = Row(
+                          crossAxisAlignment: fill ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+                          children: <Widget>[
+                            for (final (i, tile) in _moreTiles(t, height: fill ? double.infinity : 74).indexed) ...<Widget>[
+                              if (i > 0) SizedBox(width: gap),
+                              Expanded(child: tile),
                             ],
-                          ),
-                        ],
-                      ),
+                          ],
+                        );
+                        final column = Column(
+                          mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            _createPanel(t, s),
+                            SizedBox(height: gap),
+                            _joinPanel(t),
+                            if (error != null) error,
+                            SizedBox(height: gap),
+                            if (fill) Expanded(child: tileRow) else tileRow,
+                          ],
+                        );
+                        return fill ? column : SingleChildScrollView(child: column);
+                      },
                     ),
                   ),
                 ],

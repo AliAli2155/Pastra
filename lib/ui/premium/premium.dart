@@ -496,23 +496,36 @@ class LobbyTile extends StatelessWidget {
       decoration: glassDecoration(radius: 14),
       child: SizedBox(
         height: height,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(icon, color: PastraColors.text, size: 21),
-            const SizedBox(height: 3),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: const TextStyle(color: Color(0xFFC9D0D8), fontSize: 12, fontWeight: FontWeight.w600),
+        // A tall tile (filling a column) gets a bigger icon and label.
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final big = box.maxHeight.isFinite && box.maxHeight > 110;
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                if (big)
+                  IconSquare(icon: icon, color: PastraColors.gold, size: 52)
+                else
+                  Icon(icon, color: PastraColors.text, size: 21),
+                SizedBox(height: big ? 10 : 3),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: big ? PastraColors.text : const Color(0xFFC9D0D8),
+                        fontSize: big ? 15 : 12,
+                        fontWeight: big ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -748,10 +761,10 @@ class TabBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final wide = TabScope.wideOf(context);
     return ListView(
-      padding: EdgeInsets.fromLTRB(wide ? 8 : 12, wide ? 16 : 8, wide ? 20 : 12, 28),
+      padding: EdgeInsets.fromLTRB(16, wide ? 16 : 8, 16, 28),
       children: <Widget>[
         Align(
-          alignment: AlignmentDirectional.topStart,
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Column(
@@ -782,6 +795,7 @@ class SectionPanel extends StatelessWidget {
     this.trailing,
     this.padding = const EdgeInsets.fromLTRB(16, 14, 16, 16),
     this.highlight = false,
+    this.expand = false,
   });
 
   final Widget child;
@@ -792,6 +806,10 @@ class SectionPanel extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool highlight;
 
+  /// Fill the height it is given (the child gets what is left under the
+  /// title).
+  final bool expand;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -801,6 +819,7 @@ class SectionPanel extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: Column(
+          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             if (title != null) ...<Widget>[
@@ -823,7 +842,7 @@ class SectionPanel extends StatelessWidget {
               ),
               const SizedBox(height: 14),
             ],
-            child,
+            if (expand) Expanded(child: child) else child,
           ],
         ),
       ),
@@ -895,6 +914,8 @@ class ResponsiveGrid extends StatelessWidget {
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
+          // A last, shorter row sits in the middle.
+          alignment: WrapAlignment.center,
           children: <Widget>[for (final c in children) SizedBox(width: itemWidth, child: c)],
         );
       },

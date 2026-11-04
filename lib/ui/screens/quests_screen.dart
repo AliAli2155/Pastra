@@ -158,19 +158,34 @@ class _QuestsScreenState extends State<QuestsScreen> {
                                   children: <Widget>[
                                     SizedBox(width: min(280.0, box.maxWidth * 0.3), child: chest(tall: true)),
                                     const SizedBox(width: 14),
+                                    // The three quests share the chest's height when
+                                    // there is room for it; a low window scrolls.
                                     Expanded(
-                                      child: SingleChildScrollView(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                                          children: <Widget>[
-                                            for (final q in quests)
-                                              Padding(
-                                                padding: const EdgeInsets.only(bottom: 10),
-                                                child: card(q, tall: false),
-                                              ),
-                                            hint,
-                                          ],
-                                        ),
+                                      child: LayoutBuilder(
+                                        builder: (context, side) {
+                                          final fill = side.maxHeight >= quests.length * 120 + 24;
+                                          final column = Column(
+                                            mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: <Widget>[
+                                              for (final q in quests)
+                                                if (fill)
+                                                  Expanded(
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.only(bottom: 10),
+                                                      child: card(q, tall: false),
+                                                    ),
+                                                  )
+                                                else
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(bottom: 10),
+                                                    child: card(q, tall: false),
+                                                  ),
+                                              hint,
+                                            ],
+                                          );
+                                          return fill ? column : SingleChildScrollView(child: column);
+                                        },
                                       ),
                                     ),
                                   ],

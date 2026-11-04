@@ -136,7 +136,7 @@ class _CupHubScreenState extends State<CupHubScreen> {
           child: LayoutBuilder(
             builder: (context, box) {
               final wide = box.maxWidth >= 640;
-              final h = wide && box.maxHeight < 420 ? 64.0 : 80.0;
+              final h = wide ? double.infinity : 80.0;
               final rows = <Widget>[
                 _row(t, CupType.classic, t.cupClassicHint, PastraColors.gold, Icons.emoji_events_rounded, height: h),
                 _row(t, CupType.team, t.cupTeamHint, PastraColors.teal, Icons.groups_rounded, height: h),
@@ -159,20 +159,18 @@ class _CupHubScreenState extends State<CupHubScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          Expanded(flex: 9, child: _hero(t, fill: true)),
+                          Expanded(child: _hero(t, fill: true)),
                           const SizedBox(width: 16),
+                          // The three rows share the hero's height.
                           Expanded(
-                            flex: 11,
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: <Widget>[
-                                  for (var i = 0; i < rows.length; i++) ...<Widget>[
-                                    if (i > 0) const SizedBox(height: 12),
-                                    rows[i],
-                                  ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                for (var i = 0; i < rows.length; i++) ...<Widget>[
+                                  if (i > 0) const SizedBox(height: 12),
+                                  Expanded(child: rows[i]),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
                         ],

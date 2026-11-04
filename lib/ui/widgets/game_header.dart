@@ -101,47 +101,46 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
             height: height,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: <Widget>[
-                  if (canPop) ...<Widget>[
-                    const _RoundBack(),
-                    const SizedBox(width: 12),
-                  ],
-                  if (icon != null) ...<Widget>[
-                    Icon(icon, color: PastraColors.gold, size: 24),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: AlignmentDirectional.centerStart,
-                        child: DefaultTextStyle.merge(
-                          style: const TextStyle(
-                            color: PastraColors.text,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w800,
+              // The title in the middle of the bar, the back button on the
+              // left and the screen's buttons on the right.
+              child: NavigationToolbar(
+                middleSpacing: 12,
+                leading: canPop ? const _RoundBack() : null,
+                middle: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (icon != null) ...<Widget>[
+                        Icon(icon, color: PastraColors.gold, size: 24),
+                        const SizedBox(width: 8),
+                      ],
+                      DefaultTextStyle.merge(
+                        style: const TextStyle(
+                          color: PastraColors.text,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        child: title,
+                      ),
+                    ],
+                  ),
+                ),
+                trailing: actions.isEmpty
+                    ? null
+                    // The buttons keep their size (up to 45% of the bar); the
+                    // title gets smaller first.
+                    : ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.45),
+                        child: IconTheme.merge(
+                          data: const IconThemeData(color: PastraColors.text, size: 24),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[for (final a in actions) Flexible(child: a)],
                           ),
-                          maxLines: 1,
-                          child: title,
                         ),
                       ),
-                    ),
-                  ),
-                  if (actions.isNotEmpty) ...<Widget>[
-                    const SizedBox(width: 8),
-                    // The buttons keep their size (up to 60% of the bar);
-                    // the title gets smaller first.
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.6),
-                      child: IconTheme.merge(
-                        data: const IconThemeData(color: PastraColors.text, size: 24),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[for (final a in actions) Flexible(child: a)]),
-                      ),
-                    ),
-                  ],
-                ],
               ),
             ),
           ),

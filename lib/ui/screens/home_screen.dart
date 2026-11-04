@@ -214,11 +214,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Expanded(flex: 11, child: hero),
+                      Expanded(child: hero),
                       SizedBox(width: compact ? 12 : 22),
+                      // The menu fills the hero's height (both columns end on
+                      // the same line); a very low window scrolls instead.
                       Expanded(
-                        flex: 9,
-                        child: SingleChildScrollView(child: menu),
+                        child: LayoutBuilder(
+                          builder: (context, box) => box.maxHeight >= (compact ? 250 : 320)
+                              ? _SideMenu(
+                                  compact: compact,
+                                  fill: true,
+                                  tiles: tiles,
+                                  onOnline: () => _open(const OnlineScreen()),
+                                  onTournament: () => _open(const TournamentScreen()),
+                                  onQuests: () => _open(const QuestsScreen()),
+                                )
+                              : SingleChildScrollView(child: menu),
+                        ),
                       ),
                     ],
                   ),
@@ -628,12 +640,16 @@ class _SideMenu extends StatelessWidget {
   const _SideMenu({
     required this.compact,
     required this.tiles,
+    this.fill = false,
     required this.onOnline,
     required this.onTournament,
     required this.onQuests,
   });
 
   final bool compact;
+
+  /// Fill the height it is given: the rows and the tiles share it equally.
+  final bool fill;
   final List<_Tile> tiles;
   final VoidCallback onOnline;
   final VoidCallback onTournament;
@@ -645,12 +661,9 @@ class _SideMenu extends StatelessWidget {
     final settings = SettingsScope.of(context);
     final p = ProgressStrings(settings.language);
     final done = settings.quests.where((q) => q.claimed).length;
-    final rowHeight = compact ? 60.0 : 76.0;
+    final rowHeight = fill ? double.infinity : (compact ? 60.0 : 76.0);
     final gap = compact ? 8.0 : 12.0;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
+    final rows = <Widget>[
         ModeRow(
           icon: Icons.public_rounded,
           accent: PastraColors.teal,
@@ -659,7 +672,6 @@ class _SideMenu extends StatelessWidget {
           height: rowHeight,
           onTap: onOnline,
         ),
-        SizedBox(height: gap),
         ModeRow(
           icon: Icons.emoji_events_rounded,
           accent: PastraColors.gold,
@@ -668,7 +680,6 @@ class _SideMenu extends StatelessWidget {
           height: rowHeight,
           onTap: onTournament,
         ),
-        SizedBox(height: gap),
         ModeRow(
           icon: Icons.redeem_rounded,
           accent: PastraColors.coral,
@@ -678,8 +689,8 @@ class _SideMenu extends StatelessWidget {
           height: rowHeight,
           onTap: onQuests,
         ),
-        SizedBox(height: gap),
         Row(
+          crossAxisAlignment: fill ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
           children: <Widget>[
             for (var i = 0; i < tiles.length; i++) ...<Widget>[
               if (i > 0) const SizedBox(width: 8),
@@ -688,12 +699,21 @@ class _SideMenu extends StatelessWidget {
                   icon: tiles[i].icon,
                   label: tiles[i].label,
                   onTap: tiles[i].onTap,
-                  height: compact ? 56 : 64,
+                  height: fill ? double.infinity : (compact ? 56 : 64),
                 ),
               ),
             ],
           ],
         ),
+    ];
+    return Column(
+      mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (var i = 0; i < rows.length; i++) ...<Widget>[
+          if (i > 0) SizedBox(height: gap),
+          if (fill) Expanded(child: rows[i]) else rows[i],
+        ],
       ],
     );
   }
