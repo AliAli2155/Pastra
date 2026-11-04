@@ -105,7 +105,9 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
               // left and the screen's buttons on the right.
               child: NavigationToolbar(
                 middleSpacing: 12,
-                leading: canPop ? const _RoundBack() : null,
+                // The toolbar stretches its ends to the full height: centred,
+                // the buttons keep their own size.
+                leading: canPop ? const Center(widthFactor: 1, child: _RoundBack()) : null,
                 middle: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
@@ -131,7 +133,9 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ? null
                     // The buttons keep their size (up to 45% of the bar); the
                     // title gets smaller first.
-                    : ConstrainedBox(
+                    : Center(
+                        widthFactor: 1,
+                        child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.45),
                         child: IconTheme.merge(
                           data: const IconThemeData(color: PastraColors.text, size: 24),
@@ -140,6 +144,7 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
                             children: <Widget>[for (final a in actions) Flexible(child: a)],
                           ),
                         ),
+                      ),
                       ),
               ),
             ),
