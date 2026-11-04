@@ -856,7 +856,18 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
     );
-    final width = side == SeatSide.top ? 180.0 : 120.0;
+    if (side == SeatSide.top) {
+      // Beside the hand across the table, on its left: under it the plate
+      // would cover the cards in the middle on a low screen.
+      const width = 180.0;
+      return Positioned(
+        left: max(0.0, rect.left - width - 8),
+        width: width,
+        top: rect.center.dy - 17,
+        child: IgnorePointer(child: Align(alignment: Alignment.centerRight, child: tag)),
+      );
+    }
+    const width = 120.0;
     final left = min(max(rect.center.dx - width / 2, 0.0), max(0.0, area.width - width));
     return Positioned(
       left: left,

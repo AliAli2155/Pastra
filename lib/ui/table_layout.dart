@@ -155,8 +155,8 @@ class TableLayout {
     final sh = min(90.0 * scale, max(36.0, h * 0.17));
     final sw = sh / cardRatio;
     const topY = 4.0;
-    // Room for the name plate under the top hand (avatar + padding).
-    const labelH = 30.0;
+    // A little room under the top hand (its name plate sits beside it).
+    const labelH = 16.0;
     final topRowBottom = topY + sh + labelH;
     // Side hands lie sideways (card tops point to the middle), so they are sh wide.
     final sideW = teamGame ? sh + 10 : 0.0;
