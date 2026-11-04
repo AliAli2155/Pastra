@@ -125,19 +125,26 @@ class _QuestsScreenState extends State<QuestsScreen> {
                     child: LayoutBuilder(
                       builder: (context, box) {
                         final wide = box.maxWidth >= 640 && box.maxWidth > box.maxHeight * 1.15;
+                        final hint = Text(
+                          p.questsHint,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: PastraColors.muted, fontSize: 12),
+                        );
                         if (!wide) {
+                          // Upright: the chest on top, the three quests under it.
                           return ListView(
                             padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
                             children: <Widget>[
-                              for (final q in quests) Padding(padding: const EdgeInsets.only(bottom: 10), child: card(q, tall: false)),
                               chest(tall: false),
-                              const SizedBox(height: 10),
-                              Text(p.questsHint, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                              const SizedBox(height: 12),
+                              for (final q in quests) Padding(padding: const EdgeInsets.only(bottom: 10), child: card(q, tall: false)),
+                              hint,
                             ],
                           );
                         }
-                        // Sideways: never squeeze the cards below 250 px,
-                        // scroll instead (very small windows).
+                        // Sideways: the chest as a tall panel on the left, the
+                        // quests as rows on the right (they scroll if the
+                        // window is very low).
                         final h = max(box.maxHeight, 250.0);
                         final content = SizedBox(
                           height: h,
@@ -145,15 +152,27 @@ class _QuestsScreenState extends State<QuestsScreen> {
                             padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
                             child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 420),
+                                constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 460),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: <Widget>[
-                                    for (final q in quests) ...<Widget>[
-                                      Expanded(child: card(q, tall: true)),
-                                      const SizedBox(width: 12),
-                                    ],
-                                    SizedBox(width: min(230.0, box.maxWidth * 0.24), child: chest(tall: true)),
+                                    SizedBox(width: min(280.0, box.maxWidth * 0.3), child: chest(tall: true)),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: <Widget>[
+                                            for (final q in quests)
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 10),
+                                                child: card(q, tall: false),
+                                              ),
+                                            hint,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -351,7 +370,7 @@ class _QuestCard extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: quest.claimed ? Colors.white60 : Colors.white,
+        color: quest.claimed ? PastraColors.muted : PastraColors.text,
         fontSize: tall ? 16 : 15,
         fontWeight: FontWeight.w800,
         height: 1.15,
@@ -379,9 +398,9 @@ class _QuestCard extends StatelessWidget {
           : FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: PastraColors.gold,
-                foregroundColor: Colors.black,
-                disabledBackgroundColor: Colors.white10,
-                disabledForegroundColor: Colors.white38,
+                foregroundColor: PastraColors.goldInk,
+                disabledBackgroundColor: PastraColors.glass,
+                disabledForegroundColor: PastraColors.muted,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
               ),
@@ -459,11 +478,11 @@ class _QuestCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
             colors: quest.claimed
-                ? <Color>[Colors.black.withValues(alpha: 0.28), Colors.black.withValues(alpha: 0.38)]
-                : <Color>[Color.lerp(tier, Colors.black, 0.72)!.withValues(alpha: 0.92), Colors.black.withValues(alpha: 0.5)],
+                ? const <Color>[Color(0xFF16181C), Color(0xFF16181C)]
+                : <Color>[Color.lerp(tier, PastraColors.nightMid, 0.86)!, PastraColors.nightMid],
           ),
           border: Border.all(
             color: ready ? PastraColors.gold : tier.withValues(alpha: quest.claimed ? 0.2 : 0.55),
@@ -615,7 +634,7 @@ class _ChestPanel extends StatelessWidget {
       textAlign: tall ? TextAlign.center : TextAlign.start,
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: ready ? Colors.black87 : Colors.white60, fontSize: 12),
+      style: TextStyle(color: ready ? Colors.black87 : PastraColors.text2, fontSize: 12),
     );
     final reward = _RewardPill(
       xp: Quests.allBonusXp,
@@ -694,7 +713,7 @@ class _ChestPanel extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: ready
                 ? const <Color>[Color(0xFFFFE08A), Color(0xFFD9A21E)]
-                : <Color>[const Color(0xFF3A2A10).withValues(alpha: 0.85), Colors.black.withValues(alpha: 0.5)],
+                : const <Color>[Color(0xFF2B2416), PastraColors.nightMid],
           ),
           border: Border.all(color: PastraColors.gold.withValues(alpha: ready ? 1 : 0.45), width: ready ? 2 : 1.4),
         ),

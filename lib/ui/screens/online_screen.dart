@@ -421,31 +421,38 @@ class _OnlineScreenState extends State<OnlineScreen> {
         borderRadius: r,
         child: Stack(
           children: <Widget>[
-            // Two faint gold rings in the corner (a table seen from above).
+            // Two faint gold rings with a "Π" (a table seen from above).
             Positioned(
-              right: -70,
-              top: -50,
+              right: -80,
+              bottom: fill ? 70 : -40,
               child: IgnorePointer(
                 child: Container(
-                  width: 250,
-                  height: 250,
+                  width: 280,
+                  height: 280,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16), width: 2),
                   ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: -14,
-              top: 4,
-              child: IgnorePointer(
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: PastraColors.gold.withValues(alpha: 0.12), width: 2),
+                  child: Center(
+                    child: Container(
+                      width: 180,
+                      height: 180,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.12), width: 2),
+                      ),
+                      child: Text(
+                        'Π',
+                        style: TextStyle(
+                          fontFamily: 'Manrope',
+                          fontSize: 90,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                          color: PastraColors.gold.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -456,6 +463,28 @@ class _OnlineScreenState extends State<OnlineScreen> {
       ),
     );
   }
+
+  /// Cups, open tables and the leaderboard as small tiles (wide screens).
+  List<Widget> _moreTiles(OnlineStrings t, {required double height}) => <Widget>[
+        LobbyTile(
+          icon: Icons.emoji_events_rounded,
+          label: t.cup,
+          height: height,
+          onTap: _busy ? null : () => _openCup(t),
+        ),
+        LobbyTile(
+          icon: Icons.table_restaurant_rounded,
+          label: t.openTables,
+          height: height,
+          onTap: _busy ? null : _openTables,
+        ),
+        LobbyTile(
+          icon: Icons.leaderboard_rounded,
+          label: t.leaderboard,
+          height: height,
+          onTap: _busy ? null : _openLeaderboard,
+        ),
+      ];
 
   /// Cups, open tables and the leaderboard: rows like the lobby's.
   List<Widget> _moreRows(OnlineStrings t, {required bool compact}) {
@@ -631,7 +660,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       builder: (context, box) {
         final compact = box.maxHeight < 420;
         final gap = compact ? 10.0 : 14.0;
-        final rows = _moreRows(t, compact: compact);
+        final tiles = _moreTiles(t, height: compact ? 62 : 74);
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1120),
@@ -648,16 +677,19 @@ class _OnlineScreenState extends State<OnlineScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
+                          _createPanel(t, s),
+                          SizedBox(height: gap),
+                          _joinPanel(t),
+                          if (error != null) error,
+                          SizedBox(height: gap),
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Expanded(child: _createPanel(t, s)),
-                              SizedBox(width: gap),
-                              Expanded(child: _joinPanel(t)),
+                              for (var i = 0; i < tiles.length; i++) ...<Widget>[
+                                if (i > 0) SizedBox(width: gap),
+                                Expanded(child: tiles[i]),
+                              ],
                             ],
                           ),
-                          if (error != null) error,
-                          for (final r in rows) ...<Widget>[SizedBox(height: gap), r],
                         ],
                       ),
                     ),

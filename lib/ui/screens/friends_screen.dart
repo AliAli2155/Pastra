@@ -13,6 +13,7 @@ import '../../online/invites.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../../online/social_service.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/game_header.dart';
@@ -158,16 +159,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
     final favs = sorted(friends.where((f) => f.favorite));
     final recent = sorted(friends.where((f) => !f.favorite));
-    Widget section(String title, IconData icon) => Padding(
-          padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-          child: Row(
-            children: <Widget>[
-              Icon(icon, color: PastraColors.gold, size: 18),
-              const SizedBox(width: 6),
-              Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 15, fontWeight: FontWeight.w900)),
-            ],
-          ),
-        );
     Widget row(Friend f) => _FriendRow(
           friend: f,
           busy: _busy,
@@ -175,6 +166,48 @@ class _FriendsScreenState extends State<FriendsScreen> {
           onInvite: () => _invite(f),
           onRemove: () => settings.removeFriend(f.uid),
         );
+    Widget group(String title, IconData icon, Color accent, List<Friend> list) => SectionPanel(
+          title: title,
+          icon: icon,
+          accent: accent,
+          trailing: Text('${list.length}', style: PremiumText.label),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[for (final f in list) row(f)]),
+        );
+    final requests = ValueListenableBuilder<List<PlayerStatus>>(
+      valueListenable: SocialService.instance.requests,
+      builder: (context, list, _) => list.isEmpty
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: SectionPanel(
+                title: t.friendRequests,
+                icon: Icons.person_add_alt_1_rounded,
+                accent: PastraColors.coral,
+                trailing: CountBadge(count: list.length),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[for (final r in list) _RequestRow(request: r)],
+                ),
+              ),
+            ),
+    );
+    final lists = <Widget>[
+      if (friends.isEmpty)
+        SectionPanel(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: <Widget>[
+                const IconSquare(icon: Icons.people_alt_rounded, color: PastraColors.teal, size: 60),
+                const SizedBox(height: 14),
+                Text(t.noFriends, textAlign: TextAlign.center, style: PremiumText.body.copyWith(color: PastraColors.text2)),
+              ],
+            ),
+          ),
+        ),
+      if (favs.isNotEmpty) group(t.favorites, Icons.star_rounded, PastraColors.gold, favs),
+      if (recent.isNotEmpty) group(t.recent, Icons.history_rounded, PastraColors.teal, recent),
+    ];
     return Scaffold(
       body: Felt(
         child: SafeArea(
@@ -188,7 +221,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     icon: Icons.people_alt_rounded,
                     trailing: <Widget>[
                       FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: PastraColors.gold, foregroundColor: Colors.black),
                         onPressed: _busy ? null : _addFriend,
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                         label: Text(t.addFriend, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -196,51 +228,52 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     ],
                   ),
                   Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 640),
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                          children: <Widget>[
-                            const _MyCodeCard(),
-                            ValueListenableBuilder<List<PlayerStatus>>(
-                              valueListenable: SocialService.instance.requests,
-                              builder: (context, list, _) => list.isEmpty
-                                  ? const SizedBox.shrink()
-                                  : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: <Widget>[
-                                        section(t.friendRequests, Icons.person_add_alt_1_rounded),
-                                        for (final r in list) _RequestRow(request: r),
-                                      ],
-                                    ),
-                            ),
-                            if (friends.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  children: <Widget>[
-                                    const Icon(Icons.people_outline_rounded, color: Colors.white38, size: 52),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      t.noFriends,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(color: Colors.white70, fontSize: 15),
-                                    ),
-                                  ],
+                    child: LayoutBuilder(
+                      builder: (context, box) {
+                        // Wide: my code and the requests on the left, the
+                        // friends on the right. Narrow: one column.
+                        if (box.maxWidth >= 720) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                SizedBox(
+                                  width: box.maxWidth >= 1000 ? 340 : 290,
+                                  child: SingleChildScrollView(
+                                    child: Column(children: <Widget>[const _MyCodeCard(), requests]),
+                                  ),
                                 ),
-                              ),
-                            if (favs.isNotEmpty) ...<Widget>[
-                              section(t.favorites, Icons.star_rounded),
-                              for (final f in favs) row(f),
-                            ],
-                            if (recent.isNotEmpty) ...<Widget>[
-                              section(t.recent, Icons.history_rounded),
-                              for (final f in recent) row(f),
-                            ],
-                          ],
-                        ),
-                      ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: ListView(
+                                    padding: const EdgeInsets.only(bottom: 20),
+                                    children: <Widget>[
+                                      for (var i = 0; i < lists.length; i++) ...<Widget>[
+                                        if (i > 0) const SizedBox(height: 14),
+                                        lists[i],
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 640),
+                            child: ListView(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                              children: <Widget>[
+                                const _MyCodeCard(),
+                                requests,
+                                for (final l in lists) ...<Widget>[const SizedBox(height: 14), l],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -276,11 +309,7 @@ class _MyCodeCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(colors: <Color>[Color(0xFF23272E), Color(0xFF181B20)]),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.6)),
-      ),
+      decoration: panelDecoration(radius: 18, highlight: true, shadow: false),
       child: Row(
         children: <Widget>[
           PlayerAvatar(name: name, frame: settings.avatarFrame, size: 46),
@@ -289,12 +318,12 @@ class _MyCodeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(t.friendCode, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                Text(t.friendCode, style: PremiumText.eyebrow.copyWith(letterSpacing: 1.2)),
                 if (handle == null)
                   Text(t.codeWait, style: const TextStyle(color: Colors.white70, fontSize: 14))
                 else
                   _HandleText(name: name, tag: tag!, size: 20),
-                Text(t.friendCodeHint, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                Text(t.friendCodeHint, style: const TextStyle(color: PastraColors.muted, fontSize: 11)),
               ],
             ),
           ),
@@ -424,10 +453,10 @@ class _FriendRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
+        color: PastraColors.glass,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: online ? const Color(0xFF5BD69A).withValues(alpha: 0.7) : (friend.favorite ? PastraColors.gold.withValues(alpha: 0.5) : Colors.white12),
+          color: online ? PastraColors.teal.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -445,7 +474,7 @@ class _FriendRow extends StatelessWidget {
                   height: 14,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: online ? const Color(0xFF3DDC84) : const Color(0xFF6B7280),
+                    color: online ? PastraColors.teal : const Color(0xFF6B7280),
                     border: Border.all(color: const Color(0xFF181B20), width: 2.5),
                   ),
                 ),
@@ -462,7 +491,7 @@ class _FriendRow extends StatelessWidget {
                   line,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: online ? const Color(0xFF5BD69A) : Colors.white54, fontSize: 12, fontWeight: online ? FontWeight.w700 : FontWeight.w400),
+                  style: TextStyle(color: online ? PastraColors.teal : PastraColors.muted, fontSize: 12, fontWeight: online ? FontWeight.w700 : FontWeight.w400),
                 ),
               ],
             ),

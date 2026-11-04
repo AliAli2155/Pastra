@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../l10n/shop_strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
@@ -32,65 +33,80 @@ class StoreScreen extends StatelessWidget {
         child: SafeArea(
           top: false,
           bottom: false,
-          child: LayoutBuilder(
-            builder: (context, box) {
-              final wide = box.maxWidth >= 760;
-              final daily = MenuPanel(title: shop.dailyBonus, child: const DailyBonusCard());
-              const free = _FreeChipsPanel();
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 980),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        if (wide)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Expanded(flex: 3, child: daily),
-                              const SizedBox(width: 14),
-                              const Expanded(flex: 2, child: free),
-                            ],
-                          )
-                        else ...<Widget>[
-                          daily,
-                          const SizedBox(height: 14),
-                          free,
-                        ],
-                        const SizedBox(height: 14),
-                        MenuPanel(title: shop.cosmetics, child: const _Cosmetics()),
-                        const SizedBox(height: 14),
-                        MenuPanel(title: shop.exchange, child: const _Exchanges()),
-                        const SizedBox(height: 14),
-                        MenuPanel(
-                          title: shop.chipPacks,
-                          child: _Packs(packs: Economy.chipPacks, shop: shop),
-                        ),
-                        const SizedBox(height: 14),
-                        MenuPanel(
-                          title: shop.diamondPacks,
-                          child: _Packs(packs: Economy.diamondPacks, shop: shop),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          shop.howToEarn,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          shop.noCash,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white54, fontSize: 12),
-                        ),
-                      ],
+          // Sections on the left (pills at the top on a narrow screen).
+          child: SideTabs(
+            tabs: <PageTab>[
+              PageTab(
+                icon: Icons.redeem_rounded,
+                label: shop.dailyBonus,
+                builder: (_) => TabBody(
+                  children: <Widget>[
+                    SectionPanel(
+                      title: shop.dailyBonus,
+                      icon: Icons.redeem_rounded,
+                      accent: PastraColors.coral,
+                      child: const DailyBonusCard(),
                     ),
-                  ),
+                    const _FreeChipsPanel(),
+                    Text(shop.howToEarn, textAlign: TextAlign.center, style: PremiumText.secondary.copyWith(fontSize: 14)),
+                    Text(shop.noCash, textAlign: TextAlign.center, style: const TextStyle(color: PastraColors.muted, fontSize: 12)),
+                  ],
                 ),
-              );
-            },
+              ),
+              PageTab(
+                icon: Icons.style_rounded,
+                label: shop.cosmetics,
+                builder: (_) => TabBody(
+                  maxWidth: 980,
+                  children: <Widget>[
+                    SectionPanel(title: shop.cosmetics, icon: Icons.style_rounded, child: const _Cosmetics()),
+                  ],
+                ),
+              ),
+              PageTab(
+                icon: Icons.swap_horiz_rounded,
+                label: shop.exchange,
+                builder: (_) => TabBody(
+                  children: <Widget>[
+                    SectionPanel(
+                      title: shop.exchange,
+                      icon: Icons.swap_horiz_rounded,
+                      accent: PastraColors.teal,
+                      child: const _Exchanges(),
+                    ),
+                  ],
+                ),
+              ),
+              PageTab(
+                icon: Icons.toll_rounded,
+                label: shop.chipPacks,
+                builder: (_) => TabBody(
+                  maxWidth: 980,
+                  children: <Widget>[
+                    SectionPanel(
+                      title: shop.chipPacks,
+                      icon: Icons.toll_rounded,
+                      child: _Packs(packs: Economy.chipPacks, shop: shop),
+                    ),
+                  ],
+                ),
+              ),
+              PageTab(
+                icon: Icons.diamond_rounded,
+                label: shop.diamondPacks,
+                builder: (_) => TabBody(
+                  maxWidth: 980,
+                  children: <Widget>[
+                    SectionPanel(
+                      title: shop.diamondPacks,
+                      icon: Icons.diamond_rounded,
+                      accent: PastraColors.teal,
+                      child: _Packs(packs: Economy.diamondPacks, shop: shop),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -136,8 +152,9 @@ class _FreeChipsPanelState extends State<_FreeChipsPanel> {
     final now = DateTime.now();
     final ready = !now.isBefore(settings.freeChipsAt);
     final amount = Economy.freeChipsFor(settings.chips);
-    return MenuPanel(
+    return SectionPanel(
       title: shop.freeChips,
+      icon: Icons.toll_rounded,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
