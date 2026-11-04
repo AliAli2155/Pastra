@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import '../../engine/pastra_ai.dart';
@@ -8,6 +6,7 @@ import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/social_strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import 'progress_views.dart';
@@ -60,53 +59,50 @@ class StatsScreen extends StatelessWidget {
     final settings = SettingsScope.of(context);
     final unlocked = settings.achievements;
     final empty = st.games == 0 && st.rounds == 0;
-    final statsBody = empty
-        ? Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                s.noStats,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 16),
-              ),
+    final p = ProgressStrings(settings.language);
+
+    Widget statsBody(BuildContext context) {
+      if (empty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const IconSquare(icon: Icons.insights_rounded, color: PastraColors.teal, size: 64),
+                const SizedBox(height: 16),
+                Text(s.noStats, textAlign: TextAlign.center, style: PremiumText.body.copyWith(color: PastraColors.text2)),
+              ],
             ),
-          )
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: Column(
-                  children: <Widget>[
-                    _Highlights(stats: st),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      alignment: WrapAlignment.center,
-                      children: <Widget>[for (final t in tiles) t],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-    final achievementsBody = SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Column(
-            children: <Widget>[
-              Text(
+          ),
+        );
+      }
+      return TabBody(
+        maxWidth: 980,
+        children: <Widget>[
+          _Highlights(stats: st),
+          SectionPanel(
+            title: s.statistics,
+            icon: Icons.bar_chart_rounded,
+            accent: PastraColors.teal,
+            child: ResponsiveGrid(minItemWidth: 190, children: tiles),
+          ),
+        ],
+      );
+    }
+
+    Widget achievementsBody(BuildContext context) => TabBody(
+          maxWidth: 980,
+          children: <Widget>[
+            SectionPanel(
+              title: s.achievements,
+              icon: Icons.military_tech_rounded,
+              trailing: Text(
                 s.achCount(unlocked.length, kAchievements.length),
-                style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800),
+                style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                alignment: WrapAlignment.center,
+              child: ResponsiveGrid(
+                minItemWidth: 260,
                 children: <Widget>[
                   for (final a in kAchievements)
                     _Badge(
@@ -116,42 +112,33 @@ class StatsScreen extends StatelessWidget {
                     ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    final p = ProgressStrings(settings.language);
-    return DefaultTabController(
-      length: 3,
-      initialIndex: initialTab,
-      child: Scaffold(
-        appBar: GameAppBar(
-        icon: Icons.insights_rounded,
-          title: Text(s.statistics),
-          actions: <Widget>[
-            IconButton(
-              tooltip: s.resetStats,
-              onPressed: empty && unlocked.isEmpty ? null : () => _confirmReset(context),
-              icon: const Icon(Icons.delete_outline),
             ),
           ],
-          bottom: TabBar(
-            isScrollable: MediaQuery.sizeOf(context).width < 520,
-            tabAlignment: MediaQuery.sizeOf(context).width < 520 ? TabAlignment.start : null,
-            tabs: <Widget>[
-              Tab(text: s.statistics),
-              Tab(text: s.achievements),
-              Tab(text: p.season),
-            ],
+        );
+
+    return Scaffold(
+      appBar: GameAppBar(
+        icon: Icons.insights_rounded,
+        title: Text(s.statistics),
+        actions: <Widget>[
+          IconButton(
+            tooltip: s.resetStats,
+            onPressed: empty && unlocked.isEmpty ? null : () => _confirmReset(context),
+            icon: const Icon(Icons.delete_outline),
           ),
-        ),
-        body: Felt(
-          child: SafeArea(
-            top: false,
-            bottom: false,
-            child: TabBarView(children: <Widget>[statsBody, achievementsBody, const SeasonView()]),
+        ],
+      ),
+      body: Felt(
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: SideTabs(
+            initial: initialTab,
+            tabs: <PageTab>[
+              PageTab(icon: Icons.insights_rounded, label: s.statistics, builder: statsBody),
+              PageTab(icon: Icons.military_tech_rounded, label: s.achievements, builder: achievementsBody),
+              PageTab(icon: Icons.calendar_month_rounded, label: p.season, builder: (_) => const SeasonView()),
+            ],
           ),
         ),
       ),
@@ -173,28 +160,14 @@ class _Badge extends StatelessWidget {
     final goal = achievement.goal;
     final p = progress;
     return Container(
-      width: 260,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: unlocked ? 0.35 : 0.2),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: unlocked ? PastraColors.gold.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.08),
-        ),
-      ),
+      decoration: unlocked ? glassDecoration(radius: 14, selected: true) : glassDecoration(radius: 14),
       child: Row(
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: unlocked ? PastraColors.gold : Colors.white.withValues(alpha: 0.08),
-            ),
-            child: Icon(
-              unlocked ? achievement.icon : Icons.lock_outline,
-              size: 24,
-              color: unlocked ? Colors.black : Colors.white38,
-            ),
+          IconSquare(
+            icon: unlocked ? achievement.icon : Icons.lock_outline_rounded,
+            color: unlocked ? PastraColors.gold : PastraColors.muted,
+            size: 44,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -205,14 +178,11 @@ class _Badge extends StatelessWidget {
                   s.achTitle(achievement.id),
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: unlocked ? Colors.white : Colors.white70,
+                    fontWeight: FontWeight.w700,
+                    color: unlocked ? PastraColors.goldLight : PastraColors.text,
                   ),
                 ),
-                Text(
-                  s.achDesc(achievement.id),
-                  style: const TextStyle(fontSize: 12, color: Colors.white60),
-                ),
+                Text(s.achDesc(achievement.id), style: PremiumText.secondary.copyWith(fontSize: 12)),
                 if (p != null && goal > 1 && !unlocked) ...<Widget>[
                   const SizedBox(height: 6),
                   ClipRRect(
@@ -221,11 +191,11 @@ class _Badge extends StatelessWidget {
                       value: (p / goal).clamp(0.0, 1.0),
                       minHeight: 6,
                       color: PastraColors.gold,
-                      backgroundColor: Colors.white12,
+                      backgroundColor: const Color(0xFF2E333B),
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('${p.clamp(0, goal)} / $goal', style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                  Text('${p.clamp(0, goal)} / $goal', style: const TextStyle(fontSize: 11, color: PastraColors.muted)),
                 ],
               ],
             ),
@@ -246,31 +216,18 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 200,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: glassDecoration(radius: 14),
       child: Row(
         children: <Widget>[
-          Icon(icon, color: PastraColors.gold, size: 26),
+          IconSquare(icon: icon, color: PastraColors.gold, size: 40),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
-                ),
-                Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
-                ),
+                Text(value, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: PastraColors.text)),
+                Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: PremiumText.secondary.copyWith(fontSize: 12)),
               ],
             ),
           ),
@@ -295,37 +252,37 @@ class _Highlights extends StatelessWidget {
     final p = ProgressStrings(settings.language);
     final favName = stats.favoriteTable;
     final fav = TableTheme.values.where((x) => x.name == favName).firstOrNull;
-    // Four in a row when the phone is held sideways, two when upright.
-    final cardW = ((min(MediaQuery.sizeOf(context).width, 900.0) - 32 - 36) / 4).clamp(140.0, 200.0);
     Widget card({required Widget top, required String value, required String label}) => Container(
-          width: cardW,
-          height: 136,
+          height: 140,
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[Color(0xFF23272E), Color(0xFF181B20)],
-            ),
-            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
-          ),
+          decoration: panelDecoration(radius: 18, highlight: true, shadow: false),
           child: Column(
             children: <Widget>[
               Expanded(child: Center(child: top)),
-              Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
-              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: PastraColors.text, fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: PremiumText.secondary.copyWith(fontSize: 12),
+              ),
             ],
           ),
         );
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(t.highlights, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
+        Text(t.highlights, style: PremiumText.eyebrow),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          alignment: WrapAlignment.center,
+        ResponsiveGrid(
+          minItemWidth: 150,
+          maxColumns: 4,
           children: <Widget>[
             card(
               top: SizedBox(
@@ -343,11 +300,11 @@ class _Highlights extends StatelessWidget {
                         strokeWidth: 7,
                         strokeCap: StrokeCap.round,
                         color: PastraColors.gold,
-                        backgroundColor: Colors.white12,
+                        backgroundColor: const Color(0xFF2E333B),
                       ),
                     ),
                     Center(
-                      child: Text('${stats.winRate}%', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+                      child: Text('${stats.winRate}%', style: const TextStyle(color: PastraColors.text, fontSize: 15, fontWeight: FontWeight.w800)),
                     ),
                   ],
                 ),
@@ -356,7 +313,7 @@ class _Highlights extends StatelessWidget {
               label: s.statWinRate,
             ),
             card(
-              top: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF8A5B), size: 52),
+              top: const Icon(Icons.local_fire_department_rounded, color: PastraColors.coral, size: 52),
               value: '${stats.bestStreak}',
               label: s.statBestStreak,
             ),

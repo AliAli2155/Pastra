@@ -77,6 +77,9 @@ void main() {
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
+    // The languages have their own section.
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Ελληνικά'));
     await tester.pumpAndSettle();
     expect(settings.language, 'el');

@@ -13,6 +13,7 @@ import '../../online/lobby.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
 import '../../online/social_service.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/invite_share.dart';
@@ -362,14 +363,6 @@ class _OnlineScreenState extends State<OnlineScreen> {
     );
   }
 
-  Widget _quickTile(OnlineStrings t) => MenuTile(
-        icon: Icons.bolt_rounded,
-        title: t.quickMatch,
-        subtitle: t.quickMatchHint,
-        colors: TileColors.blue,
-        onTap: _busy ? null : _quickMatch,
-      );
-
   void _openCup(OnlineStrings t) {
     final settings = SettingsScope.read(context);
     settings.playerName = _name.text.trim();
@@ -377,28 +370,121 @@ class _OnlineScreenState extends State<OnlineScreen> {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CupHubScreen(name: name)));
   }
 
-  Widget _cupTile(OnlineStrings t) => MenuTile(
+  /// The big emerald card: quick match against a player of your level (and
+  /// the salon to play in, when chips are on).
+  Widget _hero(OnlineStrings t, AppSettings settings, {required bool fill}) {
+    final r = BorderRadius.circular(22);
+    final content = Padding(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(t.online, style: PremiumText.eyebrow),
+          const SizedBox(height: 6),
+          Text(t.quickMatch, style: PremiumText.title.copyWith(fontSize: 30)),
+          const SizedBox(height: 6),
+          Text(
+            t.quickMatchHint,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          if (Economy.enabled) ...<Widget>[
+            const SizedBox(height: 14),
+            _salonBar(settings),
+          ],
+          if (fill) const Spacer() else const SizedBox(height: 18),
+          GoldButton(
+            label: t.quickMatch,
+            icon: Icons.bolt_rounded,
+            onPressed: _busy ? null : _quickMatch,
+          ),
+        ],
+      ),
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: r,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF0F6A51), Color(0xFF0A4637), Color(0xFF072C23)],
+          stops: <double>[0.0, 0.6, 1.0],
+        ),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 24, offset: const Offset(0, 10)),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: r,
+        child: Stack(
+          children: <Widget>[
+            // Two faint gold rings in the corner (a table seen from above).
+            Positioned(
+              right: -70,
+              top: -50,
+              child: IgnorePointer(
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16), width: 2),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: -14,
+              top: 4,
+              child: IgnorePointer(
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: PastraColors.gold.withValues(alpha: 0.12), width: 2),
+                  ),
+                ),
+              ),
+            ),
+            if (fill) Positioned.fill(child: content) else content,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Cups, open tables and the leaderboard: rows like the lobby's.
+  List<Widget> _moreRows(OnlineStrings t, {required bool compact}) {
+    final h = compact ? 60.0 : 68.0;
+    return <Widget>[
+      ModeRow(
         icon: Icons.emoji_events_rounded,
+        accent: PastraColors.gold,
         title: t.cup,
         subtitle: t.cupHint,
-        colors: TileColors.gold,
-        darkText: true,
+        height: h,
         onTap: _busy ? null : () => _openCup(t),
-      );
-
-  Widget _tablesTile(OnlineStrings t) => MenuTile(
+      ),
+      ModeRow(
         icon: Icons.table_restaurant_rounded,
+        accent: PastraColors.teal,
         title: t.openTables,
-        colors: TileColors.teal,
+        height: h,
         onTap: _busy ? null : _openTables,
-      );
-
-  Widget _boardTile(OnlineStrings t) => MenuTile(
+      ),
+      ModeRow(
         icon: Icons.leaderboard_rounded,
+        accent: PastraColors.coral,
         title: t.leaderboard,
-        colors: TileColors.purple,
+        height: h,
         onTap: _busy ? null : _openLeaderboard,
-      );
+      ),
+    ];
+  }
 
   /// Public (listed in the open tables) or private (code only): a switch in
   /// the title row of "Create a room".
@@ -413,12 +499,12 @@ class _OnlineScreenState extends State<OnlineScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(_public ? Icons.public : Icons.lock_outline, size: 18, color: _public ? PastraColors.gold : Colors.white60),
+              Icon(_public ? Icons.public : Icons.lock_outline, size: 18, color: _public ? PastraColors.gold : PastraColors.text2),
               const SizedBox(width: 6),
               Text(
                 _public ? t.publicRoom : t.privateRoom,
                 style: TextStyle(
-                  color: _public ? PastraColors.gold : Colors.white70,
+                  color: _public ? PastraColors.gold : PastraColors.text2,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -440,10 +526,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
     );
   }
 
-  Widget _createPanel(OnlineStrings t, Strings s) => MenuPanel(
+  /// A room of your own: 1 vs 1 or 2 vs 2, public or private, your rules.
+  Widget _createPanel(OnlineStrings t, Strings s) => SectionPanel(
         title: t.createRoom,
+        icon: Icons.add_rounded,
         trailing: _visibilityPill(t),
-        padding: const EdgeInsets.all(12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -451,24 +538,38 @@ class _OnlineScreenState extends State<OnlineScreen> {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: BigButton(icon: Icons.person, label: s.mode1v1, onPressed: _busy ? null : () => _create(2)),
+                  child: GlassButton(
+                    icon: Icons.person_rounded,
+                    label: s.mode1v1,
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    onPressed: _busy ? null : () => _create(2),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: BigButton(icon: Icons.groups, label: s.mode2v2, onPressed: _busy ? null : () => _create(4)),
+                  child: GlassButton(
+                    icon: Icons.groups_rounded,
+                    label: s.mode2v2,
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    onPressed: _busy ? null : () => _create(4),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             // The rules of the room's game (the host's choice).
             RulesButton(enabled: !_busy),
           ],
         ),
       );
 
-  Widget _joinPanel(OnlineStrings t) => MenuPanel(
+  /// A friend's room: the four-digit code.
+  Widget _joinPanel(OnlineStrings t) => SectionPanel(
         title: t.joinRoom,
-        padding: const EdgeInsets.all(12),
+        icon: Icons.vpn_key_rounded,
+        accent: PastraColors.teal,
         child: Row(
           children: <Widget>[
             Expanded(
@@ -478,30 +579,32 @@ class _OnlineScreenState extends State<OnlineScreen> {
                 maxLength: 4,
                 textAlign: TextAlign.center,
                 inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w800),
+                style: const TextStyle(color: PastraColors.text, fontSize: 24, letterSpacing: 10, fontWeight: FontWeight.w800),
                 // A plain hint (not a label): it must not take the big spaced-out
                 // style of the code itself.
                 decoration: InputDecoration(
                   hintText: t.codeHint,
                   hintMaxLines: 1,
-                  hintStyle: const TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 0, fontWeight: FontWeight.w500),
+                  hintStyle: const TextStyle(color: PastraColors.muted, fontSize: 15, letterSpacing: 0, fontWeight: FontWeight.w500),
                   counterText: '',
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Colors.white38),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: PastraColors.gold, width: 2),
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                 ),
                 onSubmitted: (_) => _busy ? null : _join(),
               ),
             ),
             const SizedBox(width: 10),
-            SizedBox(width: 120, child: BigButton(label: t.join, icon: Icons.login_rounded, onPressed: _busy ? null : _join)),
+            SizedBox(
+              width: 116,
+              child: GoldButton(
+                label: t.join,
+                icon: Icons.login_rounded,
+                height: 50,
+                fontSize: 17,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                onPressed: _busy ? null : _join,
+              ),
+            ),
           ],
         ),
       );
@@ -515,76 +618,58 @@ class _OnlineScreenState extends State<OnlineScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFFFFB4A9), fontSize: 15, fontWeight: FontWeight.w600),
+            style: const TextStyle(color: PastraColors.coral, fontSize: 15, fontWeight: FontWeight.w600),
           ),
         );
 
-  /// Landscape (phones held sideways, tablets, desktop): three columns.
+  /// Landscape (phones held sideways, tablets, desktop): the quick match
+  /// card on the left; rooms, cups, open tables and the leaderboard on the
+  /// right.
   Widget _wide(OnlineStrings t, Strings s, AppSettings settings) {
     final error = _errorText();
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 1100, maxHeight: Economy.enabled ? 560 : 460),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (Economy.enabled) ...<Widget>[
-                _salonBar(settings),
-                const SizedBox(height: 10),
-              ],
-              Expanded(child: _wideRow(t, s)),
-              if (error != null) error,
-            ],
+    return LayoutBuilder(
+      builder: (context, box) {
+        final compact = box.maxHeight < 420;
+        final gap = compact ? 10.0 : 14.0;
+        final rows = _moreRows(t, compact: compact);
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1120),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, compact ? 10 : 16, 16, compact ? 10 : 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(flex: 9, child: _hero(t, settings, fill: true)),
+                  SizedBox(width: gap),
+                  Expanded(
+                    flex: 11,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Expanded(child: _createPanel(t, s)),
+                              SizedBox(width: gap),
+                              Expanded(child: _joinPanel(t)),
+                            ],
+                          ),
+                          if (error != null) error,
+                          for (final r in rows) ...<Widget>[SizedBox(height: gap), r],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
-
-  /// Three columns, each split into two equal rows: a tidy 3 × 2 grid.
-  Widget _wideRow(OnlineStrings t, Strings s) => Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(child: _quickTile(t)),
-                    const SizedBox(height: 14),
-                    Expanded(child: _cupTile(t)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(child: _tablesTile(t)),
-                    const SizedBox(height: 14),
-                    Expanded(child: _boardTile(t)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                flex: 6,
-                // Same rows as the middle column: the edges line up.
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(child: _createPanel(t, s)),
-                    const SizedBox(height: 14),
-                    Expanded(child: _joinPanel(t)),
-                  ],
-                ),
-              ),
-            ],
-          );
 
   /// Portrait: everything in one column.
   Widget _narrow(OnlineStrings t, Strings s, AppSettings settings, Widget nameField) {
@@ -599,31 +684,14 @@ class _OnlineScreenState extends State<OnlineScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               nameField,
-              const SizedBox(height: 8),
-              if (Economy.enabled) ...<Widget>[
-                _salonBar(settings),
-                const SizedBox(height: 10),
-              ],
-              SizedBox(height: 150, child: _quickTile(t)),
-              const SizedBox(height: 12),
-              SizedBox(height: 110, child: _cupTile(t)),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 140,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(child: _tablesTile(t)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _boardTile(t)),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 10),
+              _hero(t, settings, fill: false),
               const SizedBox(height: 14),
               _createPanel(t, s),
               const SizedBox(height: 12),
               _joinPanel(t),
               if (error != null) error,
+              for (final r in _moreRows(t, compact: false)) ...<Widget>[const SizedBox(height: 10), r],
             ],
           ),
         ),
@@ -678,7 +746,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700),
+            style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 13, fontWeight: FontWeight.w700),
           ),
         ),
       ],

@@ -11,8 +11,8 @@ import '../../online/leaderboard.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
-import '../ege/widgets.dart';
 import '../fx/fx.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/avatar.dart';
@@ -68,264 +68,308 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
-    final settings = SettingsScope.of(context);
-    final social = SocialStrings(settings.language);
-
-    Widget label(String text, {String? hint}) => Padding(
-          padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(text, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-              if (hint != null)
-                Text(hint, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-            ],
-          ),
-        );
-
     return Scaffold(
-      appBar: GameAppBar(
-        icon: Icons.tune_rounded,title: Text(s.settings)),
+      appBar: GameAppBar(icon: Icons.tune_rounded, title: Text(s.settings)),
       body: Felt(
         child: SafeArea(
           top: false,
           bottom: false,
+          // Sections on the left (pills at the top on a narrow screen).
+          child: SideTabs(
+            tabs: <PageTab>[
+              PageTab(icon: Icons.person_rounded, label: s.yourName, builder: _profile),
+              PageTab(icon: Icons.palette_rounded, label: s.appearance, builder: _appearance),
+              PageTab(icon: Icons.sports_esports_rounded, label: s.gameplay, builder: _gameplay),
+              PageTab(icon: Icons.translate_rounded, label: s.language, builder: _languages),
+              PageTab(icon: Icons.info_outline_rounded, label: s.about, builder: _about),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The player: avatar, level, name and the leaderboard switch.
+  Widget _profile(BuildContext context) {
+    final s = Strings.of(context);
+    final settings = SettingsScope.of(context);
+    final name = settings.playerName.isEmpty ? s.you : settings.playerName;
+    return TabBody(
+      children: <Widget>[
+        SectionPanel(
           child: LayoutBuilder(
-            builder: (context, box) {
-              Widget card(String title, IconData icon, List<Widget> children) =>
-                  _SettingsCard(title: title, icon: icon, children: children);
-              final profile = card(s.yourName, Icons.person_rounded, <Widget>[
-              const SizedBox(height: 6),
+            builder: (context, box) => Row(
+              children: <Widget>[
+                PlayerAvatar(name: name, frame: settings.avatarFrame, size: 64),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: PremiumText.title.copyWith(fontSize: 22),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ProgressStrings(settings.language).title(settings.title),
+                        style: const TextStyle(color: PastraColors.goldLight, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 10),
+                      LevelBadge(xp: settings.xp, width: (box.maxWidth - 80).clamp(140.0, 320.0).toDouble()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SectionPanel(
+          title: s.yourName,
+          icon: Icons.edit_rounded,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
               TextField(
                 controller: _name,
                 maxLength: 16,
                 textCapitalization: TextCapitalization.words,
-                decoration: InputDecoration(
-                  hintText: s.you,
-                  filled: true,
-                  fillColor: Colors.black.withValues(alpha: 0.25),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+                decoration: InputDecoration(hintText: s.you),
                 onChanged: (v) => settings.playerName = v,
               ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                title: Text(s.leaderboardShow),
-                value: settings.showOnLeaderboard,
-                onChanged: (v) {
-                  settings.showOnLeaderboard = v;
-                  if (v) {
-                    Leaderboard.submit(settings, fallbackName: s.you);
-                  } else {
-                    Leaderboard.remove();
-                  }
-                },
-              ),
-              ]);
-              final language = card(s.language, Icons.translate_rounded, <Widget>[
-              Wrap(
-                key: ValueKey<int>(_fontPass),
-                spacing: 8,
-                runSpacing: 8,
-                children: <Widget>[
-                  for (final code in _languagesAlphabetical)
-                    ChoiceChip(
-                      label: Text(Strings.languageName(code)),
-                      selected: settings.language == code,
-                      onSelected: (_) => settings.language = code,
-                      selectedColor: PastraColors.gold,
-                      labelStyle: TextStyle(
-                        color: settings.language == code ? Colors.black : Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      backgroundColor: Colors.black.withValues(alpha: 0.25),
-                      showCheckmark: false,
-                    ),
-                ],
-              ),
-              ]);
-              final appearance = card(s.appearance, Icons.palette_rounded, <Widget>[
-              Padding(padding: const EdgeInsets.only(bottom: 4), child: LevelBadge(xp: settings.xp, width: 280)),
-              label(s.tableColor),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: <Widget>[
-                  // Store colours only once bought (the store shows the rest).
-                  for (final t in (TableTheme.values.toList()..sort((a, b) => Progression.levelFor(a).compareTo(Progression.levelFor(b)))))
-                    if (Economy.itemForTable(t) == null || settings.isUnlocked(t))
-                    _Swatch(
-                      selected: settings.tableTheme == t,
-                      lockedLevel: settings.isUnlocked(t) ? null : Progression.levelFor(t),
-                      onTap: () => settings.tableTheme = t,
-                      child: DecoratedBox(
-                        decoration: t.decoration.copyWith(borderRadius: BorderRadius.circular(12)),
-                        child: const SizedBox(width: 64, height: 44),
-                      ),
-                    ),
-                ],
-              ),
-              label(s.cardBackLabel),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: <Widget>[
-                  for (final b in (CardBackStyle.values.toList()..sort((x, y) => Progression.levelForBack(x).compareTo(Progression.levelForBack(y)))))
-                    if (Economy.itemForBack(b) == null || settings.isBackUnlocked(b))
-                    _Swatch(
-                      selected: settings.cardBack == b,
-                      lockedLevel: settings.isBackUnlocked(b) ? null : Progression.levelForBack(b),
-                      onTap: () => settings.cardBack = b,
-                      child: SizedBox(
-                        width: 44,
-                        height: 62,
-                        child: PlayingCardView(card: 0, faceUp: false, backStyle: b),
-                      ),
-                    ),
-                ],
-              ),
-              label(ProgressStrings(settings.language).avatarFrame),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: <Widget>[
-                  for (final f in AvatarFrame.values)
-                    Tooltip(
-                      message: ProgressStrings(settings.language).frame(f),
-                      child: _Swatch(
-                        selected: settings.avatarFrame == f,
-                        lockedLevel: settings.isFrameUnlocked(f) ? null : Progression.levelForFrame(f),
-                        onTap: () => settings.avatarFrame = f,
-                        child: PlayerAvatar(
-                          name: settings.playerName.isEmpty ? s.you : settings.playerName,
-                          frame: f,
-                          size: 46,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              ]);
-              final gameplay = card(s.gameplay, Icons.sports_esports_rounded, <Widget>[
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                title: Text(s.fastAnimations),
-                value: settings.fastAnimations,
-                onChanged: (v) => settings.fastAnimations = v,
-              ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                title: Text(s.haptics),
-                value: settings.haptics,
-                onChanged: (v) => settings.haptics = v,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: <Widget>[
-                    Icon(settings.volume == 0 ? Icons.volume_off : Icons.volume_up, color: Colors.white70),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(s.sound, style: const TextStyle(fontSize: 16))),
-                    Text('${(settings.volume * 100).round()}%', style: const TextStyle(color: Colors.white70)),
-                  ],
+              SettingRow(
+                icon: Icons.leaderboard_rounded,
+                label: s.leaderboardShow,
+                trailing: Switch(
+                  value: settings.showOnLeaderboard,
+                  onChanged: (v) {
+                    settings.showOnLeaderboard = v;
+                    if (v) {
+                      Leaderboard.submit(settings, fallbackName: s.you);
+                    } else {
+                      Leaderboard.remove();
+                    }
+                  },
                 ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Table colour, card back and avatar frame (locked ones show their level).
+  Widget _appearance(BuildContext context) {
+    final s = Strings.of(context);
+    final settings = SettingsScope.of(context);
+    final p = ProgressStrings(settings.language);
+    return TabBody(
+      children: <Widget>[
+        SectionPanel(
+          title: s.tableColor,
+          icon: Icons.table_restaurant_rounded,
+          accent: PastraColors.teal,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              // Store colours only once bought (the store shows the rest).
+              for (final t in (TableTheme.values.toList()..sort((a, b) => Progression.levelFor(a).compareTo(Progression.levelFor(b)))))
+                if (Economy.itemForTable(t) == null || settings.isUnlocked(t))
+                  _Swatch(
+                    selected: settings.tableTheme == t,
+                    lockedLevel: settings.isUnlocked(t) ? null : Progression.levelFor(t),
+                    onTap: () => settings.tableTheme = t,
+                    child: DecoratedBox(
+                      decoration: t.decoration.copyWith(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PastraColors.wood, width: 3),
+                      ),
+                      child: const SizedBox(width: 80, height: 54),
+                    ),
+                  ),
+            ],
+          ),
+        ),
+        SectionPanel(
+          title: s.cardBackLabel,
+          icon: Icons.style_rounded,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              for (final b in (CardBackStyle.values.toList()..sort((x, y) => Progression.levelForBack(x).compareTo(Progression.levelForBack(y)))))
+                if (Economy.itemForBack(b) == null || settings.isBackUnlocked(b))
+                  _Swatch(
+                    selected: settings.cardBack == b,
+                    lockedLevel: settings.isBackUnlocked(b) ? null : Progression.levelForBack(b),
+                    onTap: () => settings.cardBack = b,
+                    child: SizedBox(
+                      width: 48,
+                      height: 68,
+                      child: PlayingCardView(card: 0, faceUp: false, backStyle: b),
+                    ),
+                  ),
+            ],
+          ),
+        ),
+        SectionPanel(
+          title: p.avatarFrame,
+          icon: Icons.account_circle_rounded,
+          accent: PastraColors.coral,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              for (final f in AvatarFrame.values)
+                Tooltip(
+                  message: p.frame(f),
+                  child: _Swatch(
+                    selected: settings.avatarFrame == f,
+                    lockedLevel: settings.isFrameUnlocked(f) ? null : Progression.levelForFrame(f),
+                    onTap: () => settings.avatarFrame = f,
+                    child: PlayerAvatar(
+                      name: settings.playerName.isEmpty ? s.you : settings.playerName,
+                      frame: f,
+                      size: 48,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Animations, vibration, sound and the graphics quality.
+  Widget _gameplay(BuildContext context) {
+    final s = Strings.of(context);
+    final settings = SettingsScope.of(context);
+    final social = SocialStrings(settings.language);
+    return TabBody(
+      children: <Widget>[
+        SectionPanel(
+          title: s.gameplay,
+          icon: Icons.sports_esports_rounded,
+          accent: PastraColors.teal,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              SettingRow(
+                icon: Icons.fast_forward_rounded,
+                label: s.fastAnimations,
+                trailing: Switch(value: settings.fastAnimations, onChanged: (v) => settings.fastAnimations = v),
+              ),
+              SettingRow(
+                icon: Icons.vibration_rounded,
+                label: s.haptics,
+                trailing: Switch(value: settings.haptics, onChanged: (v) => settings.haptics = v),
+              ),
+              SettingRow(
+                icon: settings.volume == 0 ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                label: s.sound,
+                trailing: Text('${(settings.volume * 100).round()}%', style: PremiumText.label),
               ),
               Slider(
                 value: settings.volume,
                 divisions: 20,
-                activeColor: PastraColors.gold,
                 onChanged: (v) => settings.volume = v,
                 onChangeEnd: (_) => SoundFx.instance.play(Sfx.play),
               ),
-              // Graphics quality: automatic lowers the effects by itself on a
-              // device that keeps missing frames.
-              label(social.graphics, hint: social.graphicsHint),
-              SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<FxMode>(
-                  showSelectedIcon: false,
-                  segments: <ButtonSegment<FxMode>>[
-                    ButtonSegment<FxMode>(value: FxMode.auto, label: Text(social.graphicsAuto)),
-                    ButtonSegment<FxMode>(value: FxMode.high, label: Text(social.graphicsHigh)),
-                    ButtonSegment<FxMode>(value: FxMode.low, label: Text(social.graphicsLow)),
+            ],
+          ),
+        ),
+        // Graphics quality: automatic lowers the effects by itself on a
+        // device that keeps missing frames.
+        SectionPanel(
+          title: social.graphics,
+          icon: Icons.speed_rounded,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(social.graphicsHint, style: PremiumText.secondary),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  for (final m in <(FxMode, String)>[
+                    (FxMode.auto, social.graphicsAuto),
+                    (FxMode.high, social.graphicsHigh),
+                    (FxMode.low, social.graphicsLow),
+                  ]) ...<Widget>[
+                    if (m.$1 != FxMode.auto) const SizedBox(width: 10),
+                    Expanded(
+                      child: ChoicePill(
+                        label: m.$2,
+                        selected: settings.fxMode == m.$1,
+                        onTap: () => settings.fxMode = m.$1,
+                      ),
+                    ),
                   ],
-                  selected: <FxMode>{settings.fxMode},
-                  onSelectionChanged: (v) => settings.fxMode = v.first,
-                ),
+                ],
               ),
-              ]);
-              final aboutCard = card(s.about, Icons.info_outline_rounded, <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Text('${s.aboutBody}\n${s.credits}', style: const TextStyle(color: Colors.white70, height: 1.5)),
-              ),
-              ]);
-              const gap = SizedBox(height: 14);
-              // Sideways / wide: two columns of cards; upright: one.
-              if (box.maxWidth >= 760) {
-                // Very wide screens: three columns, so nothing is left empty
-                // at the bottom.
-                final three = box.maxWidth >= 1250;
-                final columns = three
-                    ? <List<Widget>>[
-                        <Widget>[profile, gap, language],
-                        <Widget>[gameplay, gap, aboutCard],
-                        <Widget>[appearance],
-                      ]
-                    : <List<Widget>>[
-                        <Widget>[profile, gap, language, gap, aboutCard],
-                        <Widget>[appearance, gap, gameplay],
-                      ];
-                Widget row(double width) => SizedBox(
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The twelve languages as a grid of pills.
+  Widget _languages(BuildContext context) {
+    final s = Strings.of(context);
+    final settings = SettingsScope.of(context);
+    return TabBody(
+      children: <Widget>[
+        SectionPanel(
+          title: s.language,
+          icon: Icons.translate_rounded,
+          accent: PastraColors.teal,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final columns = box.maxWidth >= 520 ? 3 : 2;
+              final width = (box.maxWidth - (columns - 1) * 10) / columns;
+              return Wrap(
+                key: ValueKey<int>(_fontPass),
+                spacing: 10,
+                runSpacing: 10,
+                children: <Widget>[
+                  for (final code in _languagesAlphabetical)
+                    SizedBox(
                       width: width,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          for (var i = 0; i < columns.length; i++) ...<Widget>[
-                            if (i > 0) const SizedBox(width: 14),
-                            Expanded(child: Column(children: columns[i])),
-                          ],
-                        ],
-                      ),
-                    );
-                // Big desktop windows: the whole page is scaled up to fill
-                // the window instead of leaving it empty at the bottom.
-                if (three && box.maxHeight >= 620) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      alignment: Alignment.topCenter,
-                      child: row(1200),
-                    ),
-                  );
-                }
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: three ? 1600 : 1100),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          for (var i = 0; i < columns.length; i++) ...<Widget>[
-                            if (i > 0) const SizedBox(width: 14),
-                            Expanded(child: Column(children: columns[i])),
-                          ],
-                        ],
+                      child: ChoicePill(
+                        label: Strings.languageName(code),
+                        selected: settings.language == code,
+                        onTap: () => settings.language = code,
                       ),
                     ),
-                  ),
-                );
-              }
-              return ListView(
-                padding: _listPadding(context),
-                children: <Widget>[profile, gap, language, gap, appearance, gap, gameplay, gap, aboutCard],
+                ],
               );
             },
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _about(BuildContext context) {
+    final s = Strings.of(context);
+    return TabBody(
+      children: <Widget>[
+        SectionPanel(
+          title: s.about,
+          icon: Icons.info_outline_rounded,
+          accent: PastraColors.teal,
+          child: Text(
+            '${s.aboutBody}\n${s.credits}',
+            style: PremiumText.secondary.copyWith(height: 1.6, fontSize: 14),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -348,13 +392,6 @@ const Map<String, String> _englishLanguageNames = <String, String>{
 
 final List<String> _languagesAlphabetical = AppSettings.languages.toList()
   ..sort((a, b) => (_englishLanguageNames[a] ?? a).compareTo(_englishLanguageNames[b] ?? b));
-
-/// Side padding that keeps the list readable on a wide (landscape) screen.
-EdgeInsets _listPadding(BuildContext context) {
-  final w = MediaQuery.sizeOf(context).width;
-  final side = w > 792 ? (w - 760) / 2 : 16.0;
-  return EdgeInsets.fromLTRB(side, 8, side, 32);
-}
 
 /// A tappable preview with a gold ring when selected.
 class _Swatch extends StatelessWidget {
@@ -383,7 +420,11 @@ class _Swatch extends StatelessWidget {
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: selected ? PastraColors.gold : Colors.white24, width: selected ? 3 : 1),
+          color: selected ? PastraColors.gold.withValues(alpha: 0.12) : Colors.transparent,
+          border: Border.all(
+            color: selected ? PastraColors.gold : Colors.white.withValues(alpha: 0.12),
+            width: selected ? 2.5 : 1,
+          ),
         ),
         child: locked
             ? Stack(
@@ -403,47 +444,6 @@ class _Swatch extends StatelessWidget {
                 ],
               )
             : child,
-      ),
-    );
-  }
-}
-
-/// One group of settings: a stone tablet with a gold title and icon.
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.title, required this.icon, required this.children});
-
-  final String title;
-  final IconData icon;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Tablet(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-        // Own (see-through) Material: the switches' ripples show on the card.
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: PastraColors.gold.withValues(alpha: 0.16), shape: BoxShape.circle),
-                    child: Icon(icon, color: PastraColors.gold, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(title, style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ...children,
-            ],
-          ),
-        ),
       ),
     );
   }

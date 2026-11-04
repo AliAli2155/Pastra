@@ -540,3 +540,364 @@ class PremiumDialog extends StatelessWidget {
     );
   }
 }
+
+/// One section of a [SideTabs] page.
+class PageTab {
+  const PageTab({required this.icon, required this.label, required this.builder, this.badge = 0});
+
+  final IconData icon;
+  final String label;
+
+  /// Builds the section (it scrolls by itself, see [TabBody]).
+  final WidgetBuilder builder;
+
+  /// Things waiting in this section (a coral count on the tab).
+  final int badge;
+}
+
+/// A page split into sections: on a wide screen the sections are a column
+/// of glass rows on the left and the chosen one fills the right; on a
+/// narrow one they are a row of pills at the top.
+class SideTabs extends StatefulWidget {
+  const SideTabs({super.key, required this.tabs, this.initial = 0, this.onChanged});
+
+  final List<PageTab> tabs;
+  final int initial;
+  final ValueChanged<int>? onChanged;
+
+  /// Screens at least this wide get the column of tabs on the left.
+  static const double wideFrom = 720;
+
+  @override
+  State<SideTabs> createState() => _SideTabsState();
+}
+
+class _SideTabsState extends State<SideTabs> {
+  late int _index = widget.initial.clamp(0, widget.tabs.length - 1);
+
+  void _select(int i) {
+    if (i == _index) return;
+    setState(() => _index = i);
+    widget.onChanged?.call(i);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final wide = box.maxWidth >= SideTabs.wideFrom;
+        final content = KeyedSubtree(
+          key: ValueKey<int>(_index),
+          child: TabScope(wide: wide, child: Builder(builder: widget.tabs[_index].builder)),
+        );
+        if (wide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              SizedBox(
+                width: box.maxWidth >= 1000 ? 248 : 206,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                  children: <Widget>[
+                    for (var i = 0; i < widget.tabs.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _RailItem(tab: widget.tabs[i], selected: i == _index, onTap: () => _select(i)),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(child: content),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+              child: Row(
+                children: <Widget>[
+                  for (var i = 0; i < widget.tabs.length; i++)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: _PillItem(tab: widget.tabs[i], selected: i == _index, onTap: () => _select(i)),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(child: content),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Tells a section whether it is shown next to the column of tabs.
+class TabScope extends InheritedWidget {
+  const TabScope({super.key, required this.wide, required super.child});
+
+  final bool wide;
+
+  static bool wideOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TabScope>()?.wide ?? MediaQuery.sizeOf(context).width >= SideTabs.wideFrom;
+
+  @override
+  bool updateShouldNotify(TabScope oldWidget) => oldWidget.wide != wide;
+}
+
+class _RailItem extends StatelessWidget {
+  const _RailItem({required this.tab, required this.selected, required this.onTap});
+
+  final PageTab tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? PastraColors.goldLight : PastraColors.text;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Pressable(
+        onTap: onTap,
+        radius: BorderRadius.circular(12),
+        decoration: selected
+            ? glassDecoration(radius: 12, selected: true)
+            : BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.transparent)),
+        child: SizedBox(
+          height: 48,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: <Widget>[
+                Icon(tab.icon, size: 20, color: selected ? PastraColors.gold : PastraColors.text2),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    tab.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: fg, fontSize: 15, fontWeight: selected ? FontWeight.w700 : FontWeight.w600),
+                  ),
+                ),
+                if (tab.badge > 0) CountBadge(count: tab.badge),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillItem extends StatelessWidget {
+  const _PillItem({required this.tab, required this.selected, required this.onTap});
+
+  final PageTab tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Pressable(
+        onTap: onTap,
+        radius: BorderRadius.circular(20),
+        decoration: glassDecoration(radius: 20, selected: selected),
+        child: SizedBox(
+          height: 38,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(tab.icon, size: 17, color: selected ? PastraColors.gold : PastraColors.text2),
+                const SizedBox(width: 7),
+                Text(
+                  tab.label,
+                  style: TextStyle(
+                    color: selected ? PastraColors.goldLight : PastraColors.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (tab.badge > 0) ...<Widget>[const SizedBox(width: 6), CountBadge(count: tab.badge)],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The scrolling body of a section: its panels one under the other, at a
+/// readable width.
+class TabBody extends StatelessWidget {
+  const TabBody({super.key, required this.children, this.maxWidth = 820});
+
+  final List<Widget> children;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = TabScope.wideOf(context);
+    return ListView(
+      padding: EdgeInsets.fromLTRB(wide ? 8 : 12, wide ? 16 : 8, wide ? 20 : 12, 28),
+      children: <Widget>[
+        Align(
+          alignment: AlignmentDirectional.topStart,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (var i = 0; i < children.length; i++) ...<Widget>[
+                  if (i > 0) const SizedBox(height: 14),
+                  children[i],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A charcoal panel with an optional title row (tinted icon, title, a
+/// widget at the end).
+class SectionPanel extends StatelessWidget {
+  const SectionPanel({
+    super.key,
+    required this.child,
+    this.title,
+    this.icon,
+    this.accent = PastraColors.gold,
+    this.trailing,
+    this.padding = const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    this.highlight = false,
+  });
+
+  final Widget child;
+  final String? title;
+  final IconData? icon;
+  final Color accent;
+  final Widget? trailing;
+  final EdgeInsetsGeometry padding;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: panelDecoration(radius: 18, highlight: highlight, shadow: false),
+      // Own (see-through) Material: ripples of switches and buttons show on it.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (title != null) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  if (icon != null) ...<Widget>[
+                    IconSquare(icon: icon!, color: accent, size: 34),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Text(
+                      title!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: PremiumText.section,
+                    ),
+                  ),
+                  if (trailing != null) trailing!,
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A row with a label (and a line under it) and a control at the end
+/// (a switch, a value …).
+class SettingRow extends StatelessWidget {
+  const SettingRow({super.key, required this.label, required this.trailing, this.hint, this.icon});
+
+  final String label;
+  final String? hint;
+  final IconData? icon;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Row(
+        children: <Widget>[
+          if (icon != null) ...<Widget>[
+            Icon(icon, size: 20, color: PastraColors.text2),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(label, style: PremiumText.body),
+                if (hint != null) Text(hint!, style: PremiumText.secondary),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+/// Children in as many equal columns as fit (each at least [minItemWidth]
+/// wide), row after row.
+class ResponsiveGrid extends StatelessWidget {
+  const ResponsiveGrid({
+    super.key,
+    required this.children,
+    this.minItemWidth = 200,
+    this.spacing = 12,
+    this.maxColumns = 6,
+  });
+
+  final List<Widget> children;
+  final double minItemWidth;
+  final double spacing;
+  final int maxColumns;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth;
+        final columns = ((w + spacing) ~/ (minItemWidth + spacing)).clamp(1, maxColumns);
+        final itemWidth = (w - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: <Widget>[for (final c in children) SizedBox(width: itemWidth, child: c)],
+        );
+      },
+    );
+  }
+}
