@@ -117,7 +117,10 @@ class _TournamentScreenState extends State<TournamentScreen> {
               // on the right. Upright: the card on top.
               final wide = box.maxWidth > box.maxHeight && box.maxWidth >= 640;
               if (wide) {
-                return Padding(
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1180, maxHeight: 540),
+                    child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -127,6 +130,8 @@ class _TournamentScreenState extends State<TournamentScreen> {
                       // As high as the match card: both end on the same line.
                       Expanded(child: board(expand: true)),
                     ],
+                  ),
+                    ),
                   ),
                 );
               }

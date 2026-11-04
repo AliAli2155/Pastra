@@ -660,9 +660,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
       builder: (context, box) {
         final compact = box.maxHeight < 420;
         final gap = compact ? 10.0 : 14.0;
+        // Not taller than this on a big window: the content stays compact
+        // in the middle instead of stretching from top to bottom.
         return Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
+            constraints: const BoxConstraints(maxWidth: 1080, maxHeight: 520),
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, compact ? 10 : 16, 16, compact ? 10 : 16),
               child: Row(

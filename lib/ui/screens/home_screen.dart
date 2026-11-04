@@ -203,7 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final pad = compact ? 14.0 : 24.0;
       return Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1120),
+          // Not taller than this on a big window (stays compact in the middle).
+          constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 620),
           child: Padding(
             padding: EdgeInsets.fromLTRB(pad, compact ? 8 : 16, pad, compact ? 10 : 22),
             child: Column(
