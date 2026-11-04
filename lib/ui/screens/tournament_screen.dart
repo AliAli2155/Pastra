@@ -10,7 +10,8 @@ import '../../l10n/strings.dart';
 import '../../online/leaderboard.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
-import '../widgets/menu_tiles.dart';
+import '../premium/premium.dart';
+import '../widgets/avatar.dart';
 import 'game_screen.dart';
 
 /// The offline tournament: the bracket, and a button for the next match.
@@ -98,35 +99,40 @@ class _TournamentScreenState extends State<TournamentScreen> {
       ),
     );
     final panel = _statusPanel(s);
+    final board = SectionPanel(
+      title: s.tournament,
+      icon: Icons.account_tree_rounded,
+      accent: PastraColors.teal,
+      child: bracket,
+    );
     return Scaffold(
-      appBar: GameAppBar(
-        icon: Icons.emoji_events_rounded,title: Text(s.tournament)),
+      appBar: GameAppBar(icon: Icons.emoji_events_rounded, title: Text(s.tournament)),
       body: Felt(
         child: SafeArea(
           top: false,
           child: LayoutBuilder(
             builder: (context, box) {
+              // Wide: the next match as a big card on the left, the bracket
+              // on the right. Upright: the card on top.
               final wide = box.maxWidth > box.maxHeight && box.maxWidth >= 640;
               if (wide) {
                 return Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Expanded(child: Center(child: bracket)),
+                      SizedBox(width: box.maxWidth >= 1000 ? 360 : 300, child: panel),
                       const SizedBox(width: 16),
-                      SizedBox(width: 300, child: Center(child: SingleChildScrollView(child: panel))),
+                      Expanded(child: Center(child: SingleChildScrollView(child: board))),
                     ],
                   ),
                 );
               }
-              return Padding(
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(12),
                 child: Column(
-                  children: <Widget>[
-                    Expanded(child: Center(child: bracket)),
-                    const SizedBox(height: 12),
-                    panel,
-                  ],
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[panel, const SizedBox(height: 12), board],
                 ),
               );
             },
@@ -142,7 +148,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
       children: <Widget>[
         Text(
           s.tournamentRound(r),
-          style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w800),
+          style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6),
         ),
         const SizedBox(height: 6),
         Expanded(
@@ -180,10 +186,10 @@ class _TournamentScreenState extends State<TournamentScreen> {
                   fontSize: 13,
                   fontWeight: isMe || won ? FontWeight.w800 : FontWeight.w500,
                   color: slot == null
-                      ? Colors.white38
+                      ? PastraColors.muted
                       : lost
-                          ? Colors.white38
-                          : (isMe ? PastraColors.gold : Colors.white),
+                          ? PastraColors.muted
+                          : (isMe ? PastraColors.goldLight : PastraColors.text),
                   decoration: lost ? TextDecoration.lineThrough : null,
                 ),
               ),
@@ -195,11 +201,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.32),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: current ? PastraColors.gold : Colors.white12, width: current ? 2 : 1),
-      ),
+      decoration: glassDecoration(radius: 10, selected: current),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[line(slots[0]), const Divider(height: 1, color: Colors.white12), line(slots[1])],
@@ -207,52 +209,93 @@ class _TournamentScreenState extends State<TournamentScreen> {
     );
   }
 
+  /// The next match (me against the opponent) with the gold button, or
+  /// the result once the tournament is over: an emerald card.
   Widget _statusPanel(Strings s) {
-    final children = <Widget>[];
+    final List<Widget> children;
     if (t.finished) {
-      children.add(Icon(t.won ? Icons.emoji_events : Icons.sentiment_neutral, color: PastraColors.gold, size: 38));
-      children.add(const SizedBox(height: 4));
-      children.add(Text(
-        t.won ? s.championMsg : s.eliminatedMsg(s.tournamentRound(t.lostRound)),
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-      ));
-      if (t.bonusXp > 0) {
-        children.add(const SizedBox(height: 4));
-        children.add(Text(
-          s.tournamentBonus(t.bonusXp),
-          style: const TextStyle(color: PastraColors.gold, fontSize: 14, fontWeight: FontWeight.w700),
-        ));
-      }
-      children.add(const SizedBox(height: 12));
-      children.add(BigButton(icon: Icons.refresh_rounded, label: s.newTournament, onPressed: _startNew));
+      children = <Widget>[
+        const Spacer(),
+        Icon(t.won ? Icons.emoji_events_rounded : Icons.sentiment_neutral_rounded, color: PastraColors.gold, size: 64),
+        const SizedBox(height: 10),
+        Text(
+          t.won ? s.championMsg : s.eliminatedMsg(s.tournamentRound(t.lostRound)),
+          textAlign: TextAlign.center,
+          style: PremiumText.title.copyWith(fontSize: 22),
+        ),
+        if (t.bonusXp > 0) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            s.tournamentBonus(t.bonusXp),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: PastraColors.goldLight, fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ],
+        const Spacer(),
+        GoldButton(icon: Icons.refresh_rounded, label: s.newTournament, onPressed: _startNew),
+      ];
     } else {
-      children.add(Text(
-        s.tournamentRound(t.round),
-        style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w700),
-      ));
-      children.add(const SizedBox(height: 2));
-      children.add(Text(
-        '${_name(s, t.humanSlot)}  ${s.vsName(_name(s, t.opponentSlot))}',
-        textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-      ));
-      children.add(const SizedBox(height: 2));
-      children.add(Text(
-        s.level(t.opponentLevel),
-        style: const TextStyle(color: Colors.white60, fontSize: 13),
-      ));
-      children.add(const SizedBox(height: 12));
-      children.add(BigButton(icon: Icons.play_arrow_rounded, label: s.playMatch, onPressed: _playMatch));
+      Widget player(int slot, {required bool me}) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              PlayerAvatar(name: _name(s, slot), size: 58),
+              const SizedBox(height: 8),
+              Text(
+                _name(s, slot),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: me ? PastraColors.goldLight : PastraColors.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          );
+      children = <Widget>[
+        Text(s.tournamentRound(t.round), textAlign: TextAlign.center, style: PremiumText.eyebrow),
+        const Spacer(),
+        Row(
+          children: <Widget>[
+            Expanded(child: player(t.humanSlot, me: true)),
+            const Text(
+              'VS',
+              style: TextStyle(color: PastraColors.gold, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 1),
+            ),
+            Expanded(child: player(t.opponentSlot, me: false)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(s.level(t.opponentLevel), textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 13)),
+        const Spacer(),
+        GoldButton(icon: Icons.play_arrow_rounded, label: s.playMatch, onPressed: _playMatch),
+      ];
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      constraints: const BoxConstraints(minHeight: 280),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: PastraColors.panel,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF0F6A51), Color(0xFF0A4637), Color(0xFF072C23)],
+          stops: <double>[0.0, 0.6, 1.0],
+        ),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
       ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: children),
+      child: LayoutBuilder(
+        // Spacers only when the card has a fixed height (beside the bracket).
+        builder: (context, box) => box.hasBoundedHeight
+            ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final c in children) c is Spacer ? const SizedBox(height: 16) : c,
+                ],
+              ),
+      ),
     );
   }
 }

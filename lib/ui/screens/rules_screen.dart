@@ -4,6 +4,7 @@ import '../../engine/cards.dart';
 import '../../engine/rules.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/playing_card.dart';
@@ -27,6 +28,46 @@ class RulesScreen extends StatelessWidget {
       (Cards.twoOfClubs, s.twoOfClubs),
       (Cards.tenOfDiamonds, s.tenOfDiamonds),
     ];
+    final sections = s.rulesSections(v);
+    final points = Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 12,
+      children: <Widget>[
+        for (final (card, label) in pointCards)
+          _PointTile(
+            label: label,
+            points: rules.pointsOf(card),
+            art: PlayingCardView(card: card, faceUp: true),
+          ),
+        _PointTile(
+          label: s.mostCards,
+          points: PastraRules.mostCardsBonus,
+          art: Stack(
+            children: <Widget>[
+              for (var i = 0; i < 3; i++)
+                Positioned(
+                  left: i * 6.0,
+                  top: i * 4.0,
+                  width: 46,
+                  height: 66,
+                  child: const PlayingCardView(card: 0, faceUp: false),
+                ),
+            ],
+          ),
+        ),
+        _PointTile(
+          label: s.pastraRow,
+          points: rules.pastraPoints,
+          art: const Center(
+            child: Text(
+              'Π',
+              style: TextStyle(color: PastraColors.gold, fontSize: 44, fontWeight: FontWeight.w800, fontFamily: 'Manrope'),
+            ),
+          ),
+        ),
+      ],
+    );
     return Scaffold(
       appBar: GameAppBar(
         icon: Icons.menu_book_rounded,
@@ -46,74 +87,23 @@ class RulesScreen extends StatelessWidget {
         child: SafeArea(
           top: false,
           bottom: false,
-          child: ListView(
-            padding: _listPadding(context),
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 14,
-                  runSpacing: 12,
-                  children: <Widget>[
-                    for (final (card, label) in pointCards)
-                      _PointTile(
-                        label: label,
-                        points: rules.pointsOf(card),
-                        art: PlayingCardView(card: card, faceUp: true),
-                      ),
-                    _PointTile(
-                      label: s.mostCards,
-                      points: PastraRules.mostCardsBonus,
-                      art: Stack(
-                        children: <Widget>[
-                          for (var i = 0; i < 3; i++)
-                            Positioned(
-                              left: i * 6.0,
-                              top: i * 4.0,
-                              width: 46,
-                              height: 66,
-                              child: const PlayingCardView(card: 0, faceUp: false),
-                            ),
-                        ],
-                      ),
-                    ),
-                    _PointTile(
-                      label: s.pastraRow,
-                      points: rules.pastraPoints,
-                      art: const Center(
-                        child: Text(
-                          'Π',
-                          style: TextStyle(color: PastraColors.gold, fontSize: 44, fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              for (final section in s.rulesSections(v))
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          // A section of the rules per tab; the points are on the first one.
+          child: SideTabs(
+            tabs: <PageTab>[
+              for (var i = 0; i < sections.length; i++)
+                PageTab(
+                  icon: _icons[i % _icons.length],
+                  label: sections[i][0],
+                  builder: (_) => TabBody(
                     children: <Widget>[
-                      Text(
-                        section[0],
-                        style: const TextStyle(
-                          color: PastraColors.gold,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
+                      if (i == 0) SectionPanel(child: Center(child: points)),
+                      SectionPanel(
+                        title: sections[i][0],
+                        icon: _icons[i % _icons.length],
+                        child: Text(
+                          sections[i][1],
+                          style: const TextStyle(color: PastraColors.text, fontSize: 15, height: 1.55),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        section[1],
-                        style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.45),
                       ),
                     ],
                   ),
@@ -124,6 +114,17 @@ class RulesScreen extends StatelessWidget {
       ),
     );
   }
+
+  static const List<IconData> _icons = <IconData>[
+    Icons.style_rounded,
+    Icons.back_hand_rounded,
+    Icons.layers_rounded,
+    Icons.auto_awesome_rounded,
+    Icons.calculate_rounded,
+    Icons.emoji_events_rounded,
+    Icons.tune_rounded,
+    Icons.lightbulb_outline_rounded,
+  ];
 }
 
 /// One scoring item: a picture, "+points" and what it is.
@@ -139,11 +140,7 @@ class _PointTile extends StatelessWidget {
     return Container(
       width: 104,
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.3)),
-      ),
+      decoration: glassDecoration(radius: 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -151,24 +148,17 @@ class _PointTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             '+$points',
-            style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w900, fontSize: 20),
+            style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800, fontSize: 20),
           ),
           Text(
             label,
             maxLines: 2,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(color: PastraColors.text2, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
     );
   }
-}
-
-/// Side padding that keeps the list readable on a wide (landscape) screen.
-EdgeInsets _listPadding(BuildContext context) {
-  final w = MediaQuery.sizeOf(context).width;
-  final side = w > 792 ? (w - 760) / 2 : 16.0;
-  return EdgeInsets.fromLTRB(side, 8, side, 32);
 }

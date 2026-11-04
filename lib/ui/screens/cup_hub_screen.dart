@@ -10,6 +10,7 @@ import '../../l10n/strings.dart';
 import '../../online/cup_logic.dart';
 import '../../online/cup_service.dart';
 import '../../online/online_service.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/menu_tiles.dart';
@@ -54,55 +55,127 @@ class _CupHubScreenState extends State<CupHubScreen> {
     );
   }
 
-  Widget _tile(OnlineStrings t, CupType type, String hint, List<Color> colors, IconData icon, {bool dark = false}) {
+  /// A cup as a row: tinted icon, name, its line and the next start.
+  Widget _row(OnlineStrings t, CupType type, String hint, Color accent, IconData icon, {required double height}) {
     final next = type.nextStart(OnlineService.serverNow);
-    return MenuTile(
+    return ModeRow(
       icon: icon,
+      accent: accent,
       title: cupTitle(t, type),
-      subtitle: '$hint\n${t.cupAt(_time(next))}',
-      colors: colors,
-      darkText: dark,
+      subtitle: '${t.cupAt(_time(next))} · $hint',
+      height: height,
       onTap: () => _open(type),
+    );
+  }
+
+  /// The quick cup, the one that starts soonest: a big emerald card.
+  Widget _hero(OnlineStrings t, {required bool fill}) {
+    final next = CupType.quick.nextStart(OnlineService.serverNow);
+    final children = <Widget>[
+      Text(t.cup, style: PremiumText.eyebrow),
+      const SizedBox(height: 6),
+      Text(cupTitle(t, CupType.quick), style: PremiumText.title.copyWith(fontSize: 30)),
+      const SizedBox(height: 6),
+      Text(
+        t.cupQuickHint,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+      const SizedBox(height: 14),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(16)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.schedule_rounded, size: 16, color: PastraColors.goldLight),
+              const SizedBox(width: 6),
+              Text(
+                t.cupAt(_time(next)),
+                style: const TextStyle(color: PastraColors.goldLight, fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (fill) const Spacer() else const SizedBox(height: 18),
+      GoldButton(label: t.join, icon: Icons.bolt_rounded, onPressed: () => _open(CupType.quick)),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF0F6A51), Color(0xFF0A4637), Color(0xFF072C23)],
+          stops: <double>[0.0, 0.6, 1.0],
+        ),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = OnlineStrings(SettingsScope.of(context).language);
-    final quick = _tile(t, CupType.quick, t.cupQuickHint, TileColors.gold, Icons.bolt_rounded, dark: true);
-    final classic = _tile(t, CupType.classic, t.cupClassicHint, TileColors.blue, Icons.emoji_events_rounded);
-    final team = _tile(t, CupType.team, t.cupTeamHint, TileColors.green, Icons.groups_rounded);
-    final friends = MenuTile(
-      icon: Icons.vpn_key_rounded,
-      title: t.cupFriends,
-      subtitle: t.cupFriendsHint,
-      colors: TileColors.purple,
-      onTap: _friendsDialog,
-    );
     return Scaffold(
-      appBar: GameAppBar(
-        icon: Icons.emoji_events_rounded,title: Text(t.cup, style: const TextStyle(fontWeight: FontWeight.w900))),
+      appBar: GameAppBar(icon: Icons.emoji_events_rounded, title: Text(t.cup)),
       body: Felt(
         child: SafeArea(
           top: false,
           child: LayoutBuilder(
             builder: (context, box) {
-              if (box.maxWidth >= 640) {
-                // A 2 × 2 grid.
-                Widget column(Widget a, Widget b) => Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[Expanded(child: a), const SizedBox(height: 14), Expanded(child: b)],
-                      ),
-                    );
+              final wide = box.maxWidth >= 640;
+              final h = wide && box.maxHeight < 420 ? 64.0 : 80.0;
+              final rows = <Widget>[
+                _row(t, CupType.classic, t.cupClassicHint, PastraColors.gold, Icons.emoji_events_rounded, height: h),
+                _row(t, CupType.team, t.cupTeamHint, PastraColors.teal, Icons.groups_rounded, height: h),
+                ModeRow(
+                  icon: Icons.vpn_key_rounded,
+                  accent: PastraColors.coral,
+                  title: t.cupFriends,
+                  subtitle: t.cupFriendsHint,
+                  height: h,
+                  onTap: _friendsDialog,
+                ),
+              ];
+              if (wide) {
+                // The quick cup on the left, the others as rows on the right.
                 return Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 460),
+                    constraints: const BoxConstraints(maxWidth: 1100),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[column(quick, classic), const SizedBox(width: 14), column(team, friends)],
+                        children: <Widget>[
+                          Expanded(flex: 9, child: _hero(t, fill: true)),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 11,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  for (var i = 0; i < rows.length; i++) ...<Widget>[
+                                    if (i > 0) const SizedBox(height: 12),
+                                    rows[i],
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -111,8 +184,8 @@ class _CupHubScreenState extends State<CupHubScreen> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
-                  for (final tile in <Widget>[quick, classic, team, friends])
-                    Padding(padding: const EdgeInsets.only(bottom: 12), child: SizedBox(height: 120, child: tile)),
+                  _hero(t, fill: false),
+                  for (final r in rows) ...<Widget>[const SizedBox(height: 12), r],
                 ],
               );
             },

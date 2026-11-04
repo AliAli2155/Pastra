@@ -8,6 +8,7 @@ import '../../game/progression.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/game_header.dart';
@@ -178,11 +179,7 @@ class _Summary extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: Colors.black.withValues(alpha: 0.32),
-          border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
-        ),
+        decoration: panelDecoration(radius: 18, highlight: true, shadow: false),
         child: Row(
           children: <Widget>[
             PlayerAvatar(name: name, frame: settings.avatarFrame, size: 50),
@@ -193,8 +190,8 @@ class _Summary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-                  Text(p.title(settings.title), style: const TextStyle(color: PastraColors.gold, fontSize: 12, fontWeight: FontWeight.w800)),
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: PastraColors.text, fontSize: 16, fontWeight: FontWeight.w800)),
+                  Text(p.title(settings.title), style: const TextStyle(color: PastraColors.goldLight, fontSize: 12, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -203,12 +200,8 @@ class _Summary extends StatelessWidget {
               width: 44,
               height: 44,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: PastraColors.gold,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: Text('$level', style: const TextStyle(color: Colors.black, fontSize: 19, fontWeight: FontWeight.w900)),
+              decoration: const BoxDecoration(shape: BoxShape.circle, gradient: goldGradient),
+              child: Text('$level', style: const TextStyle(color: PastraColors.goldInk, fontSize: 19, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: 10),
             Expanded(

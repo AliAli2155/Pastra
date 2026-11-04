@@ -87,7 +87,7 @@ class _Cell extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: me || won ? FontWeight.w800 : FontWeight.w500,
-                  color: name == null || lost ? Colors.white38 : (me ? PastraColors.gold : Colors.white),
+                  color: name == null || lost ? PastraColors.muted : (me ? PastraColors.goldLight : PastraColors.text),
                   decoration: lost ? TextDecoration.lineThrough : null,
                 ),
               ),
@@ -100,9 +100,12 @@ class _Cell extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.32),
+        color: cell.current ? PastraColors.gold.withValues(alpha: 0.14) : PastraColors.glass,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cell.current ? PastraColors.gold : Colors.white12, width: cell.current ? 2 : 1),
+        border: Border.all(
+          color: cell.current ? PastraColors.gold : Colors.white.withValues(alpha: 0.12),
+          width: cell.current ? 1.5 : 1,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
