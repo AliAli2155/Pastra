@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../table_layout.dart';
 import '../theme.dart';
 
 /// How the table is seen on the screen.
@@ -171,9 +172,9 @@ class TableStage extends StatelessWidget {
   }
 }
 
-/// The table itself: a rim of polished gold around the cloth in the colour
-/// the player chose, a pool of lantern light and dark edges. It is drawn on
-/// the flat table and may go beyond its edges (the rim).
+/// The table itself: a wooden rim with a gold edge around the cloth in the
+/// colour the player chose, lit from the middle and darker towards the rim.
+/// It is drawn on the flat table and may go beyond its edges (the rim).
 class StageFeltPainter extends CustomPainter {
   const StageFeltPainter({required this.table, required this.rim});
 
@@ -186,36 +187,37 @@ class StageFeltPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final short = math.min(w, h);
-    final felt = RRect.fromLTRBR(0, 0, w, h, Radius.circular(short * 0.11));
+    final felt = RRect.fromLTRBR(0, 0, w, h, Radius.circular(short * TableLayout.cornerFactor));
     final outer = felt.inflate(rim);
 
-    // The rim: polished gold, lighter on the far side.
+    // A gold edge around the rim.
+    canvas.drawRRect(outer.inflate(2.5), Paint()..color = PastraColors.gold);
+    // The wooden rim, lighter on the far side.
     canvas.drawRRect(
       outer,
       Paint()
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[PastraColors.goldLight, Color(0xFFD9A234), Color(0xFF7A5210)],
-          stops: <double>[0.0, 0.2, 1.0],
+          colors: <Color>[Color(0xFF6E4C27), PastraColors.wood, PastraColors.woodDark],
+          stops: <double>[0.0, 0.35, 1.0],
         ).createShader(outer.outerRect),
     );
+    // A fine light along the top of the wood.
     canvas.drawRRect(
-      outer.deflate(1.2),
+      outer.deflate(1.5),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = Colors.white.withValues(alpha: 0.5),
+        ..strokeWidth = 1
+        ..color = Colors.white.withValues(alpha: 0.12),
     );
-    // A dark groove between the rim and the cloth.
-    canvas.drawRRect(felt.inflate(2.5), Paint()..color = const Color(0xFF1C1204));
 
     // The cloth, lit from the middle.
     canvas.drawRRect(
       felt,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(0, -0.05),
+          center: const Alignment(0, -0.1),
           radius: (w * 0.6) / short,
           colors: <Color>[table.light, table.mid, table.dark],
           stops: const <double>[0.0, 0.55, 1.0],
@@ -224,49 +226,36 @@ class StageFeltPainter extends CustomPainter {
 
     canvas.save();
     canvas.clipRRect(felt);
-    // The warm light of the lantern hanging over the table.
-    canvas.drawRect(
-      felt.outerRect,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(0, 0.05),
-          radius: (w * 0.4) / short,
-          colors: <Color>[
-            PastraColors.lantern.withValues(alpha: 0.2),
-            PastraColors.lantern.withValues(alpha: 0.0),
-          ],
-        ).createShader(felt.outerRect),
-    );
     // The cloth falls into the dark towards the edges.
     canvas.drawRect(
       felt.outerRect,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(0, -0.05),
+          center: const Alignment(0, -0.1),
           radius: (w * 0.62) / short,
-          colors: <Color>[Colors.transparent, Colors.black.withValues(alpha: 0.42)],
+          colors: <Color>[Colors.transparent, Colors.black.withValues(alpha: 0.32)],
           stops: const <double>[0.6, 1.0],
         ).createShader(felt.outerRect),
     );
     // A soft shadow just inside the rim, as if the cloth lay a little lower.
     for (var i = 0; i < 4; i++) {
       canvas.drawRRect(
-        felt.deflate(i * 2.0),
+        felt.deflate(i * 2.5),
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 4
-          ..color = Colors.black.withValues(alpha: 0.18 - i * 0.04),
+          ..strokeWidth = 5
+          ..color = Colors.black.withValues(alpha: 0.2 - i * 0.045),
       );
     }
     canvas.restore();
 
-    // A thin gold line inlaid in the cloth.
+    // A gold hairline where the cloth meets the rim.
     canvas.drawRRect(
-      felt.deflate(rim * 0.5),
+      felt.deflate(1),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = PastraColors.gold.withValues(alpha: 0.3),
+        ..strokeWidth = 1.6
+        ..color = PastraColors.gold.withValues(alpha: 0.45),
     );
   }
 
@@ -274,8 +263,9 @@ class StageFeltPainter extends CustomPainter {
   bool shouldRepaint(StageFeltPainter old) => old.table != table || old.rim != rim;
 }
 
-/// The playing area in the middle of the table: a slightly lighter panel with
-/// a stitched gold edge (gold and brighter while a card is dragged over it).
+/// The playing area in the middle of the table: only a faint gold ring with
+/// a "Π" in it. While a card is dragged over it, a soft light and a gold
+/// edge show where it can be dropped.
 class TableZonePainter extends CustomPainter {
   const TableZonePainter({required this.highlight});
 
@@ -285,78 +275,49 @@ class TableZonePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
     final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(26));
-    // Lighter cloth in the middle.
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..shader = RadialGradient(
-          colors: <Color>[
-            Colors.white.withValues(alpha: highlight ? 0.11 : 0.06),
-            Colors.white.withValues(alpha: 0.0),
-          ],
-        ).createShader(rect),
-    );
-    // A shadow just inside the edge.
-    for (var i = 0; i < 3; i++) {
+    if (highlight) {
+      final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(26));
       canvas.drawRRect(
-        rrect.deflate(1 + i * 2.0),
+        rrect,
+        Paint()
+          ..shader = RadialGradient(
+            colors: <Color>[Colors.white.withValues(alpha: 0.1), Colors.white.withValues(alpha: 0.0)],
+          ).createShader(rect),
+      );
+      canvas.drawRRect(
+        rrect.deflate(2),
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = Colors.black.withValues(alpha: 0.12 - i * 0.03),
+          ..strokeWidth = 2
+          ..color = PastraColors.gold.withValues(alpha: 0.75),
       );
     }
-    // A faint "Π" emblem in the middle of the cloth.
+    // The "Π" emblem in the middle of the cloth.
     final c = rect.center;
-    final er = math.min(rect.height, rect.width) * 0.28;
+    final er = math.min(rect.height, rect.width) * 0.32;
     canvas.drawCircle(
       c,
       er,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
-        ..color = Colors.white.withValues(alpha: 0.05),
-    );
-    canvas.drawCircle(
-      c,
-      er * 0.86,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = Colors.white.withValues(alpha: 0.04),
+        ..color = PastraColors.gold.withValues(alpha: 0.2),
     );
     final emblem = TextPainter(
       text: TextSpan(
         text: 'Π',
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.06),
-          fontSize: er * 1.1,
-          fontWeight: FontWeight.w900,
+          color: PastraColors.gold.withValues(alpha: 0.12),
+          fontSize: er * 1.0,
+          fontWeight: FontWeight.w800,
           height: 1,
+          fontFamily: 'Manrope',
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
     emblem.paint(canvas, c - Offset(emblem.width / 2, emblem.height / 2));
     emblem.dispose();
-    // The stitched gold line, drawn as one path.
-    final stitches = Path();
-    for (final metric in (Path()..addRRect(rrect.deflate(5))).computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        stitches.addPath(metric.extractPath(d, d + 7), Offset.zero);
-        d += 12;
-      }
-    }
-    canvas.drawPath(
-      stitches,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = highlight ? 2.2 : 1.4
-        ..strokeCap = StrokeCap.round
-        ..color = PastraColors.gold.withValues(alpha: highlight ? 0.95 : 0.32),
-    );
   }
 
   @override

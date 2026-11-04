@@ -114,7 +114,7 @@ class RoundSummaryPanel extends StatelessWidget {
         : Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: PastraColors.text),
           );
     // Game over: the trophy next to the title (saves height on a phone).
     final titleRow = over
@@ -137,7 +137,7 @@ class RoundSummaryPanel extends StatelessWidget {
                 ),
                 child: Text(
                   s.round(state.round),
-                  style: const TextStyle(color: PastraColors.gold, fontSize: 12, fontWeight: FontWeight.w900),
+                  style: const TextStyle(color: PastraColors.gold, fontSize: 12, fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(height: 4),
@@ -148,8 +148,6 @@ class RoundSummaryPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         titleRow,
-        const SizedBox(height: 6),
-        const SizedBox(width: 150, child: MeanderBand(height: 8, opacity: 0.45)),
       ],
     );
 
@@ -269,7 +267,7 @@ class RoundSummaryPanel extends StatelessWidget {
         child: Transform.scale(scale: 0.9 + 0.1 * t, child: child),
       ),
       child: Container(
-        color: const Color(0x9E040817),
+        color: const Color(0xBF0A0B0D),
         alignment: Alignment.center,
         padding: const EdgeInsets.all(10),
         child: LayoutBuilder(
@@ -360,11 +358,11 @@ class _RowBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
       ),
       child: icon != null
-          ? Icon(icon, size: 18, color: Colors.white70)
+          ? Icon(icon, size: 18, color: PastraColors.text2)
           : Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text(text ?? '', maxLines: 1, softWrap: false, style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w900, height: 1)),
+                Text(text ?? '', maxLines: 1, softWrap: false, style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w800, height: 1)),
                 if (suit != null) SuitIcon(suit: suit!, size: 10, color: ink),
               ],
             ),
@@ -392,14 +390,14 @@ class _ScoreSheet extends StatelessWidget {
           Text(
             v == 0 ? '–' : '+$v',
             style: TextStyle(
-              color: best ? PastraColors.gold : (v == 0 ? Colors.white38 : Colors.white),
+              color: best ? PastraColors.gold : (v == 0 ? PastraColors.muted : PastraColors.text),
               fontSize: 16,
-              fontWeight: best ? FontWeight.w900 : FontWeight.w700,
+              fontWeight: best ? FontWeight.w800 : FontWeight.w700,
             ),
           ),
           if (note != null) ...<Widget>[
             const SizedBox(width: 4),
-            Text(note, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(note, style: const TextStyle(color: PastraColors.muted, fontSize: 11)),
           ],
         ],
       );
@@ -413,7 +411,7 @@ class _ScoreSheet extends StatelessWidget {
           style: TextStyle(
             color: ours ? PastraColors.gold : PastraColors.foam,
             fontSize: 13,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
           ),
         );
 
@@ -432,7 +430,7 @@ class _ScoreSheet extends StatelessWidget {
                         r.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13.5, fontWeight: FontWeight.w600),
+                        style: const TextStyle(color: PastraColors.text2, fontSize: 13.5, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -447,9 +445,9 @@ class _ScoreSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16)),
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -469,7 +467,7 @@ class _ScoreSheet extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 flex: 5,
-                child: Text(totalLabel, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+                child: Text(totalLabel, style: const TextStyle(color: PastraColors.text, fontSize: 15, fontWeight: FontWeight.w800)),
               ),
               for (var i = 0; i < 2; i++)
                 Expanded(
@@ -483,9 +481,9 @@ class _ScoreSheet extends StatelessWidget {
                       '$v',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: totals[i] >= totals[1 - i] ? PastraColors.gold : Colors.white,
+                        color: totals[i] >= totals[1 - i] ? PastraColors.gold : PastraColors.text,
                         fontSize: 19,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -524,7 +522,7 @@ class _GameScore extends StatelessWidget {
     final f = MediaQuery.textScalerOf(context).scale(1);
     Widget side(int i) {
       final ours = i == 0;
-      final color = ours ? PastraColors.gold : PastraColors.seaLight;
+      final color = ours ? PastraColors.gold : PastraColors.teal;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(
@@ -571,7 +569,7 @@ class _GameScore extends StatelessWidget {
                         maxLines: 1,
                         softWrap: false,
                         textAlign: TextAlign.right,
-                        style: TextStyle(color: ours ? PastraColors.gold : Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                        style: TextStyle(color: ours ? PastraColors.gold : PastraColors.text, fontSize: 18, fontWeight: FontWeight.w800),
                       ),
                     ),
                   ),
@@ -586,20 +584,20 @@ class _GameScore extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.16)),
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(label, style: const TextStyle(color: PastraColors.text2, fontSize: 12, fontWeight: FontWeight.w700)),
               const Spacer(),
-              const Icon(Icons.flag_rounded, color: Colors.white54, size: 14),
+              const Icon(Icons.flag_rounded, color: PastraColors.muted, size: 14),
               const SizedBox(width: 3),
-              Text(targetText, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(targetText, style: const TextStyle(color: PastraColors.muted, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 4),
@@ -636,7 +634,7 @@ class _Trophy extends StatelessWidget {
         ),
         child: Icon(
           won ? Icons.emoji_events_rounded : Icons.sentiment_neutral_rounded,
-          color: won ? Colors.black : Colors.white70,
+          color: won ? Colors.black : PastraColors.text2,
           size: 24,
         ),
       ),
@@ -672,7 +670,7 @@ class _XpLine extends StatelessWidget {
         chip(
           child: Text(
             '+${gain.amount} XP',
-            style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w900),
+            style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800),
           ),
         ),
         if (gain.chips != 0)
@@ -697,7 +695,7 @@ class _XpLine extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     '${s.levelUp} ${s.levelN(gain.levelAfter)}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                    style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),

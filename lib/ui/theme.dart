@@ -243,10 +243,11 @@ enum TableTheme {
 
 /// Card back colours (gradient + accent for frame and emblem).
 enum CardBackStyle {
-  aegean(Color(0xFF0D3B8C), Color(0xFF1E6FD0), Colors.white),
+  // The first back ("aegean" by its old name) is the charcoal and gold one.
+  aegean(Color(0xFF15171B), Color(0xFF262A31), PastraColors.gold),
   red(Color(0xFF7A1020), Color(0xFFC62838), Colors.white),
   green(Color(0xFF0B4D2C), Color(0xFF1E8A50), Colors.white),
-  black(Color(0xFF15161A), Color(0xFF3A3D45), PastraColors.gold),
+  black(Color(0xFF0B0B0D), Color(0xFF2A2A2E), Color(0xFFC9D0D8)),
   purple(Color(0xFF3B1B6E), Color(0xFF7A4BC2), Colors.white),
   gold(Color(0xFF6B4E0E), Color(0xFFD4A43A), Color(0xFFFFF6DA)),
   meander(Color(0xFF0D47A1), Color(0xFF42A5F5), Colors.white),

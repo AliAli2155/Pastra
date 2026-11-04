@@ -22,6 +22,7 @@ import '../ege/fly_card.dart';
 import '../ege/table_stage.dart';
 import '../ege/widgets.dart';
 import '../fx/fx.dart';
+import '../premium/premium.dart';
 import '../table_layout.dart';
 import '../theme.dart';
 import '../widgets/fullscreen_button.dart';
@@ -769,13 +770,13 @@ class _GameScreenState extends State<GameScreen> {
         child: Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: plateDecoration(radius: 10, edge: 0.55),
+            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(7)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(icon, size: 12, color: PastraColors.gold),
-                const SizedBox(width: 3),
-                Text(text, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w800)),
+                Icon(icon, size: 12, color: const Color(0xFFC9D6CF)),
+                const SizedBox(width: 4),
+                Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFFE4ECE7), fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -795,30 +796,31 @@ class _GameScreenState extends State<GameScreen> {
     final name = _seatName(s, seat);
     // Name plate: a small round "avatar" (robot for the computer, the
     // initial for a person), the name, and a gold glow on the player's turn.
+    // The ring is gold on the player's turn, teal otherwise.
     final avatar = Container(
-      width: 20,
-      height: 20,
+      width: 26,
+      height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: active ? PastraColors.gold : (isPartner ? const Color(0xFF1F7A6B) : PastraColors.nightLight),
-        border: Border.all(color: PastraColors.gold.withValues(alpha: active ? 0.0 : 0.35)),
+        color: PastraColors.raised,
+        border: Border.all(color: active ? PastraColors.gold : PastraColors.teal, width: 2),
       ),
       child: info.isBot
-          ? Icon(Icons.smart_toy_rounded, size: 13, color: active ? Colors.black : PastraColors.foam)
+          ? Icon(Icons.smart_toy_rounded, size: 14, color: active ? PastraColors.gold : PastraColors.text)
           : Text(
               name.isEmpty ? '?' : name.characters.first.toUpperCase(),
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                color: active ? Colors.black : PastraColors.foam,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: active ? PastraColors.gold : PastraColors.text,
               ),
             ),
     );
     final tag = AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.fromLTRB(3, 3, 9, 3),
-      decoration: plateDecoration(radius: 14, glow: active, edge: 0.35),
+      padding: const EdgeInsets.fromLTRB(3, 3, 11, 3),
+      decoration: plateDecoration(radius: 16, glow: active, edge: 0.35),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -830,19 +832,19 @@ class _GameScreenState extends State<GameScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12.5,
-                color: active ? PastraColors.gold : PastraColors.marble,
-                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: active ? PastraColors.goldLight : PastraColors.text,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
           if (c.offlineSeats.contains(seat)) ...<Widget>[
             const SizedBox(width: 4),
-            const Icon(Icons.wifi_off_rounded, size: 13, color: Color(0xFFFF8A80)),
+            const Icon(Icons.wifi_off_rounded, size: 13, color: PastraColors.coral),
           ],
           if (isPartner) ...<Widget>[
             const SizedBox(width: 4),
-            const Icon(Icons.handshake_outlined, size: 13, color: Color(0xFF7FD3A8)),
+            const Icon(Icons.handshake_outlined, size: 13, color: PastraColors.teal),
           ],
           if (thinking) ...<Widget>[
             const SizedBox(width: 6),
@@ -918,14 +920,14 @@ class _GameScreenState extends State<GameScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: gold ? PastraColors.gold : Colors.white,
+                  color: gold ? PastraColors.goldLight : PastraColors.text,
                 ),
               ),
               if (sub != null)
                 Text(
                   '   $sub',
                   maxLines: 1,
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  style: const TextStyle(fontSize: 12, color: PastraColors.text2, fontWeight: FontWeight.w500),
                 ),
             ],
           ),
@@ -958,187 +960,115 @@ class _TopBar extends StatelessWidget {
   /// Quick chat (online games).
   final VoidCallback? onChat;
 
-  /// One slim row with the scoreboard exactly in the middle.
+  /// One slim row with the scoreboard (a glass pill) exactly in the middle,
+  /// the back button on the left and the glass buttons on the right.
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
-    Widget name(String text, TextAlign align) => SizedBox(
-          width: 96,
+    // Phones: the round / target text only when there is room next to the
+    // scoreboard; the buttons stay big enough for a thumb.
+    final roomForInfo = MediaQuery.sizeOf(context).width >= 1000;
+    Widget name(String text, TextAlign align) => ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 110),
           child: Text(
             text,
             textAlign: align,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, color: Color(0xFFC9D0D8), fontWeight: FontWeight.w600),
           ),
         );
-    Widget score(int value, bool ours) => Container(
-          constraints: const BoxConstraints(minWidth: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 1),
-          decoration: BoxDecoration(
-            gradient: ours
-                ? const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)],
-                    stops: <double>[0.0, 0.5, 1.0],
-                  )
-                : const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0xFF26407F), Color(0xFF162B60)],
-                  ),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: ours ? PastraColors.goldLight.withValues(alpha: 0.8) : Colors.white24),
-          ),
-          // The score counts up to its new value; the thin bar under it
-          // shows how far it is to the target.
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TweenAnimationBuilder<int>(
-                tween: IntTween(end: value),
-                duration: const Duration(milliseconds: 700),
-                curve: Curves.easeOutCubic,
-                builder: (context, v, _) => Text(
-                  '$v',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 19,
-                    height: 1.1,
-                    fontWeight: FontWeight.w900,
-                    color: ours ? Colors.black : Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              SizedBox(
-                width: 34,
-                height: 3,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(end: (value / max(1, state.rules.targetScore)).clamp(0.0, 1.0)),
-                    duration: const Duration(milliseconds: 700),
-                    builder: (context, v, _) => LinearProgressIndicator(
-                      value: v,
-                      color: ours ? Colors.black.withValues(alpha: 0.7) : PastraColors.gold,
-                      backgroundColor: ours ? Colors.black.withValues(alpha: 0.18) : Colors.white24,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    // The score counts up to its new value.
+    Widget score(int value, bool ours) => TweenAnimationBuilder<int>(
+          tween: IntTween(end: value),
+          duration: const Duration(milliseconds: 700),
+          curve: Curves.easeOutCubic,
+          builder: (context, v, _) => Text(
+            '$v',
+            style: TextStyle(
+              fontSize: 22,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+              color: ours ? PastraColors.gold : PastraColors.text,
+            ),
           ),
         );
     final board = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: plateDecoration(radius: 16, edge: 0.6),
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xCC181B20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           name(teamNames[0], TextAlign.right),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           score(state.scores[0], true),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text(':', style: TextStyle(fontSize: 20, color: Colors.white54, fontWeight: FontWeight.w700)),
+          Container(
+            width: 1,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: Colors.white.withValues(alpha: 0.2),
           ),
           score(state.scores[1], false),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           name(teamNames[1], TextAlign.left),
+          if (roomForInfo) ...<Widget>[
+            const SizedBox(width: 12),
+            Text(
+              '/ ${state.rules.targetScore} · ${s.round(state.round)}',
+              style: const TextStyle(fontSize: 12, color: PastraColors.muted, fontWeight: FontWeight.w500),
+            ),
+          ],
         ],
       ),
     );
-    // Phones: the round / target text only when there is room next to the
-    // scoreboard; the two buttons are big enough for a thumb.
-    final roomForInfo = MediaQuery.sizeOf(context).width >= 1000;
-    // Width of the buttons (and text) on the right; the left gets the same,
-    // so the board is centred. The full screen button is only on the web.
-    // Phones: compact buttons and a left side that only holds the back button,
-    // so the scoreboard keeps its size instead of being scaled down.
-    final btn = roomForInfo ? 48.0 : 40.0;
-    final buttons = (showHint ? btn : 0) + (onChat != null ? btn : 0) + btn + (kIsWeb ? 48.0 : 0);
-    final rightRoom = (roomForInfo ? 150.0 : 0.0) + buttons;
-    final leftRoom = roomForInfo ? rightRoom : 52.0;
-    final sideRoom = rightRoom;
-    return Container(
-      height: 48,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xB3040817), Color(0x1F040817)],
-        ),
-        border: Border(bottom: BorderSide(color: Color(0x40F2C14E))),
-      ),
-      // The scoreboard stays exactly in the middle: the buttons sit on both
-      // sides over it, and the board keeps clear of the wider (right) side.
+    const btn = 40.0;
+    const gap = 8.0;
+    Widget button(IconData icon, String tooltip, VoidCallback? onTap, {Color color = PastraColors.text}) => Padding(
+          padding: const EdgeInsetsDirectional.only(start: gap),
+          child: GlassIconButton(icon: icon, tooltip: tooltip, onPressed: onTap, size: btn, color: color),
+        );
+    // The board stays centred: both sides get the room of the wider (right) one.
+    final buttons = (showHint ? 1 : 0) + (onChat != null ? 1 : 0) + 1;
+    final sideRoom = 10.0 + buttons * (btn + gap) + (kIsWeb ? 48.0 : 0.0);
+    return SizedBox(
+      height: 54,
       child: Stack(
         children: <Widget>[
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Tooltip(
-                message: s.leave,
-                child: Material(
-                  color: const Color(0xD90A1636),
-                  shape: const CircleBorder(side: BorderSide(color: Color(0x66F2C14E))),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onBack,
-                    child: const Padding(
-                      padding: EdgeInsets.all(7),
-                      child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
-                    ),
-                  ),
-                ),
-              ),
+              padding: const EdgeInsets.only(left: 10),
+              child: GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.leave, onPressed: onBack, size: btn),
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(left: leftRoom, right: sideRoom),
+            padding: EdgeInsets.symmetric(horizontal: sideRoom),
             child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: board)),
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (roomForInfo)
-                  Text(
-                    '${s.round(state.round)} · ${s.target(state.rules.targetScore)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.white54),
-                  ),
-                if (onChat != null)
-                  IconButton(
-                    onPressed: onChat,
-                    iconSize: roomForInfo ? 26 : 23,
-                    padding: roomForInfo ? null : EdgeInsets.zero,
-                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
-                    tooltip: SocialStrings(s.lang).quickChat,
-                  ),
-                if (showHint)
-                  IconButton(
-                    onPressed: onHint,
-                    iconSize: roomForInfo ? 26 : 23,
-                    padding: roomForInfo ? null : EdgeInsets.zero,
-                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
-                    icon: Icon(Icons.lightbulb_outline_rounded, color: onHint == null ? Colors.white38 : PastraColors.gold),
-                    tooltip: SocialStrings(s.lang).hint,
-                  ),
-                IconButton(
-                  onPressed: onRules,
-                  iconSize: roomForInfo ? 26 : 23,
-                    padding: roomForInfo ? null : EdgeInsets.zero,
-                    constraints: roomForInfo ? null : const BoxConstraints.tightFor(width: 40, height: 40),
-                  icon: const Icon(Icons.menu_book_outlined, color: Colors.white),
-                  tooltip: s.rules,
-                ),
-                const FullscreenButton(),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (onChat != null) button(Icons.chat_bubble_outline_rounded, SocialStrings(s.lang).quickChat, onChat),
+                  if (showHint)
+                    button(
+                      Icons.lightbulb_outline_rounded,
+                      SocialStrings(s.lang).hint,
+                      onHint,
+                      color: PastraColors.gold,
+                    ),
+                  button(Icons.menu_book_outlined, s.rules, onRules),
+                  const FullscreenButton(),
+                ],
+              ),
             ),
           ),
         ],
@@ -1197,7 +1127,7 @@ class _CountdownState extends State<_Countdown> {
     final total = widget.duration.inMilliseconds;
     final v = total <= 0 ? 0.0 : (1 - _gone / total).clamp(0.0, 1.0).toDouble();
     final left = (v * widget.duration.inSeconds).ceil();
-    final color = v > 0.3 ? PastraColors.gold : const Color(0xFFFF6B5B);
+    final color = v > 0.3 ? PastraColors.gold : PastraColors.coral;
     return RepaintBoundary(
       child: SizedBox(
         width: size,
@@ -1210,7 +1140,7 @@ class _CountdownState extends State<_Countdown> {
                 value: v,
                 strokeWidth: 2.4,
                 color: color,
-                backgroundColor: Colors.white24,
+                backgroundColor: Colors.white12,
               ),
             ),
             Text(
@@ -1373,17 +1303,17 @@ class _PastraBanner extends StatelessWidget {
               title,
               style: const TextStyle(
                 fontSize: 40,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
                 color: PastraColors.gold,
-                letterSpacing: 2,
+                letterSpacing: 1.5,
                 height: 1.1,
-                shadows: <Shadow>[Shadow(color: Color(0xFF7A5210), offset: Offset(0, 3))],
               ),
             ),
-            const SizedBox(height: 4),
-            const SizedBox(width: 150, child: MeanderBand(height: 8)),
             const SizedBox(height: 6),
-            Text(subtitle, style: const TextStyle(fontSize: 16, color: Colors.white)),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 16, color: PastraColors.text2, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -1483,8 +1413,8 @@ class _BurstPainter extends CustomPainter {
 
   static const List<Color> _colors = <Color>[
     PastraColors.gold,
-    Color(0xFFFFF3C4),
-    Color(0xFFFF9F43),
+    PastraColors.goldLight,
+    PastraColors.teal,
   ];
 
   @override
@@ -1837,7 +1767,7 @@ class _OnlineClosedOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xEB040817),
+      color: const Color(0xEB111316),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1925,11 +1855,10 @@ class _ConfettiPainter extends CustomPainter {
 
   static const List<Color> colors = <Color>[
     PastraColors.gold,
-    Color(0xFFFF5A6E),
-    Color(0xFF4CA8FF),
-    Color(0xFF5BD69A),
-    Color(0xFFB57BFF),
-    Colors.white,
+    PastraColors.goldLight,
+    PastraColors.teal,
+    PastraColors.coral,
+    PastraColors.cream,
   ];
 
   final Animation<double> anim;

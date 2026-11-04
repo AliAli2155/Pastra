@@ -51,7 +51,7 @@ class PlayingCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     const w = baseWidth;
     const h = baseHeight;
-    final radius = BorderRadius.circular(w * 0.09);
+    final radius = BorderRadius.circular(w * 0.08);
     final glow = highlighted || selected;
     final glowColor = highlighted ? PastraColors.gold : Colors.white;
     final Widget content = !faceUp
@@ -150,49 +150,25 @@ class CardFace extends StatelessWidget {
     final suit = Cards.suit(card);
     final label = Cards.rankLabel(card);
     final corner = _Corner(label: label, suit: suit, color: color, cardWidth: w);
+    // A plain cream card with a fine edge (gold when it is about to be
+    // captured) and a faint sheen towards the bottom.
     return Container(
       width: w,
       height: h,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFFFFDF7), PastraColors.cream, Color(0xFFF3EBDA)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[PastraColors.cream, Color(0xFFF4EFE3)],
         ),
-        borderRadius: BorderRadius.circular(w * 0.09),
+        borderRadius: BorderRadius.circular(w * 0.08),
         border: Border.all(
-          color: highlighted ? PastraColors.gold : PastraColors.cardEdge,
+          color: highlighted ? PastraColors.gold : const Color(0xFFD8D0BE),
           width: highlighted ? max(1.5, w * 0.035) : 1.0,
-        ),
-      ),
-      // The gloss of a coated card: light from the top left.
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(w * 0.09),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            Colors.white.withValues(alpha: 0.24),
-            Colors.white.withValues(alpha: 0.0),
-            Colors.black.withValues(alpha: 0.05),
-          ],
-          stops: const <double>[0.0, 0.5, 1.0],
         ),
       ),
       child: Stack(
         children: <Widget>[
-          // A fine frame line inside the edge, like printed cards.
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.all(w * 0.035),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(w * 0.06),
-                  border: Border.all(color: color.withValues(alpha: 0.12), width: max(0.6, w * 0.008)),
-                ),
-              ),
-            ),
-          ),
           Positioned(left: w * 0.06, top: w * 0.05, child: corner),
           Positioned(
             right: w * 0.06,
@@ -226,8 +202,8 @@ class _BlankCard extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: PastraColors.cream,
-        borderRadius: BorderRadius.circular(width * 0.09),
-        border: Border.all(color: PastraColors.cardEdge, width: 1.0),
+        borderRadius: BorderRadius.circular(width * 0.08),
+        border: Border.all(color: const Color(0xFFD8D0BE), width: 1.0),
       ),
     );
   }
@@ -251,9 +227,9 @@ class _Corner extends StatelessWidget {
           label,
           style: TextStyle(
             color: color,
-            fontSize: w * 0.22,
+            fontSize: w * 0.23,
             height: 1.0,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             letterSpacing: label.length > 1 ? -w * 0.02 : 0,
           ),
         ),
@@ -516,108 +492,68 @@ class CardBackPainter extends CustomPainter {
   final CardBackStyle style;
   final bool simple;
 
+  /// A dark card with a fine edge and a large "Π" in the accent colour, a
+  /// faint lattice behind it.
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.09));
-    canvas.drawRRect(outer, Paint()..color = Colors.white);
-    final inner = outer.deflate(w * 0.055);
-    canvas.drawRRect(
-      inner,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[style.dark, style.light],
-        ).createShader(inner.outerRect),
-    );
-    if (simple) return;
-    canvas.save();
-    canvas.clipRRect(inner);
-    final line = Paint()
-      ..color = style.accent.withValues(alpha: 0.16)
-      ..strokeWidth = max(0.7, w * 0.012)
-      ..style = PaintingStyle.stroke;
-    final step = max(4.0, w * 0.14);
-    for (var d = -h; d < w + h; d += step) {
-      canvas.drawLine(Offset(d, 0), Offset(d + h, h), line);
-      canvas.drawLine(Offset(d + h, 0), Offset(d, h), line);
-    }
-    canvas.restore();
-    canvas.drawRRect(
-      inner.deflate(w * 0.045),
-      Paint()
-        ..color = style.accent.withValues(alpha: 0.85)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.8, w * 0.02),
-    );
-    // A Greek key (meander) band at the top and the bottom.
-    if (w >= 40) {
-      final band = inner.deflate(w * 0.045).outerRect;
-      final unit = w * 0.1;
-      final key = Paint()
-        ..color = style.accent.withValues(alpha: 0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.7, w * 0.012)
-        ..strokeJoin = StrokeJoin.miter;
-      for (final top in <bool>[true, false]) {
-        final y0 = top ? band.top + w * 0.035 : band.bottom - w * 0.035 - unit;
-        final count = ((band.width - w * 0.08) / unit).floor();
-        final x0 = band.center.dx - count * unit / 2;
-        for (var i = 0; i < count; i++) {
-          final x = x0 + i * unit;
-          final u = unit;
-          final path = Path()
-            ..moveTo(x, y0 + u)
-            ..lineTo(x, y0)
-            ..lineTo(x + u * 0.8, y0)
-            ..lineTo(x + u * 0.8, y0 + u * 0.6)
-            ..lineTo(x + u * 0.35, y0 + u * 0.6)
-            ..lineTo(x + u * 0.35, y0 + u * 0.3)
-            ..moveTo(x, y0 + u)
-            ..lineTo(x + u, y0 + u);
-          canvas.drawPath(path, key);
-        }
-      }
-    }
-    if (w >= 28) {
-      final center = Offset(w / 2, h / 2);
-      final r = w * 0.2;
-      canvas.drawCircle(center, r, Paint()..color = style.accent);
-      canvas.drawCircle(
-        center,
-        r * 0.8,
-        Paint()
-          ..color = style.dark
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = max(0.8, w * 0.018),
-      );
-      final tp = TextPainter(
-        text: TextSpan(
-          text: 'Π',
-          style: TextStyle(color: style.dark, fontSize: r * 1.05, fontWeight: FontWeight.w800, height: 1.0),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
-      tp.dispose();
-    }
-    // The gloss of a coated card: light from the top left.
+    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
     canvas.drawRRect(
       outer,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[
-            Colors.white.withValues(alpha: 0.2),
-            Colors.white.withValues(alpha: 0.0),
-            Colors.black.withValues(alpha: 0.12),
-          ],
-          stops: const <double>[0.0, 0.5, 1.0],
+          colors: <Color>[style.light, style.dark],
         ).createShader(outer.outerRect),
     );
+    // The edge in the accent colour.
+    canvas.drawRRect(
+      outer.deflate(max(1.0, w * 0.018)),
+      Paint()
+        ..color = style.accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.0, w * 0.03),
+    );
+    if (simple) return;
+    final inner = outer.deflate(w * 0.1);
+    canvas.save();
+    canvas.clipRRect(inner);
+    final line = Paint()
+      ..color = style.accent.withValues(alpha: 0.07)
+      ..strokeWidth = max(0.6, w * 0.01)
+      ..style = PaintingStyle.stroke;
+    final step = max(5.0, w * 0.16);
+    for (var d = -h; d < w + h; d += step) {
+      canvas.drawLine(Offset(d, 0), Offset(d + h, h), line);
+      canvas.drawLine(Offset(d + h, 0), Offset(d, h), line);
+    }
+    canvas.restore();
+    canvas.drawRRect(
+      inner,
+      Paint()
+        ..color = style.accent.withValues(alpha: 0.28)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.6, w * 0.01),
+    );
+    if (w >= 24) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: 'Π',
+          style: TextStyle(
+            color: style.accent,
+            fontSize: w * 0.42,
+            fontWeight: FontWeight.w800,
+            height: 1.0,
+            fontFamily: 'Manrope',
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(w / 2, h / 2) - Offset(tp.width / 2, tp.height / 2));
+      tp.dispose();
+    }
   }
 
   @override

@@ -103,6 +103,10 @@ class TableLayout {
   static const int _visibleInStack = 6;
 
   /// Big screens (a desktop browser) get bigger cards: 1 on a phone, up to 2.
+  /// Corner radius of the cloth, as a part of the shorter side of the flat
+  /// table (the painter of the table uses the same).
+  static const double cornerFactor = 0.14;
+
   static double scaleFor(Size size) => min(size.width / 844, size.height / 390).clamp(1.0, 2.0).toDouble();
 
   /// Opening cards side by side: each starts this far (in card widths) to
@@ -175,8 +179,10 @@ class TableLayout {
     // clear of the screen edges after the turn.
     const deckTilt = pi / 4;
     final deckReach = (sw + sh) / 2 * 0.72;
+    // Away from the rounded corner of the cloth, so the whole deck lies on it.
+    final corner = min(w, h) * cornerFactor;
     final deckRect = Rect.fromCenter(
-      center: Offset(margin + deckReach, topY + max(deckReach, sh / 2)),
+      center: Offset(margin + deckReach + corner * 0.45, topY + max(deckReach, sh / 2)),
       width: sw,
       height: sh,
     );
