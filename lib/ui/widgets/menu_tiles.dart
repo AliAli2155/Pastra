@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../ege/painters.dart';
 import '../ege/widgets.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 
 /// Colour pairs for the big menu tiles.
@@ -43,8 +43,10 @@ class MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = darkText ? Colors.black87 : Colors.white;
-    final sub = darkText ? Colors.black54 : Colors.white70;
+    final fg = darkText ? PastraColors.goldInk : PastraColors.text;
+    final sub = darkText ? const Color(0xB31A1305) : PastraColors.text2;
+    // The tile's colour tints its icon.
+    final accent = darkText ? PastraColors.goldInk : Color.lerp(colors.first, Colors.white, 0.15)!;
     final enabled = onTap != null;
     return HoverLift(
       enabled: enabled,
@@ -53,28 +55,20 @@ class MenuTile extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              // A night-blue tablet tinted with the tile's colour (the gold
-              // tile stays gold: it is the main action).
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: darkText
-                    ? colors
-                    : <Color>[
-                        Color.lerp(colors.first, const Color(0xFF0B1634), 0.35)!,
-                        Color.lerp(colors.last, const Color(0xFF0B1634), 0.6)!,
-                      ],
-              ),
-              border: Border.all(color: PastraColors.gold.withValues(alpha: darkText ? 0.8 : 0.5), width: 1.5),
-              boxShadow: <BoxShadow>[
-                BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 8)),
-              ],
-            ),
+            // A charcoal panel with a hairline (the gold tile stays gold: it
+            // is the main action).
+            decoration: darkText
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: goldGradient,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(color: PastraColors.goldBottom.withValues(alpha: 0.28), blurRadius: 20, offset: const Offset(0, 8)),
+                    ],
+                  )
+                : panelDecoration(radius: 20),
             child: LayoutBuilder(
               builder: (context, box) {
                 // Icon above the text only in tiles that are high enough for it
@@ -87,10 +81,10 @@ class MenuTile extends StatelessWidget {
                   width: iconSize + 18,
                   height: iconSize + 18,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: (darkText ? Colors.black : Colors.white).withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular((iconSize + 18) * 0.26),
+                    color: accent.withValues(alpha: darkText ? 0.12 : 0.16),
                   ),
-                  child: Icon(icon, size: iconSize, color: fg),
+                  child: Icon(icon, size: iconSize, color: accent),
                 );
                 // Long words (e.g. "Açık masalar") shrink instead of being cut.
                 final titleText = FittedBox(
@@ -99,7 +93,7 @@ class MenuTile extends StatelessWidget {
                   child: Text(
                     title,
                     maxLines: 1,
-                    style: TextStyle(color: fg, fontSize: tall ? 26 : 21, fontWeight: FontWeight.w900),
+                    style: TextStyle(color: fg, fontSize: tall ? 24 : 19, fontWeight: FontWeight.w800),
                   ),
                 );
                 final subText = subtitle == null
@@ -165,9 +159,8 @@ class MenuTile extends StatelessWidget {
   }
 }
 
-/// On a computer: the widget grows a little under the mouse, turns towards
-/// it in 3D (and the pointer becomes a hand). Nothing changes on touch
-/// screens.
+/// On a computer: the widget grows a little under the mouse (and the
+/// pointer becomes a hand). Nothing changes on touch screens.
 class HoverLift extends StatefulWidget {
   const HoverLift({super.key, required this.child, this.enabled = true, this.scale = 1.02});
 
@@ -192,7 +185,7 @@ class _HoverLiftState extends State<HoverLift> {
         scale: _hover && widget.enabled ? widget.scale : 1,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
-        child: Tilt3D(enabled: widget.enabled, maxAngle: 0.07, child: widget.child),
+        child: widget.child,
       ),
     );
   }
@@ -257,8 +250,8 @@ class BigOutlineButton extends StatelessWidget {
   }
 }
 
-/// One option of a choice (players, difficulty …): a big card that is gold
-/// when selected.
+/// One option of a choice (players, difficulty …): a glass pill with a gold
+/// edge when selected.
 class ChoiceCard extends StatelessWidget {
   const ChoiceCard({
     super.key,
@@ -277,70 +270,7 @@ class ChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? const Color(0xFF2A1A00) : Colors.white;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: selected
-                ? const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)],
-                  )
-                : const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0xCC1A2F63), Color(0xCC0A1636)],
-                  ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? PastraColors.goldLight : PastraColors.gold.withValues(alpha: 0.28),
-              width: 1.5,
-            ),
-            boxShadow: <BoxShadow>[
-              if (selected) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.35), blurRadius: 14),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (icon != null) ...<Widget>[Icon(icon, color: fg, size: 24), const SizedBox(width: 8)],
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: TextStyle(color: fg, fontSize: 18, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (hint != null)
-                Text(
-                  hint!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: selected ? const Color(0xFF5A4200) : Colors.white60, fontSize: 12),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return ChoicePill(label: label, hint: hint, icon: icon, selected: selected, onTap: onTap, minHeight: 56);
   }
 }
 
@@ -376,7 +306,7 @@ class MenuPanel extends StatelessWidget {
                     title!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: PastraColors.gold, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.4),
+                    style: const TextStyle(color: PastraColors.text, fontSize: 17, fontWeight: FontWeight.w800),
                   ),
                 ),
                 if (trailing != null) trailing!,
@@ -388,9 +318,7 @@ class MenuPanel extends StatelessWidget {
         child,
       ],
     );
-    return CustomPaint(
-      foregroundPainter: CornerBracketsPainter(color: PastraColors.gold.withValues(alpha: 0.45)),
-      child: Container(
+    return Container(
         padding: padding,
         decoration: tabletDecoration(radius: 22),
         child: LayoutBuilder(
@@ -407,7 +335,6 @@ class MenuPanel extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
+      );
   }
 }

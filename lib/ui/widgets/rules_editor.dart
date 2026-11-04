@@ -180,7 +180,7 @@ class RulesButton extends StatelessWidget {
     final s = Strings.of(context);
     final rules = SettingsScope.of(context).rules;
     return Material(
-      color: Colors.black.withValues(alpha: 0.25),
+      color: PastraColors.glass,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -189,7 +189,7 @@ class RulesButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           child: Row(
             children: <Widget>[
@@ -200,7 +200,7 @@ class RulesButton extends StatelessWidget {
                   s.targetInfo(rules.variant, rules.targetScore, rules.cardsPerDeal),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 6),

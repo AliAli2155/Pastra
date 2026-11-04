@@ -2,115 +2,141 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'ege/backdrop.dart';
 import 'palette.dart';
+import 'premium/premium.dart';
 
 export 'palette.dart';
 
+/// The app font: Outfit, with Manrope filling in Greek and Cyrillic.
+const String appFont = 'Outfit';
+const List<String> appFontFallback = <String>['Manrope'];
+
 ThemeData buildPastraTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: PastraColors.sea,
+    seedColor: PastraColors.gold,
     brightness: Brightness.dark,
   ).copyWith(
     primary: PastraColors.gold,
-    onPrimary: Colors.black,
-    secondary: PastraColors.gold,
+    onPrimary: PastraColors.goldInk,
+    secondary: PastraColors.teal,
     onSecondary: Colors.black,
-    surface: const Color(0xFF0B1634),
+    surface: PastraColors.nightMid,
+    onSurface: PastraColors.text,
   );
-  final rounded16 = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+  final rounded14 = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
+    fontFamily: appFont,
+    fontFamilyFallback: appFontFallback,
     scaffoldBackgroundColor: PastraColors.night,
-    // The same transition on every platform: the new screen is laid down
-    // like a dealt card. It is cheap (no snapshots, no shadows), so it stays
+    // The same light transition on every platform: the new screen fades in
+    // while it rises a little. No perspective and no snapshots, so it stays
     // smooth on phones and on the web.
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
-        TargetPlatform.android: _DealTransitions(),
-        TargetPlatform.iOS: _DealTransitions(),
-        TargetPlatform.macOS: _DealTransitions(),
-        TargetPlatform.windows: _DealTransitions(),
-        TargetPlatform.linux: _DealTransitions(),
-        TargetPlatform.fuchsia: _DealTransitions(),
+        TargetPlatform.android: _RiseTransitions(),
+        TargetPlatform.iOS: _RiseTransitions(),
+        TargetPlatform.macOS: _RiseTransitions(),
+        TargetPlatform.windows: _RiseTransitions(),
+        TargetPlatform.linux: _RiseTransitions(),
+        TargetPlatform.fuchsia: _RiseTransitions(),
       },
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xCC040817),
-      shape: Border(bottom: BorderSide(color: Color(0x33F2C14E))),
+      backgroundColor: Color(0xE6111316),
+      shape: Border(bottom: BorderSide(color: PastraColors.edge)),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
-      foregroundColor: Colors.white,
-      titleTextStyle: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
-      iconTheme: IconThemeData(color: Colors.white, size: 26),
+      foregroundColor: PastraColors.text,
+      titleTextStyle: TextStyle(
+        fontFamily: appFont,
+        fontFamilyFallback: appFontFallback,
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        color: PastraColors.text,
+      ),
+      iconTheme: IconThemeData(color: PastraColors.text, size: 24),
     ),
     // Tabs: a gold pill behind the chosen one.
     tabBarTheme: TabBarThemeData(
-      indicator: BoxDecoration(color: PastraColors.gold, borderRadius: BorderRadius.circular(20)),
+      indicator: BoxDecoration(color: PastraColors.gold, borderRadius: BorderRadius.circular(10)),
       indicatorSize: TabBarIndicatorSize.tab,
       dividerHeight: 0,
-      labelColor: Colors.black,
-      unselectedLabelColor: Colors.white70,
-      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+      labelColor: PastraColors.goldInk,
+      unselectedLabelColor: PastraColors.text2,
+      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
       unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-      splashBorderRadius: BorderRadius.circular(20),
+      splashBorderRadius: BorderRadius.circular(10),
       overlayColor: WidgetStateProperty.all(Colors.white10),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: PastraColors.gold,
-        foregroundColor: Colors.black,
+        foregroundColor: PastraColors.goldInk,
         disabledBackgroundColor: Colors.white12,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-        shape: rounded16,
+        shape: rounded14,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white38, width: 1.4),
+        foregroundColor: PastraColors.text,
+        backgroundColor: PastraColors.glass,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        shape: rounded16,
+        shape: rounded14,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: PastraColors.gold, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: PastraColors.panel,
+      backgroundColor: PastraColors.nightMid,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: PastraColors.edge),
       ),
-      titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
+      titleTextStyle: const TextStyle(
+        fontFamily: appFont,
+        fontFamilyFallback: appFontFallback,
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        color: PastraColors.text,
+      ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: const Color(0xF0071027),
-      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+      backgroundColor: PastraColors.nightLight,
+      contentTextStyle: const TextStyle(
+        fontFamily: appFont,
+        fontFamilyFallback: appFontFallback,
+        color: PastraColors.text,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.5)),
+        side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.45)),
       ),
     ),
     tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(color: const Color(0xF0071027), borderRadius: BorderRadius.circular(10)),
-      textStyle: const TextStyle(color: Colors.white, fontSize: 13),
+      decoration: BoxDecoration(color: PastraColors.nightLight, borderRadius: BorderRadius.circular(10)),
+      textStyle: const TextStyle(fontFamily: appFont, fontFamilyFallback: appFontFallback, color: PastraColors.text, fontSize: 13),
       waitDuration: const Duration(milliseconds: 400),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? PastraColors.gold : Colors.white70,
+        (states) => states.contains(WidgetState.selected) ? PastraColors.gold : PastraColors.text2,
       ),
       trackColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected) ? PastraColors.gold.withValues(alpha: 0.4) : Colors.white12,
+        (states) => states.contains(WidgetState.selected) ? PastraColors.gold.withValues(alpha: 0.35) : Colors.white10,
       ),
       trackOutlineColor: WidgetStateProperty.all(Colors.white24),
     ),
@@ -120,35 +146,35 @@ ThemeData buildPastraTheme() {
       inactiveTrackColor: Colors.white24,
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: Colors.black.withValues(alpha: 0.28),
+      backgroundColor: PastraColors.glass,
       selectedColor: PastraColors.gold,
-      side: const BorderSide(color: Colors.white24),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      labelStyle: const TextStyle(color: PastraColors.text, fontWeight: FontWeight.w600),
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? PastraColors.gold : Colors.black.withValues(alpha: 0.25),
+          (states) => states.contains(WidgetState.selected) ? PastraColors.gold : PastraColors.glass,
         ),
         foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? Colors.black : Colors.white,
+          (states) => states.contains(WidgetState.selected) ? PastraColors.goldInk : PastraColors.text,
         ),
         textStyle: WidgetStateProperty.all(const TextStyle(fontWeight: FontWeight.w700)),
-        side: WidgetStateProperty.all(const BorderSide(color: Colors.white24)),
+        side: WidgetStateProperty.all(BorderSide(color: Colors.white.withValues(alpha: 0.14))),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.black.withValues(alpha: 0.25),
+      fillColor: PastraColors.glass,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.white24),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: PastraColors.gold, width: 2),
+        borderSide: const BorderSide(color: PastraColors.gold, width: 1.6),
       ),
     ),
     scrollbarTheme: ScrollbarThemeData(
@@ -158,14 +184,12 @@ ThemeData buildPastraTheme() {
   );
 }
 
-class _DealTransitions extends PageTransitionsBuilder {
-  const _DealTransitions();
+class _RiseTransitions extends PageTransitionsBuilder {
+  const _RiseTransitions();
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 340);
+  Duration get transitionDuration => const Duration(milliseconds: 260);
 
-  /// The new screen is laid down like a card: it turns up from the table
-  /// with a little perspective while it fades in.
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,
@@ -175,34 +199,19 @@ class _DealTransitions extends PageTransitionsBuilder {
     Widget child,
   ) {
     final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
-    return AnimatedBuilder(
-      animation: curved,
-      builder: (context, child) {
-        final t = curved.value.clamp(0.0, 1.0).toDouble();
-        // A plain (identity) matrix once it has landed, so the page is not
-        // drawn through a perspective transform for ever.
-        final turn = Matrix4.identity();
-        if (t < 1) {
-          turn
-            ..setEntry(3, 2, 0.001)
-            ..rotateX((1 - t) * 0.12);
-        }
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 22 * (1 - t)),
-            child: Transform(alignment: Alignment.center, transform: turn, child: child),
-          ),
-        );
-      },
-      child: child,
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.025), end: Offset.zero).animate(curved),
+        child: child,
+      ),
     );
   }
 }
 
 /// Table cloth colours (light centre → dark edge).
 enum TableTheme {
-  green(Color(0xFF138152), Color(0xFF0A5A39), Color(0xFF052E1E)),
+  green(Color(0xFF16A07A), Color(0xFF0D7356), Color(0xFF064734)),
   blue(Color(0xFF2468B5), Color(0xFF15427A), Color(0xFF0A2142)),
   red(Color(0xFFA3303F), Color(0xFF6E1A27), Color(0xFF3A0C14)),
   wood(Color(0xFFA0703F), Color(0xFF6B4423), Color(0xFF34200F)),
@@ -267,21 +276,18 @@ class Look {
 /// Card-table background in the chosen colour.
 BoxDecoration get feltDecoration => Look.table.decoration;
 
-/// The background of the menu screens: the Aegean night (see
-/// [AegeanBackdrop]).
+/// The background of the menu screens: the still charcoal gradient of
+/// [PremiumBackdrop]. [ambient] and [animated] are kept for the callers;
+/// the background never moves.
 class Felt extends StatelessWidget {
   const Felt({super.key, required this.child, this.ambient = false, this.animated = true});
 
   final Widget child;
-
-  /// Lantern sparks rising (home screen).
   final bool ambient;
-
-  /// False: a still picture (the game screen).
   final bool animated;
 
   @override
-  Widget build(BuildContext context) => AegeanBackdrop(ambient: ambient, animated: animated, child: child);
+  Widget build(BuildContext context) => PremiumBackdrop(child: child);
 }
 
 /// The table cloth of the game screen: the chosen colour, a fine woven
@@ -408,7 +414,7 @@ class GoldText extends StatelessWidget {
           shaderCallback: (bounds) => const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFFFFF1C1), Color(0xFFF2C14E), Color(0xFFC08A1E)],
+            colors: <Color>[Color(0xFFF7E2B0), Color(0xFFE6B54A), Color(0xFFB8862B)],
             stops: <double>[0.0, 0.55, 1.0],
           ).createShader(bounds),
           child: Text(text, style: style.copyWith(color: Colors.white)),

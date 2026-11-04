@@ -52,17 +52,14 @@ class PlayerAvatar extends StatelessWidget {
       ),
       child: Container(
         alignment: Alignment.center,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[Color(0xFF3E86D8), Color(0xFF173B82)],
-          ),
+          color: const Color(0xFF2A2E36),
+          border: frame == AvatarFrame.none ? Border.all(color: const Color(0x33FFFFFF), width: 1.5) : null,
         ),
         child: Text(
           initial,
-          style: TextStyle(color: Colors.white, fontSize: size * 0.42, fontWeight: FontWeight.w900, height: 1),
+          style: TextStyle(color: const Color(0xFFF3EEE2), fontSize: size * 0.42, fontWeight: FontWeight.w700, height: 1),
         ),
       ),
     );

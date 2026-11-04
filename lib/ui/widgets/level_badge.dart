@@ -30,12 +30,15 @@ class LevelBadge extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: PastraColors.gold,
-              border: Border.all(color: Colors.white, width: 2),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[PastraColors.goldTop, PastraColors.goldBottom],
+              ),
             ),
             child: Text(
               '$level',
-              style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w900),
+              style: const TextStyle(color: PastraColors.goldInk, fontSize: 18, fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 10),
@@ -71,7 +74,7 @@ class LevelBadge extends StatelessWidget {
                     builder: (context, v, _) => LinearProgressIndicator(
                       value: v,
                       minHeight: 7,
-                      backgroundColor: Colors.black.withValues(alpha: 0.35),
+                      backgroundColor: const Color(0xFF2E333B),
                       valueColor: const AlwaysStoppedAnimation<Color>(PastraColors.gold),
                     ),
                   ),

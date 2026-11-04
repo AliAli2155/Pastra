@@ -5,40 +5,28 @@ import 'package:flutter/material.dart';
 
 import '../fx/fx.dart';
 import '../palette.dart';
+import '../premium/premium.dart';
 import 'painters.dart';
 
-/// The look of a stone tablet: dark navy, a gold hairline and a soft shadow.
-BoxDecoration tabletDecoration({double radius = 20, bool glow = false}) {
-  return BoxDecoration(
-    borderRadius: BorderRadius.circular(radius),
-    gradient: const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: <Color>[Color(0xF01A2F63), Color(0xF00B1634)],
-    ),
-    border: Border.all(color: PastraColors.gold.withValues(alpha: glow ? 0.8 : 0.4), width: 1.2),
-    boxShadow: <BoxShadow>[
-      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 18, offset: const Offset(0, 8)),
-      if (glow) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.25), blurRadius: 22),
-    ],
-  );
-}
+/// A charcoal panel with a hairline edge (the premium look); [glow] gives
+/// it a gold edge and a faint gold light.
+BoxDecoration tabletDecoration({double radius = 20, bool glow = false}) =>
+    panelDecoration(radius: radius, highlight: glow);
 
-/// A small plate (name plates, counters, short messages on the table): navy
-/// with a gold hairline. With [glow] the edge is brighter and a gold light
+/// A small plate (name plates, counters, short messages on the table): dark
+/// glass with a hairline. With [glow] the edge turns gold and a gold light
 /// shines around the plate.
 BoxDecoration plateDecoration({double radius = 12, bool glow = false, double edge = 0.4}) {
   return BoxDecoration(
     borderRadius: BorderRadius.circular(radius),
-    gradient: const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: <Color>[Color(0xF01A2F63), Color(0xF00B1634)],
+    color: const Color(0xD114161A),
+    border: Border.all(
+      color: glow ? PastraColors.gold.withValues(alpha: 0.9) : Colors.white.withValues(alpha: 0.12 + edge * 0.1),
+      width: glow ? 1.5 : 1,
     ),
-    border: Border.all(color: PastraColors.gold.withValues(alpha: glow ? 0.9 : edge), width: glow ? 1.5 : 1),
     boxShadow: <BoxShadow>[
-      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 2)),
-      if (glow) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.4), blurRadius: 14),
+      BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
+      if (glow) BoxShadow(color: PastraColors.gold.withValues(alpha: 0.35), blurRadius: 14),
     ],
   );
 }
@@ -66,11 +54,9 @@ class Tablet extends StatelessWidget {
       decoration: tabletDecoration(radius: radius, glow: glow),
       child: Padding(padding: padding, child: child),
     );
-    if (!brackets) return box;
-    return CustomPaint(
-      foregroundPainter: CornerBracketsPainter(color: PastraColors.gold.withValues(alpha: 0.5)),
-      child: box,
-    );
+    // [brackets] is kept for the callers; the premium look has no corner
+    // ornaments.
+    return box;
   }
 }
 
@@ -81,16 +67,15 @@ class MeanderBand extends StatelessWidget {
   final double height;
   final double opacity;
 
+  /// The premium look has no Greek key: the band only keeps its place (a
+  /// hairline in the middle).
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
       width: double.infinity,
-      child: CustomPaint(
-        painter: MeanderPainter(
-          color: PastraColors.gold.withValues(alpha: opacity),
-          stroke: math.max(1.0, height / 9),
-        ),
+      child: Center(
+        child: Container(height: 1, color: Colors.white.withValues(alpha: opacity * 0.15)),
       ),
     );
   }
@@ -351,15 +336,15 @@ class _ShimmerSweepState extends State<ShimmerSweep> with SingleTickerProviderSt
   }
 }
 
-/// A raised button with a visible lower edge that sinks when pressed. Gold
-/// for the main action, dark blue ("lapis") for the others.
-class BevelButton extends StatefulWidget {
+/// A button of the premium look: gold with dark text for the main action,
+/// glass for the others. (The name is from the older raised design.)
+class BevelButton extends StatelessWidget {
   const BevelButton({
     super.key,
     required this.onPressed,
     required this.child,
     this.height = 56,
-    this.radius = 16,
+    this.radius = 14,
     this.gold = true,
     this.shimmer = false,
     this.autofocus = false,
@@ -372,115 +357,42 @@ class BevelButton extends StatefulWidget {
   final double height;
   final double radius;
   final bool gold;
+
+  /// Kept for the callers: the premium buttons do not shimmer.
   final bool shimmer;
   final bool autofocus;
   final double fontSize;
   final EdgeInsets padding;
 
   @override
-  State<BevelButton> createState() => _BevelButtonState();
-}
-
-class _BevelButtonState extends State<BevelButton> {
-  static const double _edge = 5;
-
-  bool _down = false;
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
-    final enabled = widget.onPressed != null;
-    final gold = widget.gold;
-    final r = BorderRadius.circular(widget.radius);
-    final fg = gold ? const Color(0xFF2A1A00) : Colors.white;
-    final faceColors = gold
-        ? const <Color>[PastraColors.goldLight, PastraColors.gold, Color(0xFFD9A234)]
-        : const <Color>[Color(0xFF26407F), Color(0xFF162B60), Color(0xFF0F2048)];
-    final edgeColor = gold ? PastraColors.goldDeep : const Color(0xFF050D24);
-    final top = _down ? _edge - 1 : (_hover && enabled ? -1.0 : 0.0);
-    final button = SizedBox(
-      height: widget.height + _edge,
-      child: Stack(
-        children: <Widget>[
-          // The lower edge: the thickness of the button.
-          Positioned(
-            left: 0,
-            right: 0,
-            top: _edge,
-            height: widget.height,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
+    final r = BorderRadius.circular(radius);
+    final fg = gold ? PastraColors.goldInk : PastraColors.text;
+    return SizedBox(
+      height: height,
+      child: Pressable(
+        onTap: onPressed,
+        radius: r,
+        autofocus: autofocus,
+        decoration: gold
+            ? BoxDecoration(
+                gradient: goldGradient,
                 borderRadius: r,
-                color: edgeColor,
                 boxShadow: <BoxShadow>[
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.38), blurRadius: 14, offset: const Offset(0, 8)),
+                  BoxShadow(color: PastraColors.goldBottom.withValues(alpha: 0.28), blurRadius: 22, offset: const Offset(0, 8)),
                 ],
-              ),
+              )
+            : glassDecoration(radius: radius),
+        child: Center(
+          child: Padding(
+            padding: padding,
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: fg, fontSize: fontSize, fontWeight: FontWeight.w800),
+              child: IconTheme.merge(data: IconThemeData(color: fg), child: child),
             ),
           ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 80),
-            curve: Curves.easeOut,
-            left: 0,
-            right: 0,
-            top: top,
-            height: widget.height,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: r,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: faceColors,
-                  stops: const <double>[0.0, 0.5, 1.0],
-                ),
-                border: Border.all(
-                  color: (gold ? PastraColors.goldLight : PastraColors.gold).withValues(alpha: gold ? 0.9 : 0.45),
-                  width: 1.2,
-                ),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: r,
-                  autofocus: widget.autofocus,
-                  onTap: widget.onPressed,
-                  onHighlightChanged: (v) => setState(() => _down = v),
-                  onHover: (v) => setState(() => _hover = v),
-                  child: Stack(
-                    children: <Widget>[
-                      if (widget.shimmer && enabled) Positioned.fill(child: ShimmerSweep(borderRadius: r)),
-                      // The light along the upper edge.
-                      Positioned(
-                        left: widget.radius,
-                        right: widget.radius,
-                        top: 2,
-                        height: 1.5,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(1),
-                            color: Colors.white.withValues(alpha: gold ? 0.55 : 0.2),
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Padding(
-                          padding: widget.padding,
-                          child: DefaultTextStyle.merge(
-                            style: TextStyle(color: fg, fontSize: widget.fontSize, fontWeight: FontWeight.w800),
-                            child: IconTheme.merge(data: IconThemeData(color: fg), child: widget.child),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
-    return enabled ? button : Opacity(opacity: 0.45, child: button);
   }
 }

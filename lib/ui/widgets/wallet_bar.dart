@@ -4,10 +4,11 @@ import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 
-const Color chipColor = Color(0xFFFFC94A);
-const Color diamondColor = Color(0xFF7FD8F5);
+const Color chipColor = PastraColors.gold;
+const Color diamondColor = PastraColors.teal;
 
 /// A small round chip (the in-game coin).
 class ChipIcon extends StatelessWidget {
@@ -22,29 +23,20 @@ class ChipIcon extends StatelessWidget {
 class _ChipPainter extends CustomPainter {
   const _ChipPainter();
 
+  /// A gold coin with an engraved ring.
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2;
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xFFB8860B));
+    canvas.drawCircle(c, r, Paint()..color = PastraColors.goldDeep);
     canvas.drawCircle(c, r * 0.9, Paint()..color = chipColor);
-    // The white edge marks of a casino chip.
-    final mark = Paint()
-      ..color = Colors.white
-      ..strokeWidth = r * 0.28
-      ..style = PaintingStyle.stroke;
-    for (var i = 0; i < 4; i++) {
-      final a = i * 3.14159 / 2;
-      canvas.drawArc(Rect.fromCircle(center: c, radius: r * 0.76), a - 0.22, 0.44, false, mark);
-    }
-    canvas.drawCircle(c, r * 0.5, Paint()..color = const Color(0xFFD99A1E));
     canvas.drawCircle(
       c,
-      r * 0.5,
+      r * 0.56,
       Paint()
-        ..color = Colors.white70
+        ..color = const Color(0xFF9A6E14)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = r * 0.08,
+        ..strokeWidth = r * 0.14,
     );
   }
 
@@ -88,7 +80,8 @@ class Amount extends StatelessWidget {
   }
 }
 
-/// The player's chips and diamonds; tapping opens the store.
+/// The player's chips and diamonds in two glass pills; tapping opens the
+/// store.
 class WalletBar extends StatelessWidget {
   const WalletBar({super.key, required this.onTap, this.compact = false});
 
@@ -99,34 +92,26 @@ class WalletBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = SettingsScope.of(context);
     final shop = ShopStrings(settings.language);
-    final size = compact ? 14.0 : 16.0;
+    final size = compact ? 14.0 : 15.0;
+    final height = compact ? 34.0 : 38.0;
+    Widget pill(Widget amount) => Container(
+          height: height,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
+          decoration: glassDecoration(radius: 10),
+          child: Center(child: amount),
+        );
     return Tooltip(
       message: shop.store,
-      child: Material(
-        color: const Color(0xE60A1636),
-        shape: StadiumBorder(side: BorderSide(color: PastraColors.gold.withValues(alpha: 0.6))),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12, vertical: compact ? 5 : 7),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Amount(chips: settings.chips, size: size),
-                SizedBox(width: compact ? 10 : 14),
-                Amount(diamonds: settings.diamonds, size: size),
-                if (onTap != null) ...<Widget>[
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: const BoxDecoration(color: PastraColors.gold, shape: BoxShape.circle),
-                    padding: const EdgeInsets.all(2),
-                    child: Icon(Icons.add_rounded, size: size + 2, color: Colors.black),
-                  ),
-                ],
-              ],
-            ),
-          ),
+      child: Pressable(
+        onTap: onTap,
+        radius: BorderRadius.circular(10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            pill(Amount(chips: settings.chips, size: size)),
+            SizedBox(width: compact ? 6 : 8),
+            pill(Amount(diamonds: settings.diamonds, size: size)),
+          ],
         ),
       ),
     );
