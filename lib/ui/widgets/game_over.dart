@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -12,8 +13,8 @@ import 'round_summary.dart';
 import 'wallet_bar.dart';
 
 /// The end of a game: first a big moment (the trophy, the final score, the
-/// XP bar filling up and a new level), then, on request, the full score
-/// sheet of the last round ([RoundSummaryPanel]).
+/// XP bar filling up and a new level), then, by itself (or at once on
+/// request), the full score sheet of the last round ([RoundSummaryPanel]).
 ///
 /// Everything here moves once when it appears and then stands still.
 class GameOverView extends StatefulWidget {
@@ -47,24 +48,53 @@ class GameOverView extends StatefulWidget {
 }
 
 class _GameOverViewState extends State<GameOverView> {
+  /// How long the big moment stays before the score sheet comes.
+  static const Duration showSheetAfter = Duration(milliseconds: 4000);
+
   bool _sheet = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(showSheetAfter, _showSheet);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _showSheet() {
+    _timer?.cancel();
+    if (mounted && !_sheet) setState(() => _sheet = true);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_sheet) {
-      return RoundSummaryPanel(
-        state: widget.state,
-        teamNames: widget.teamNames,
-        onNextRound: widget.onNextRound,
-        onMainMenu: widget.onMainMenu,
-        onPlayAgain: widget.onPlayAgain,
-        playAgainLabel: widget.playAgainLabel,
-        xpGain: widget.xpGain,
-        tournament: widget.tournament,
-        onReview: widget.onReview,
-        reviewCount: widget.reviewCount,
-      );
-    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      child: _sheet ? KeyedSubtree(key: const ValueKey<String>('sheet'), child: _sheetPanel()) : _moment(context),
+    );
+  }
+
+  Widget _sheetPanel() {
+    return RoundSummaryPanel(
+      state: widget.state,
+      teamNames: widget.teamNames,
+      onNextRound: widget.onNextRound,
+      onMainMenu: widget.onMainMenu,
+      onPlayAgain: widget.onPlayAgain,
+      playAgainLabel: widget.playAgainLabel,
+      xpGain: widget.xpGain,
+      tournament: widget.tournament,
+      onReview: widget.onReview,
+      reviewCount: widget.reviewCount,
+    );
+  }
+
+  Widget _moment(BuildContext context) {
     final s = Strings.of(context);
     final state = widget.state;
     final won = state.winner == 0;
@@ -123,7 +153,7 @@ class _GameOverViewState extends State<GameOverView> {
         const SizedBox(height: 4),
         Center(
           child: TextButton.icon(
-            onPressed: () => setState(() => _sheet = true),
+            onPressed: _showSheet,
             icon: const Icon(Icons.table_rows_rounded, size: 18),
             label: Text(s.gameScore),
           ),
@@ -132,6 +162,7 @@ class _GameOverViewState extends State<GameOverView> {
     );
 
     return ColoredBox(
+      key: const ValueKey<String>('moment'),
       color: const Color(0xD90A0B0D),
       child: Stack(
         children: <Widget>[

@@ -478,6 +478,9 @@ class _GameScreenState extends State<GameScreen> {
               // perspective (slow, above all in a browser): each one is
               // placed, sized and slanted like the part of the table under it.
               for (final e in entries) _card(e.key, e.value, duration, geo),
+              // On a computer: a card of my hand rises under the mouse.
+              for (final e in entries)
+                if (e.value.interactive && e.key != _dragCard) _hoverZone(e.key, e.value, geo),
               if (state.deck.isNotEmpty)
                 // On the deck itself: beside it the card a player has just
                 // played may show, the face-up cards under it stick out at the
@@ -806,15 +809,12 @@ class _GameScreenState extends State<GameScreen> {
       angle: p.angle,
       duration: duration,
       delay: Duration(milliseconds: delay),
+      delayKey: _staggerAt,
       still: dragging,
       hop: !Fx.low.value,
       geometry: geo,
       child: RepaintBoundary(
-        child: MouseRegion(
-          cursor: p.interactive && c.isHumanTurn ? SystemMouseCursors.click : MouseCursor.defer,
-          onEnter: p.interactive ? (_) => setState(() => _hoverCard = card) : null,
-          onExit: p.interactive ? (_) => setState(() => _hoverCard = _hoverCard == card ? null : _hoverCard) : null,
-          child: GestureDetector(
+        child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: p.interactive ? () => c.tapHandCard(card) : null,
           onPanStart: canDrag ? (_) => _dragStart(card) : null,
@@ -832,6 +832,36 @@ class _GameScreenState extends State<GameScreen> {
             selected: p.selected,
           ),
         ),
+      ),
+    );
+  }
+
+  /// Where the mouse makes a card of my hand rise: the place where the card
+  /// lies (and, while it is up, the strip it rose by). It does not move with
+  /// the card, so a card rising out from under the mouse does not drop back
+  /// and rise again, and a card flying past the mouse is not caught.
+  Widget _hoverZone(int card, CardPlacement p, StageGeometry geo) {
+    var rect = p.rect;
+    if (card == _hoverCard) rect = Rect.fromLTRB(rect.left, rect.top - rect.height * 0.08, rect.right, rect.bottom);
+    final center = geo.project(rect.center);
+    return Positioned(
+      left: center.dx - rect.width / 2,
+      top: center.dy - rect.height / 2,
+      width: rect.width,
+      height: rect.height,
+      child: Transform(
+        alignment: Alignment.center,
+        transform: geo.slantAt(rect.center)..rotateZ(p.angle),
+        child: MouseRegion(
+          // Taps and drags go on to the card under it.
+          hitTestBehavior: HitTestBehavior.translucent,
+          cursor: c.isHumanTurn ? SystemMouseCursors.click : MouseCursor.defer,
+          onEnter: (_) {
+            if (_hoverCard != card) setState(() => _hoverCard = card);
+          },
+          onExit: (_) {
+            if (_hoverCard == card && mounted) setState(() => _hoverCard = null);
+          },
         ),
       ),
     );

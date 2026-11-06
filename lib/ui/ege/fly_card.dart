@@ -13,6 +13,10 @@ import 'table_stage.dart';
 /// where that place is seen on the screen: smaller further away and slanted
 /// like the table under it (see [StageGeometry.slantAt]).
 ///
+/// The [delay] is waited once for each [delayKey] (one deal, one capture):
+/// when the place changes again later (a card rising under the mouse, a new
+/// layout), the card goes on at once instead of stopping in the air.
+///
 /// It has to be a direct child of a [Stack] (it builds a [Positioned]).
 class FlyCard extends StatefulWidget {
   const FlyCard({
@@ -22,6 +26,7 @@ class FlyCard extends StatefulWidget {
     required this.duration,
     required this.child,
     this.delay = Duration.zero,
+    this.delayKey,
     this.still = false,
     this.hop = true,
     this.geometry,
@@ -36,6 +41,9 @@ class FlyCard extends StatefulWidget {
   /// How long the move takes (after the [delay]).
   final Duration duration;
   final Duration delay;
+
+  /// The move the [delay] belongs to (see the class description).
+  final Object? delayKey;
 
   /// Follows [rect] at once, without gliding (a card held by a finger).
   final bool still;
@@ -60,12 +68,28 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
   late double _angleTo = widget.angle;
   Curve _curve = Curves.easeOutCubic;
 
+  /// The [FlyCard.delayKey] whose delay has been (or is being) waited. A new
+  /// card lies where it belongs already.
+  Object? _delayKey;
+
+  /// Part of the running animation spent waiting.
+  double _wait = 0;
+
+  /// A short slide (a card rising under the mouse) takes at most this long.
+  static const Duration _short = Duration(milliseconds: 130);
+
   /// How far the glide has come (0 = at [_from], 1 = at [_to]).
   double get _t => _curve.transform(_c.value.clamp(0.0, 1.0).toDouble());
 
   Rect get _rectNow => Rect.lerp(_from, _to, _t)!;
 
   double get _angleNow => _angleFrom + (_angleTo - _angleFrom) * _t;
+
+  @override
+  void initState() {
+    super.initState();
+    _delayKey = widget.delayKey;
+  }
 
   @override
   void didUpdateWidget(FlyCard oldWidget) {
@@ -81,15 +105,30 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
       return;
     }
     if (w.rect == _to && w.angle == _angleTo) return;
+    // The delay of a new move; for a later change only what is left of a
+    // wait that is still running.
+    final Duration wait;
+    if (w.delayKey != _delayKey) {
+      wait = w.delay;
+      _delayKey = w.delayKey;
+    } else if (_c.isAnimating && _c.value < _wait) {
+      wait = (_c.duration ?? Duration.zero) * (_wait - _c.value);
+    } else {
+      wait = Duration.zero;
+    }
     // The place changed: glide on from wherever the card is now.
     _from = _rectNow;
     _angleFrom = _angleNow;
     _to = w.rect;
     _angleTo = w.angle;
-    _curve = w.delay == Duration.zero
-        ? Curves.easeOutCubic
-        : Interval(w.delay.inMicroseconds / total.inMicroseconds, 1, curve: Curves.easeOutCubic);
-    _c.duration = total;
+    var move = w.duration;
+    if (wait == Duration.zero && (_to.center - _from.center).distance < _to.height * 0.15 && move > _short) {
+      move = _short;
+    }
+    final run = move + wait;
+    _wait = run > Duration.zero ? wait.inMicroseconds / run.inMicroseconds : 0;
+    _curve = wait == Duration.zero ? Curves.easeOutCubic : Interval(_wait, 1, curve: Curves.easeOutCubic);
+    _c.duration = run;
     _c.forward(from: 0);
   }
 
