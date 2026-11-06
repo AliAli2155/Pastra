@@ -293,10 +293,11 @@ class _CardCenter extends StatelessWidget {
   }
 }
 
-/// Original artwork for J / Q / K: a framed, two-ended panel (like real
-/// court cards, readable from both sides) with an emblem in each half (a
-/// crown for the king, a tiara for the queen, a plumed cap for the jack)
-/// and the letter in a medallion in the middle.
+/// Original artwork for J / Q / K: a two-ended court card (readable from
+/// both sides) with an art-deco portrait in each half — the king with a
+/// crown and a beard, the queen with a tiara and long hair, the jack with a
+/// plumed cap — on a deep panel in a gold frame, and the suit in a cream
+/// medallion on the gold band between the two halves.
 class _FaceCardArt extends StatelessWidget {
   const _FaceCardArt({required this.card, required this.color, required this.cardWidth});
 
@@ -318,158 +319,346 @@ class _CourtPainter extends CustomPainter {
 
   final int rank;
   final int suit;
+
+  /// The suit colour (red or black) of the medallion in the middle.
   final Color ink;
 
   static const Color gold = Color(0xFFE6B54A);
-  static const Color goldDark = Color(0xFF9A6E14);
+  static const Color goldLight = Color(0xFFF7E2B0);
+  static const Color goldDark = Color(0xFF8A6212);
+  static const Color skin = Color(0xFFF4E6CB);
 
-  /// A court card of the premium look: a deep panel (burgundy for the red
-  /// suits, charcoal for the black ones) in a gold frame, a gold emblem at
-  /// each end (crown, tiara, plumed cap) and the letter in a gold medallion.
+  bool get _red => suit == Cards.diamonds || suit == Cards.hearts;
+
+  /// Rubies on the red cards, turquoise on the black ones.
+  Color get _jewel => _red ? const Color(0xFFE0574A) : const Color(0xFF5FD3C2);
+
+  /// The robe: charcoal on the burgundy panel, emerald on the charcoal one.
+  List<Color> get _robe =>
+      _red ? const <Color>[Color(0xFF2A2E36), Color(0xFF111316)] : const <Color>[Color(0xFF16A07A), Color(0xFF064734)];
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
     if (w <= 0 || h <= 0) return;
-    final red = suit == Cards.diamonds || suit == Cards.hearts;
-    final frame = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
+    final panel = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
     canvas.drawRRect(
-      frame,
+      panel,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: red
-              ? const <Color>[Color(0xFF8A2A22), Color(0xFF6A1C16), Color(0xFF8A2A22)]
-              : const <Color>[Color(0xFF2E333B), Color(0xFF181B20), Color(0xFF2E333B)],
+          colors: _red
+              ? const <Color>[Color(0xFF8A2A22), Color(0xFF5E1712), Color(0xFF8A2A22)]
+              : const <Color>[Color(0xFF2E333B), Color(0xFF16181D), Color(0xFF2E333B)],
         ).createShader(Offset.zero & size),
     );
+
+    // A faint gold lattice behind the portraits.
+    final inner = panel.deflate(w * 0.06);
+    canvas.save();
+    canvas.clipRRect(inner);
+    final lattice = Paint()
+      ..color = gold.withValues(alpha: 0.08)
+      ..strokeWidth = max(0.5, w * 0.008);
+    final step = w * 0.16;
+    for (var x = -h; x < w + h; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x + h, h), lattice);
+      canvas.drawLine(Offset(x + h, 0), Offset(x, h), lattice);
+    }
+
+    // The portrait in the top half, the same turned round in the bottom one.
+    final half = Rect.fromLTWH(0, 0, w, h / 2);
+    canvas.save();
+    canvas.clipRect(half);
+    _portrait(canvas, half);
+    canvas.restore();
+    canvas.save();
+    canvas.translate(w, h);
+    canvas.rotate(pi);
+    canvas.clipRect(half);
+    _portrait(canvas, half);
+    canvas.restore();
+    canvas.restore();
+
     // Gold frame with a fine line inside it.
     canvas.drawRRect(
-      frame,
+      panel,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.9, w * 0.035)
         ..color = gold,
     );
     canvas.drawRRect(
-      frame.deflate(w * 0.07),
+      inner,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.5, w * 0.01)
-        ..color = gold.withValues(alpha: 0.45),
+        ..strokeWidth = max(0.5, w * 0.012)
+        ..color = gold.withValues(alpha: 0.6),
     );
-    // The diagonal line that splits the two ends.
-    canvas.drawLine(
-      Offset(w * 0.1, h * 0.62),
-      Offset(w * 0.9, h * 0.38),
-      Paint()
-        ..color = gold.withValues(alpha: 0.35)
-        ..strokeWidth = max(0.6, w * 0.012),
-    );
-    // Emblem at the top, the same turned round at the bottom.
-    final emblem = Rect.fromCenter(center: Offset(w / 2, h * 0.19), width: w * 0.78, height: h * 0.28);
-    _emblem(canvas, emblem);
-    canvas.save();
-    canvas.translate(w, h);
-    canvas.rotate(pi);
-    _emblem(canvas, emblem);
-    canvas.restore();
-    // Medallion with the letter.
+
+    // The gold band between the halves with the suit in a cream medallion.
     final c = Offset(w / 2, h / 2);
-    final r = min(w, h) * 0.24;
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xFF14161A));
+    final band = Paint()
+      ..color = gold
+      ..strokeWidth = max(0.8, w * 0.022);
+    canvas.drawLine(Offset(inner.left, c.dy), Offset(inner.right, c.dy), band);
+    final r = w * 0.16;
+    canvas.drawCircle(c, r * 1.12, Paint()..color = goldDark);
+    canvas.drawCircle(c, r, Paint()..color = PastraColors.cream);
     canvas.drawCircle(
       c,
       r,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.9, w * 0.04)
+        ..strokeWidth = max(0.8, w * 0.025)
         ..color = gold,
     );
-    final tp = TextPainter(
-      text: TextSpan(
-        text: Cards.rankLabel(Cards.make(suit, rank)),
-        style: TextStyle(color: gold, fontSize: r * 1.2, fontWeight: FontWeight.w800, fontFamily: 'Outfit', height: 1),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-    tp.dispose();
+    final s = r * 1.15;
+    canvas.save();
+    canvas.translate(c.dx - s / 2, c.dy - s / 2);
+    SuitPainter(suit, ink).paint(canvas, Size(s, s));
+    canvas.restore();
   }
 
-  void _emblem(Canvas canvas, Rect r) {
-    final red = suit == Cards.diamonds || suit == Cards.hearts;
-    final fill = Paint()..color = gold;
-    final line = Paint()
-      ..color = goldDark
+  /// One half: a bust from the shoulders up, facing the viewer.
+  void _portrait(Canvas canvas, Rect r) {
+    final w = r.width;
+    final hh = r.height;
+    final cx = r.center.dx;
+    final headY = r.top + hh * 0.5;
+    final rx = w * 0.19;
+    final ry = w * 0.235;
+    final outline = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = max(0.7, r.width * 0.035)
-      ..strokeJoin = StrokeJoin.round;
-    // Rubies on the red cards, turquoise on the black ones.
-    final jewel = Paint()..color = red ? const Color(0xFFE05A47) : const Color(0xFF5FD3C2);
+      ..color = goldDark
+      ..strokeWidth = max(0.6, w * 0.014)
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final goldFill = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[Color(0xFFF2C866), Color(0xFFD9A033)],
+      ).createShader(r);
+    final jewel = Paint()..color = _jewel;
+
+    // Behind the head: the queen's long hair, the king's hair.
+    if (rank == Cards.queen) {
+      // Long hair that ends in a curl on each shoulder.
+      final end = r.top + hh * 0.8;
+      final hair = Path()
+        ..moveTo(cx - rx * 0.9, end)
+        ..quadraticBezierTo(cx - rx * 1.75, end + hh * 0.02, cx - rx * 1.55, headY + ry * 0.2)
+        ..cubicTo(cx - rx * 1.7, headY - ry * 0.9, cx - rx * 1.2, headY - ry * 1.35, cx, headY - ry * 1.3)
+        ..cubicTo(cx + rx * 1.2, headY - ry * 1.35, cx + rx * 1.7, headY - ry * 0.9, cx + rx * 1.55, headY + ry * 0.2)
+        ..quadraticBezierTo(cx + rx * 1.75, end + hh * 0.02, cx + rx * 0.9, end)
+        ..close();
+      canvas.drawPath(hair, goldFill);
+      canvas.drawPath(hair, outline);
+    } else if (rank == Cards.king) {
+      final hair = Path()
+        ..moveTo(cx - rx * 1.25, headY + ry * 0.35)
+        ..quadraticBezierTo(cx - rx * 1.35, headY - ry * 1.0, cx, headY - ry * 1.1)
+        ..quadraticBezierTo(cx + rx * 1.35, headY - ry * 1.0, cx + rx * 1.25, headY + ry * 0.35)
+        ..close();
+      canvas.drawPath(hair, goldFill);
+      canvas.drawPath(hair, outline);
+    }
+
+    // Shoulders and robe with a gold-trimmed neckline.
+    final shoulderY = r.top + hh * 0.84;
+    final robe = Path()
+      ..moveTo(r.left + w * 0.1, r.bottom)
+      ..quadraticBezierTo(r.left + w * 0.11, shoulderY - hh * 0.01, cx - rx * 0.8, shoulderY - hh * 0.03)
+      ..lineTo(cx + rx * 0.8, shoulderY - hh * 0.03)
+      ..quadraticBezierTo(r.right - w * 0.11, shoulderY - hh * 0.01, r.right - w * 0.1, r.bottom)
+      ..close();
+    canvas.drawPath(
+      robe,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: _robe,
+        ).createShader(Rect.fromLTRB(r.left, shoulderY, r.right, r.bottom)),
+    );
+    canvas.drawPath(robe, outline..color = gold);
+    outline.color = goldDark;
+
+    // Neck.
+    final neck = Rect.fromLTRB(cx - rx * 0.42, headY + ry * 0.6, cx + rx * 0.42, shoulderY);
+    canvas.drawRect(neck, Paint()..color = skin);
+
+    // V collar: gold for the king, cream lace for the queen, a ruff for the jack.
+    final collar = Path()
+      ..moveTo(cx - rx * 1.1, shoulderY - hh * 0.03)
+      ..lineTo(cx, r.bottom)
+      ..lineTo(cx + rx * 1.1, shoulderY - hh * 0.03)
+      ..lineTo(cx + rx * 0.5, shoulderY - hh * 0.03)
+      ..lineTo(cx, shoulderY + hh * 0.08)
+      ..lineTo(cx - rx * 0.5, shoulderY - hh * 0.03)
+      ..close();
+    canvas.drawPath(collar, rank == Cards.queen ? (Paint()..color = goldLight) : goldFill);
+    canvas.drawPath(collar, outline);
+    if (rank == Cards.jack) {
+      // Ruff: a row of small cream scallops under the chin.
+      for (var i = -2; i <= 2; i++) {
+        canvas.drawCircle(Offset(cx + i * rx * 0.36, shoulderY - hh * 0.04), rx * 0.2, Paint()..color = goldLight);
+        canvas.drawCircle(Offset(cx + i * rx * 0.36, shoulderY - hh * 0.04), rx * 0.2, outline);
+      }
+    }
+    if (rank == Cards.queen) {
+      // Necklace of small jewels along the neckline.
+      for (var i = -2; i <= 2; i++) {
+        final t = i / 2;
+        canvas.drawCircle(Offset(cx + t * rx * 0.9, shoulderY - hh * 0.06 + t * t * hh * 0.035), w * 0.022, jewel);
+      }
+    }
+
+    // Face.
+    final face = Rect.fromCenter(center: Offset(cx, headY), width: rx * 2, height: ry * 2);
+    canvas.drawOval(face, Paint()..color = skin);
+    // A touch of colour on the cheeks.
+    for (final side in <double>[-1, 1]) {
+      canvas.drawCircle(
+        Offset(cx + side * rx * 0.55, headY + ry * 0.28),
+        rx * 0.2,
+        Paint()..color = const Color(0xFFE0574A).withValues(alpha: 0.22),
+      );
+    }
+    canvas.drawOval(face, outline);
+    final features = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = goldDark
+      ..strokeWidth = max(0.5, w * 0.012)
+      ..strokeCap = StrokeCap.round;
+    // Open eyes (a dot under a lid), brows and nose.
+    for (final side in <double>[-1, 1]) {
+      final ex = cx + side * rx * 0.4;
+      final ey = headY - ry * 0.05;
+      canvas.drawCircle(Offset(ex, ey), w * 0.018, Paint()..color = goldDark);
+      canvas.drawArc(Rect.fromCenter(center: Offset(ex, ey + ry * 0.04), width: rx * 0.42, height: ry * 0.26), pi, pi, false, features);
+      canvas.drawLine(Offset(ex - rx * 0.2, ey - ry * 0.3), Offset(ex + rx * 0.2, ey - ry * 0.34), features);
+    }
+    canvas.drawLine(Offset(cx, headY), Offset(cx - rx * 0.08, headY + ry * 0.3), features);
+
     switch (rank) {
       case Cards.king:
-        // Crown: three points on a band, a jewel on each point.
-        final base = r.top + r.height * 0.78;
-        final path = Path()
-          ..moveTo(r.left + r.width * 0.12, base)
-          ..lineTo(r.left + r.width * 0.06, r.top + r.height * 0.22)
-          ..lineTo(r.left + r.width * 0.32, r.top + r.height * 0.5)
-          ..lineTo(r.center.dx, r.top + r.height * 0.08)
-          ..lineTo(r.right - r.width * 0.32, r.top + r.height * 0.5)
-          ..lineTo(r.right - r.width * 0.06, r.top + r.height * 0.22)
-          ..lineTo(r.right - r.width * 0.12, base)
+        // Beard and moustache.
+        final beard = Path()
+          ..moveTo(cx - rx * 0.98, headY + ry * 0.05)
+          ..quadraticBezierTo(cx - rx * 0.95, headY + ry * 1.1, cx, headY + ry * 1.55)
+          ..quadraticBezierTo(cx + rx * 0.95, headY + ry * 1.1, cx + rx * 0.98, headY + ry * 0.05)
+          ..quadraticBezierTo(cx + rx * 0.5, headY + ry * 0.75, cx, headY + ry * 0.62)
+          ..quadraticBezierTo(cx - rx * 0.5, headY + ry * 0.75, cx - rx * 0.98, headY + ry * 0.05)
           ..close();
-        canvas.drawPath(path, fill);
-        canvas.drawPath(path, line);
-        final band = Rect.fromLTRB(r.left + r.width * 0.12, base, r.right - r.width * 0.12, base + r.height * 0.16);
-        canvas.drawRect(band, fill);
-        canvas.drawRect(band, line);
-        for (final x in <double>[0.06, 0.5, 0.94]) {
-          final y = x == 0.5 ? r.top + r.height * 0.08 : r.top + r.height * 0.22;
-          canvas.drawCircle(Offset(r.left + r.width * x, y), r.width * 0.05, jewel);
+        canvas.drawPath(beard, goldFill);
+        canvas.drawPath(beard, outline);
+        final moustache = Path()
+          ..moveTo(cx - rx * 0.62, headY + ry * 0.52)
+          ..quadraticBezierTo(cx - rx * 0.25, headY + ry * 0.3, cx, headY + ry * 0.45)
+          ..quadraticBezierTo(cx + rx * 0.25, headY + ry * 0.3, cx + rx * 0.62, headY + ry * 0.52);
+        canvas.drawPath(moustache, features..strokeWidth = max(0.7, w * 0.02));
+        // Crown with three points and a jewel on each.
+        final base = headY - ry * 0.72;
+        final top = headY - ry * 1.75;
+        final crown = Path()
+          ..moveTo(cx - rx * 1.05, base)
+          ..lineTo(cx - rx * 1.2, top + ry * 0.25)
+          ..lineTo(cx - rx * 0.5, top + ry * 0.6)
+          ..lineTo(cx, top)
+          ..lineTo(cx + rx * 0.5, top + ry * 0.6)
+          ..lineTo(cx + rx * 1.2, top + ry * 0.25)
+          ..lineTo(cx + rx * 1.05, base)
+          ..close();
+        canvas.drawPath(crown, goldFill);
+        canvas.drawPath(crown, outline);
+        canvas.drawRect(Rect.fromLTRB(cx - rx * 1.05, base - ry * 0.22, cx + rx * 1.05, base), goldFill);
+        canvas.drawRect(Rect.fromLTRB(cx - rx * 1.05, base - ry * 0.22, cx + rx * 1.05, base), outline);
+        for (final p in <Offset>[Offset(cx - rx * 1.2, top + ry * 0.25), Offset(cx, top), Offset(cx + rx * 1.2, top + ry * 0.25)]) {
+          canvas.drawCircle(p, w * 0.03, jewel);
         }
+        canvas.drawCircle(Offset(cx, base - ry * 0.11), w * 0.025, jewel);
       case Cards.queen:
-        // Tiara: an arch with five small points and a gem in the middle.
-        final base = r.top + r.height * 0.82;
-        final path = Path()..moveTo(r.left + r.width * 0.1, base);
+        // Lips, earrings and a tiara with a gem.
+        canvas.drawArc(
+          Rect.fromCenter(center: Offset(cx, headY + ry * 0.5), width: rx * 0.45, height: ry * 0.22),
+          0,
+          pi,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..color = _red ? const Color(0xFFB3261E) : goldDark
+            ..strokeWidth = max(0.6, w * 0.016)
+            ..strokeCap = StrokeCap.round,
+        );
+        for (final side in <double>[-1, 1]) {
+          canvas.drawCircle(Offset(cx + side * rx * 1.02, headY + ry * 0.35), w * 0.022, jewel);
+        }
+        final base = headY - ry * 0.78;
+        final tiara = Path()..moveTo(cx - rx * 0.95, base);
         const peaks = 5;
         for (var i = 0; i <= peaks * 2; i++) {
           final t = i / (peaks * 2);
-          final x = r.left + r.width * (0.1 + 0.8 * t);
           final arch = sin(t * pi);
-          final up = i.isOdd ? r.height * 0.14 : 0.0;
-          path.lineTo(x, base - r.height * (0.25 + 0.4 * arch) - up);
+          final up = i.isOdd ? ry * 0.22 : 0.0;
+          tiara.lineTo(cx - rx * 0.95 + rx * 1.9 * t, base - ry * (0.15 + 0.45 * arch) - up);
         }
-        path
-          ..lineTo(r.right - r.width * 0.1, base)
-          ..close();
-        canvas.drawPath(path, fill);
-        canvas.drawPath(path, line);
+        tiara.close();
+        canvas.drawPath(tiara, goldFill);
+        canvas.drawPath(tiara, outline);
         final gem = Path()
-          ..moveTo(r.center.dx, r.top + r.height * 0.18)
-          ..lineTo(r.center.dx + r.width * 0.09, r.top + r.height * 0.42)
-          ..lineTo(r.center.dx, r.top + r.height * 0.62)
-          ..lineTo(r.center.dx - r.width * 0.09, r.top + r.height * 0.42)
+          ..moveTo(cx, base - ry * 0.75)
+          ..lineTo(cx + rx * 0.17, base - ry * 0.45)
+          ..lineTo(cx, base - ry * 0.18)
+          ..lineTo(cx - rx * 0.17, base - ry * 0.45)
           ..close();
         canvas.drawPath(gem, jewel);
       default:
-        // Jack: a cap with a long feather.
-        final cap = Rect.fromLTRB(r.left + r.width * 0.2, r.top + r.height * 0.3, r.right - r.width * 0.2, r.bottom + r.height * 0.3);
-        final capPath = Path()
-          ..addArc(cap, pi, pi)
+        // A small smile, short hair and a plumed cap set at an angle.
+        canvas.drawArc(
+          Rect.fromCenter(center: Offset(cx, headY + ry * 0.48), width: rx * 0.5, height: ry * 0.2),
+          0,
+          pi,
+          false,
+          features,
+        );
+        final hair = Path()
+          ..moveTo(cx - rx * 1.02, headY + ry * 0.05)
+          ..quadraticBezierTo(cx - rx * 1.05, headY - ry * 0.95, cx, headY - ry * 0.98)
+          ..quadraticBezierTo(cx + rx * 1.05, headY - ry * 0.95, cx + rx * 1.02, headY + ry * 0.05)
+          ..quadraticBezierTo(cx + rx * 0.8, headY - ry * 0.45, cx, headY - ry * 0.55)
+          ..quadraticBezierTo(cx - rx * 0.8, headY - ry * 0.45, cx - rx * 1.02, headY + ry * 0.05)
           ..close();
-        canvas.drawPath(capPath, fill);
-        canvas.drawPath(capPath, line);
-        final band = Rect.fromLTRB(r.left + r.width * 0.16, r.top + r.height * 0.74, r.right - r.width * 0.16, r.top + r.height * 0.92);
-        canvas.drawRRect(RRect.fromRectAndRadius(band, Radius.circular(r.height * 0.05)), jewel);
+        canvas.drawPath(hair, goldFill);
+        canvas.drawPath(hair, outline);
+        // Feather first, so the cap sits on its quill.
         final feather = Path()
-          ..moveTo(r.center.dx + r.width * 0.05, r.top + r.height * 0.4)
-          ..quadraticBezierTo(r.right + r.width * 0.05, r.top - r.height * 0.1, r.right - r.width * 0.02, r.top + r.height * 0.05)
-          ..quadraticBezierTo(r.right - r.width * 0.2, r.top + r.height * 0.12, r.center.dx + r.width * 0.05, r.top + r.height * 0.4)
+          ..moveTo(cx + rx * 0.4, headY - ry * 0.95)
+          ..cubicTo(cx + rx * 1.3, headY - ry * 1.85, cx + rx * 2.1, headY - ry * 1.5, cx + rx * 2.05, headY - ry * 0.6)
+          ..cubicTo(cx + rx * 1.7, headY - ry * 1.25, cx + rx * 1.1, headY - ry * 1.2, cx + rx * 0.4, headY - ry * 0.95)
           ..close();
-        canvas.drawPath(feather, Paint()..color = jewel.color);
+        canvas.drawPath(feather, jewel);
+        canvas.drawPath(feather, outline);
+        canvas.save();
+        canvas.translate(cx, headY - ry * 0.95);
+        canvas.rotate(-0.18);
+        final cap = Rect.fromCenter(center: Offset.zero, width: rx * 2.5, height: ry * 0.95);
+        canvas.drawOval(
+          cap,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: _robe,
+            ).createShader(cap),
+        );
+        canvas.drawOval(cap, outline..color = gold);
+        canvas.drawLine(Offset(-rx * 1.15, ry * 0.18), Offset(rx * 1.15, ry * 0.18), outline);
+        canvas.restore();
+        outline.color = goldDark;
     }
   }
 
