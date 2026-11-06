@@ -31,7 +31,11 @@ jobs:
 
       - run: flutter pub get
       - run: flutter test
-      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      # WebAssembly for Chrome, Edge and Chrome on Android phones: much less
+      # work per frame. Safari (every iPhone browser), Firefox and older
+      # browsers get the JavaScript build from the same folder (Flutter's
+      # loader decides).
+      - run: flutter build web --release --wasm --base-href "/${{ github.event.repository.name }}/"
 
       - uses: actions/upload-pages-artifact@v3
         with:

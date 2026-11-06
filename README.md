@@ -123,6 +123,10 @@ app, choose **More info → Run anyway**.
 - Publish for free with **GitHub Pages**: the workflow in `.github/workflows/web-pages.yml`
   runs the tests, builds the web app and deploys it on every push to `main`. In the repository,
   choose **Settings → Pages → Source: GitHub Actions** once.
+- The web app is built with `--wasm`: Chrome, Edge and Chrome on Android run the faster
+  WebAssembly build; Safari (every iPhone browser), Firefox and older browsers get the
+  JavaScript build that is published next to it. To try the same build locally:
+  `flutter build web --release --wasm`.
 
 On an iPhone, **Share → Add to Home Screen** opens the game full screen like an app; the saved
 game and settings stay on the phone.
