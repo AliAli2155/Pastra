@@ -223,7 +223,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                       FilledButton.icon(
                         onPressed: _busy ? null : _addFriend,
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                        label: Text(t.addFriend, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        label: FittedBox(fit: BoxFit.scaleDown, child: Text(t.addFriend, maxLines: 1)),
                       ),
                     ],
                   ),

@@ -354,7 +354,8 @@ class ChoicePill extends StatelessWidget {
                 if (hint != null)
                   Text(
                     hint!,
-                    maxLines: 1,
+                    // Long languages (or a narrow phone) get more lines.
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: fg.withValues(alpha: 0.75), fontSize: 12, fontWeight: FontWeight.w500),
@@ -738,11 +739,15 @@ class _RailItem extends StatelessWidget {
                 Icon(tab.icon, size: 20, color: selected ? PastraColors.gold : PastraColors.text2),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    tab.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: fg, fontSize: 15, fontWeight: selected ? FontWeight.w700 : FontWeight.w600),
+                  // A long section name shrinks a little instead of being cut.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      tab.label,
+                      maxLines: 1,
+                      style: TextStyle(color: fg, fontSize: 15, fontWeight: selected ? FontWeight.w700 : FontWeight.w600),
+                    ),
                   ),
                 ),
                 if (tab.badge > 0) CountBadge(count: tab.badge),

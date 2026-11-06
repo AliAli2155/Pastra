@@ -79,7 +79,7 @@ ThemeData buildPastraTheme() {
         foregroundColor: PastraColors.goldInk,
         disabledBackgroundColor: Colors.white12,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontFamily: appFont, fontFamilyFallback: appFontFallback, fontSize: 17, fontWeight: FontWeight.w800),
         shape: rounded14,
       ),
     ),
@@ -89,12 +89,17 @@ ThemeData buildPastraTheme() {
         backgroundColor: PastraColors.glass,
         side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: appFont, fontFamilyFallback: appFontFallback, fontSize: 16, fontWeight: FontWeight.w700),
         shape: rounded14,
       ),
     ),
+    // A button's text style replaces the theme's text, so every button
+    // style names the app font again (otherwise it falls back to Roboto).
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: PastraColors.gold, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+      style: TextButton.styleFrom(
+        foregroundColor: PastraColors.gold,
+        textStyle: const TextStyle(fontFamily: appFont, fontFamilyFallback: appFontFallback, fontWeight: FontWeight.w700),
+      ),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: PastraColors.nightMid,
@@ -160,7 +165,9 @@ ThemeData buildPastraTheme() {
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected) ? PastraColors.goldInk : PastraColors.text,
         ),
-        textStyle: WidgetStateProperty.all(const TextStyle(fontWeight: FontWeight.w700)),
+        textStyle: WidgetStateProperty.all(
+          const TextStyle(fontFamily: appFont, fontFamilyFallback: appFontFallback, fontWeight: FontWeight.w700),
+        ),
         side: WidgetStateProperty.all(BorderSide(color: Colors.white.withValues(alpha: 0.14))),
       ),
     ),

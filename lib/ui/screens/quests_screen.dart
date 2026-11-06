@@ -382,7 +382,8 @@ class _QuestCard extends StatelessWidget {
     final title = Text(
       p.quest(def),
       textAlign: tall ? TextAlign.center : TextAlign.start,
-      maxLines: 2,
+      // A row on a narrow phone leaves the title little width: one more line.
+      maxLines: tall ? 2 : 3,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: quest.claimed ? PastraColors.muted : PastraColors.text,

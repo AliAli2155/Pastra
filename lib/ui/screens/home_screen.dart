@@ -496,17 +496,18 @@ class _HeroCard extends StatelessWidget {
             }
             return Stack(
               children: <Widget>[
-                Positioned(
-                  right: -tableW * 0.19,
+                // Mirrored right to left (Arabic): the drawing on the left, the title on the right.
+                PositionedDirectional(
+                  end: -tableW * 0.19,
                   top: artTop,
                   width: tableW,
                   height: tableH,
                   child: const RepaintBoundary(child: _TableArt()),
                 ),
-                Positioned(
-                  left: pad,
+                PositionedDirectional(
+                  start: pad,
                   top: pad,
-                  right: w * 0.32,
+                  end: w * 0.32,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -712,6 +713,8 @@ class _SideMenu extends StatelessWidget {
           accent: PastraColors.teal,
           title: s.playOnline,
           subtitle: s.playOnlineHint,
+          // Stacked rows (an upright phone) have room for two lines.
+          subtitleLines: fill ? 1 : 2,
           height: rowHeight,
           onTap: onOnline,
         ),
@@ -720,6 +723,8 @@ class _SideMenu extends StatelessWidget {
           accent: PastraColors.gold,
           title: s.tournament,
           subtitle: s.tournamentHint,
+          // Stacked rows (an upright phone) have room for two lines.
+          subtitleLines: fill ? 1 : 2,
           height: rowHeight,
           onTap: onTournament,
         ),
@@ -836,28 +841,32 @@ class _NewGameSheetState extends State<NewGameSheet> {
             SizedBox(height: gap),
             Text(s.gameType, style: PremiumText.label),
             const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: ChoicePill(
-                    icon: Icons.person_rounded,
-                    label: s.mode1v1,
-                    hint: s.mode1v1Hint,
-                    selected: _players == 2,
-                    onTap: () => setState(() => _players = 2),
+            // Both pills as high as the taller one (a hint may take two lines).
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    child: ChoicePill(
+                      icon: Icons.person_rounded,
+                      label: s.mode1v1,
+                      hint: s.mode1v1Hint,
+                      selected: _players == 2,
+                      onTap: () => setState(() => _players = 2),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ChoicePill(
-                    icon: Icons.groups_rounded,
-                    label: s.mode2v2,
-                    hint: s.mode2v2Hint,
-                    selected: _players == 4,
-                    onTap: () => setState(() => _players = 4),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ChoicePill(
+                      icon: Icons.groups_rounded,
+                      label: s.mode2v2,
+                      hint: s.mode2v2Hint,
+                      selected: _players == 4,
+                      onTap: () => setState(() => _players = 4),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             SizedBox(height: gap),
             Text(s.difficulty, style: PremiumText.label),
@@ -894,8 +903,9 @@ class _NewGameSheetState extends State<NewGameSheet> {
                 icon: const Icon(Icons.school_rounded, size: 18),
                 label: Text(
                   '${social.training} · ${social.trainingHint}',
-                  maxLines: 1,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),

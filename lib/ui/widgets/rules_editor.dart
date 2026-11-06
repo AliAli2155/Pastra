@@ -228,25 +228,31 @@ class RulesButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.tune_rounded, size: 18, color: PastraColors.gold),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  s.targetInfo(rules.variant, rules.targetScore, rules.cardsPerDeal),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+          // Very narrow (an upright phone): the summary keeps the room and the
+          // gold "Game rules" word is left out (the arrow still shows it opens).
+          child: LayoutBuilder(
+            builder: (context, box) => Row(
+              children: <Widget>[
+                const Icon(Icons.tune_rounded, size: 18, color: PastraColors.gold),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    s.targetInfo(rules.variant, rules.targetScore, rules.cardsPerDeal),
+                    // A narrow phone: a second line rather than "…".
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                s.gameRules,
-                style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w800),
-              ),
-              const Icon(Icons.chevron_right_rounded, size: 18, color: PastraColors.gold),
-            ],
+                const SizedBox(width: 6),
+                if (box.maxWidth >= 340)
+                  Text(
+                    s.gameRules,
+                    style: const TextStyle(color: PastraColors.gold, fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: PastraColors.gold),
+              ],
+            ),
           ),
         ),
       ),

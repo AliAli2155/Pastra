@@ -210,11 +210,14 @@ class _Summary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
-                    maxed ? p.maxLevel : (next != null ? p.nextReward(next) : s.levelN(level + 1)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      maxed ? p.maxLevel : (next != null ? p.nextReward(next) : s.levelN(level + 1)),
+                      maxLines: 1,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
                   ),
                   const SizedBox(height: 5),
                   ClipRRect(
@@ -515,11 +518,14 @@ class _RewardCard extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          Text(
-            kind.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: reached ? PastraColors.gold : Colors.white38, fontSize: 9.5, fontWeight: FontWeight.w900, letterSpacing: 0.6),
+          // Long words (other languages) shrink a little instead of being cut.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              kind.toUpperCase(),
+              maxLines: 1,
+              style: TextStyle(color: reached ? PastraColors.gold : Colors.white38, fontSize: 9.5, fontWeight: FontWeight.w900, letterSpacing: 0.6),
+            ),
           ),
           const SizedBox(height: 4),
           Expanded(
@@ -529,12 +535,14 @@ class _RewardCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: reached ? Colors.white : Colors.white54, fontSize: 12, fontWeight: FontWeight.w800),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: reached ? Colors.white : Colors.white54, fontSize: 12, fontWeight: FontWeight.w800),
+            ),
           ),
           const SizedBox(height: 5),
           footer,

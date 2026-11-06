@@ -41,12 +41,11 @@ class HeaderPill extends StatelessWidget {
         children: <Widget>[
           Icon(icon, color: color, size: 16),
           const SizedBox(width: 5),
+          // Shrinks a little on a narrow phone instead of being cut.
           Flexible(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w800),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(text, maxLines: 1, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w800)),
             ),
           ),
         ],
