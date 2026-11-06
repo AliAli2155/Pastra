@@ -212,7 +212,7 @@ class _CupScreenState extends State<CupScreen> {
       final prize = Economy.cupPrize(_fee, wins: bracket.winsOf(me), champion: champion);
       settings.addWallet(chips: prize);
     }
-    Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
+    Leaderboard.submit(settings);
   }
 
   // ---- playing a match

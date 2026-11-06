@@ -68,7 +68,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
       if (t.finished && !t.bonusPaid) {
         t.bonusPaid = true;
         settings.addXp(t.bonusXp);
-        Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
+        Leaderboard.submit(settings);
       }
     });
     _save();

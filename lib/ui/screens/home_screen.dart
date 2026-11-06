@@ -345,8 +345,7 @@ class _Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     final settings = SettingsScope.of(context);
-    final plain = settings.playerName.isEmpty ? s.you : settings.playerName;
-    final name = settings.playerTag != null ? settings.handleName : plain;
+    final name = settings.playerName.isEmpty ? s.you : settings.playerName;
     final level = Progression.levelOf(settings.xp);
     final p = Progression.progress(settings.xp);
     final fraction = level >= Progression.maxLevel

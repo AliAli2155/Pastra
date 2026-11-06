@@ -85,13 +85,14 @@ class Leaderboard {
   static const int maxNameLength = 16;
 
   /// Writes the local player's row (when they chose to appear on the board).
-  static Future<void> submit(AppSettings settings, {String fallbackName = 'Player'}) async {
+  static Future<void> submit(AppSettings settings) async {
     if (!settings.showOnLeaderboard) return;
     try {
       if (await OnlineService.ensureReady() != null) return;
       final raw = settings.playerName.trim();
-      // With a player code the name friends type ("Player #2155").
-      var name = raw.isEmpty ? (settings.playerTag != null ? settings.handleName : fallbackName) : raw;
+      // Without a name: the neutral "Player" that is also in the player code
+      // ("Player #2155"), never "You", which other players would read.
+      var name = raw.isEmpty ? settings.handleName : raw;
       if (name.length > maxNameLength) name = name.substring(0, maxNameLength);
       // The database only accepts believable steps (see the rules: at most
       // [maxXpStep] XP and [maxGameStep] games per update, one update every

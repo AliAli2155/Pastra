@@ -149,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (v) {
                     settings.showOnLeaderboard = v;
                     if (v) {
-                      Leaderboard.submit(settings, fallbackName: s.you);
+                      Leaderboard.submit(settings);
                     } else {
                       Leaderboard.remove();
                     }

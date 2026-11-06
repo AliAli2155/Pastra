@@ -69,6 +69,20 @@ void main() {
     expect(settings.tournamentJson, isNotNull);
   });
 
+  testWidgets('a player without a name is "You" in the lobby, also with a player code', (tester) async {
+    SharedPreferences.setMockInitialValues(
+      <String, Object>{'language': 'en', 'sound': false, 'tutorialDone': true, 'playerTag': '9812'},
+    );
+    final settings = await AppSettings.load();
+    await tester.pumpWidget(PastraApp(settings: settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text('You'), findsOneWidget);
+    expect(find.text('Player'), findsNothing);
+    // Others still find the player by the neutral name in the code.
+    expect(settings.handleName, 'Player');
+  });
+
   testWidgets('settings screen switches the language', (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false});
     final settings = await AppSettings.load();

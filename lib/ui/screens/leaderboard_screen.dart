@@ -34,7 +34,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _load() {
     final settings = SettingsScope.read(context);
     // Our own row first, so a new XP total shows up in the list.
-    _submitted = Leaderboard.submit(settings, fallbackName: Strings.of(context).you);
+    _submitted = Leaderboard.submit(settings);
     final season = settings.season;
     _season = _submitted!.then((_) => Leaderboard.season(season));
     _all = _submitted!.then((_) => Leaderboard.top());
