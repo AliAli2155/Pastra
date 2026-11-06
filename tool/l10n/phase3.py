@@ -20,7 +20,7 @@ leaveMatchBody=The tournament is saved. The match starts over when you continue.
 
 P2['el'] = """
 tournament=Τουρνουά
-tournamentHint=8 παίκτες, νοκ-άουτ, πιο δυνατοί αντίπαλοι σε κάθε γύρο
+tournamentHint=8 παίκτες, νοκ-άουτ, πιο δυνατοί αντίπαλοι
 quickGame=Γρήγορο παιχνίδι
 quickGameHint=Διάλεξε παίκτες και επίπεδο
 roundQF=Προημιτελικός
@@ -54,7 +54,7 @@ leaveMatchBody=Turnuva kaydedilir. Devam ettiğinde maç baştan başlar.
 
 P2['de'] = """
 tournament=Turnier
-tournamentHint=8 Spieler, K.-o.-System, in jeder Runde stärkere Gegner
+tournamentHint=8 Spieler, K.-o., je Runde stärkere Gegner
 quickGame=Schnelles Spiel
 quickGameHint=Spieler und Stufe wählen
 roundQF=Viertelfinale
@@ -71,7 +71,7 @@ leaveMatchBody=Das Turnier ist gespeichert. Das Spiel beginnt neu, wenn du fortf
 
 P2['fr'] = """
 tournament=Tournoi
-tournamentHint=8 joueurs, élimination directe, des adversaires plus forts à chaque tour
+tournamentHint=8 joueurs, élimination, rivaux plus forts
 quickGame=Partie rapide
 quickGameHint=Choisis les joueurs et le niveau
 roundQF=Quart de finale
@@ -88,7 +88,7 @@ leaveMatchBody=Le tournoi est sauvegardé. Le match recommence quand tu reprends
 
 P2['es'] = """
 tournament=Torneo
-tournamentHint=8 jugadores, eliminación directa, rivales más fuertes en cada ronda
+tournamentHint=8 jugadores, eliminatoria, rivales más fuertes
 quickGame=Partida rápida
 quickGameHint=Elige jugadores y nivel
 roundQF=Cuartos de final
@@ -105,7 +105,7 @@ leaveMatchBody=El torneo se guarda. El partido empieza de nuevo cuando continúe
 
 P2['it'] = """
 tournament=Torneo
-tournamentHint=8 giocatori, eliminazione diretta, avversari più forti a ogni turno
+tournamentHint=8 giocatori, eliminazione, avversari più forti
 quickGame=Partita veloce
 quickGameHint=Scegli giocatori e livello
 roundQF=Quarti di finale
@@ -122,7 +122,7 @@ leaveMatchBody=Il torneo è salvato. La partita ricomincia quando continui.
 
 P2['pt'] = """
 tournament=Torneio
-tournamentHint=8 jogadores, eliminatória, adversários mais fortes a cada rodada
+tournamentHint=8 jogadores, eliminatória, rivais mais fortes
 quickGame=Jogo rápido
 quickGameHint=Escolhe os jogadores e o nível
 roundQF=Quartas de final
@@ -139,7 +139,7 @@ leaveMatchBody=O torneio fica guardado. A partida recomeça quando continuares.
 
 P2['ru'] = """
 tournament=Турнир
-tournamentHint=8 игроков, на вылет, соперники сильнее с каждым раундом
+tournamentHint=8 игроков, на вылет, соперники всё сильнее
 quickGame=Быстрая игра
 quickGameHint=Выбери игроков и уровень
 roundQF=Четвертьфинал
@@ -156,7 +156,7 @@ leaveMatchBody=Турнир сохранён. Матч начнётся зано
 
 P2['bg'] = """
 tournament=Турнир
-tournamentHint=8 играчи, директни елиминации, по-силни противници с всеки кръг
+tournamentHint=8 играчи, елиминации, по-силни съперници
 quickGame=Бърза игра
 quickGameHint=Избери играчи и ниво
 roundQF=Четвъртфинал

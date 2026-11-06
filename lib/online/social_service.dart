@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../game/app_settings.dart';
 import '../game/friends.dart';
+import '../l10n/strings.dart';
 import '../notifications/notification_service.dart';
 import 'online_service.dart';
 
@@ -94,7 +95,11 @@ class SocialService {
         final isNew = requests.value.every((r) => r.uid != from);
         requests.value = withRequest(requests.value, st);
         if (isNew) {
-          NotificationService.instance.friendRequest(from: st.name, title: 'Pastra', body: '${st.name} #${st.tag}');
+          NotificationService.instance.friendRequest(
+            from: st.name,
+            title: Strings(s.language).appTitle,
+            body: '${st.name} #${st.tag}',
+          );
         }
       } catch (_) {}
     });
