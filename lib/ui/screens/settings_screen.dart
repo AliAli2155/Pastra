@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../game/economy.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
@@ -100,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: LayoutBuilder(
             builder: (context, box) => Row(
               children: <Widget>[
-                PlayerAvatar(name: name, frame: settings.avatarFrame, size: 64),
+                PlayerAvatar(name: name, frame: settings.avatarFrame, pic: settings.avatarPic, size: 64),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -218,6 +219,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         SectionPanel(
+          title: p.avatarPic,
+          icon: Icons.face_rounded,
+          accent: PastraColors.teal,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: <Widget>[
+              for (final pic in AvatarPic.values)
+                _Swatch(
+                  selected: settings.avatarPic == pic,
+                  lockedLevel: settings.isPicUnlocked(pic) ? null : pic.level,
+                  onTap: () => settings.avatarPic = pic,
+                  child: PlayerAvatar(
+                    name: settings.playerName.isEmpty ? s.you : settings.playerName,
+                    frame: settings.avatarFrame,
+                    pic: pic,
+                    size: 48,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        SectionPanel(
           title: p.avatarFrame,
           icon: Icons.account_circle_rounded,
           accent: PastraColors.coral,
@@ -235,6 +259,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: PlayerAvatar(
                       name: settings.playerName.isEmpty ? s.you : settings.playerName,
                       frame: f,
+                      pic: settings.avatarPic,
                       size: 48,
                     ),
                   ),

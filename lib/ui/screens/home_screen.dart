@@ -153,7 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
               final zoom = min(box.maxWidth / 1000, box.maxHeight / 600).clamp(1.0, 1.35).toDouble();
               final w = box.maxWidth / zoom;
               final h = box.maxHeight / zoom;
-              final layout = _layout(context, w, h);
+              // Rebuilt when a friend request comes or goes (the badge).
+              final layout = ValueListenableBuilder<List<PlayerStatus>>(
+                valueListenable: SocialService.instance.requests,
+                builder: (context, _, __) => _layout(context, w, h),
+              );
               if (zoom == 1.0) return layout;
               return Center(
                 child: Transform.scale(scale: zoom, child: SizedBox(width: w, height: h, child: layout)),
@@ -180,7 +184,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final tiles = <_Tile>[
       if (Economy.enabled) _Tile(Icons.storefront_rounded, ShopStrings(settings.language).store, _openStore),
-      _Tile(Icons.people_alt_rounded, SocialStrings(settings.language).friends, () => _open(const FriendsScreen())),
+      _Tile(
+        Icons.people_alt_rounded,
+        SocialStrings(settings.language).friends,
+        () => _open(const FriendsScreen()),
+        badge: SocialService.instance.requests.value.length,
+      ),
       _Tile(Icons.insights_rounded, s.statistics, () => _open(const StatsScreen())),
       _Tile(Icons.menu_book_rounded, s.rules, () => _open(const RulesScreen())),
       _Tile(Icons.tune_rounded, s.settings, () => _open(const SettingsScreen())),
@@ -267,11 +276,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
 /// A small tile of the lobby.
 class _Tile {
-  const _Tile(this.icon, this.label, this.onTap);
+  const _Tile(this.icon, this.label, this.onTap, {this.badge = 0});
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final int badge;
 }
 
 /// The player (opens the level path) and the wallet (opens the store).
@@ -351,7 +361,7 @@ class _Profile extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            PlayerAvatar(name: name, frame: settings.avatarFrame, size: compact ? 40 : 46),
+            PlayerAvatar(name: name, frame: settings.avatarFrame, pic: settings.avatarPic, size: compact ? 40 : 46),
             const SizedBox(width: 12),
             Flexible(
               child: Column(
@@ -700,6 +710,7 @@ class _SideMenu extends StatelessWidget {
                   icon: tiles[i].icon,
                   label: tiles[i].label,
                   onTap: tiles[i].onTap,
+                  badge: tiles[i].badge,
                   height: fill ? double.infinity : (compact ? 56 : 64),
                 ),
               ),

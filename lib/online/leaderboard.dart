@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../game/app_settings.dart';
+import '../game/avatar_pic.dart';
 import '../game/progression.dart';
 import '../game/seasons.dart';
 import 'online_service.dart';
@@ -17,9 +18,13 @@ class LeaderEntry {
     required this.wins,
     required this.games,
     this.frame = AvatarFrame.none,
+    this.pic = AvatarPic.letter,
     this.storedLevel,
     this.tag = '',
   });
+
+  /// The picture in the player's avatar.
+  final AvatarPic pic;
 
   /// The player's code ("#2155"); empty for old rows.
   final String tag;
@@ -55,6 +60,7 @@ class LeaderEntry {
           wins: (raw['wins'] as num?)?.toInt() ?? 0,
           games: (raw['games'] as num?)?.toInt() ?? 0,
           frame: AvatarFrame.values.where((f) => f.name == raw['frame']).firstOrNull ?? AvatarFrame.none,
+          pic: AvatarPic.byName(raw['pic']),
           storedLevel: (raw['lvl'] as num?)?.toInt(),
           tag: raw['tag'] is String ? raw['tag'] as String : '',
         ),
@@ -101,6 +107,7 @@ class Leaderboard {
         'wins': min(settings.gamesWon, games),
         'games': games,
         'frame': settings.avatarFrame.name,
+        'pic': settings.avatarPic.name,
         if (settings.playerTag != null) 'tag': settings.playerTag,
         'updated': ServerValue.timestamp,
       });
@@ -117,6 +124,7 @@ class Leaderboard {
           'games': sgames,
           'lvl': settings.playerLevel,
           'frame': settings.avatarFrame.name,
+          'pic': settings.avatarPic.name,
           if (settings.playerTag != null) 'tag': settings.playerTag,
           'updated': ServerValue.timestamp,
         });

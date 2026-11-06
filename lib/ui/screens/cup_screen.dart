@@ -19,6 +19,7 @@ import '../../online/cup_service.dart';
 import '../../online/leaderboard.dart';
 import '../../online/online_service.dart';
 import '../../online/room_session.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/bracket_view.dart';
@@ -515,16 +516,29 @@ class _CupScreenState extends State<CupScreen> {
   Widget _twoPanes(Widget left, Widget right) => LayoutBuilder(
         builder: (context, box) {
           if (box.maxWidth >= 640) {
+            // Two panels of the same height: the bracket or the players on
+            // the left, the state of the cup and its buttons on the right.
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
+                constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 540),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Expanded(flex: 3, child: Center(child: left)),
+                      Expanded(
+                        flex: 3,
+                        child: SectionPanel(expand: true, child: Center(child: SingleChildScrollView(child: left))),
+                      ),
                       const SizedBox(width: 16),
-                      SizedBox(width: 320, child: Center(child: SingleChildScrollView(child: right))),
+                      Expanded(
+                        flex: 2,
+                        child: SectionPanel(
+                          expand: true,
+                          highlight: true,
+                          child: Center(child: SingleChildScrollView(child: right)),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -534,10 +548,11 @@ class _CupScreenState extends State<CupScreen> {
           return Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Expanded(child: Center(child: left)),
+                Expanded(child: SectionPanel(expand: true, child: Center(child: left))),
                 const SizedBox(height: 12),
-                right,
+                SectionPanel(highlight: true, child: right),
               ],
             ),
           );
@@ -559,12 +574,12 @@ class _CupScreenState extends State<CupScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             avatar: Icon(x.uid == _uid ? Icons.star : Icons.person, size: 18),
-            backgroundColor: Colors.black.withValues(alpha: 0.3),
+            backgroundColor: PastraColors.glass,
           ),
         if (sorted.length > shown)
           Chip(
             label: Text('+${sorted.length - shown}', style: const TextStyle(fontWeight: FontWeight.w700)),
-            backgroundColor: Colors.black.withValues(alpha: 0.3),
+            backgroundColor: PastraColors.glass,
           ),
       ],
     );
@@ -576,7 +591,7 @@ class _CupScreenState extends State<CupScreen> {
     final full = n >= CupRules.size * type.maxGroups && !_inNext;
     final groups = (n + CupRules.size - 1) ~/ CupRules.size;
     final next = _next;
-    final left = MenuPanel(
+    final left = KeyedSubtree(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -662,7 +677,7 @@ class _CupScreenState extends State<CupScreen> {
     final data = _currentData!;
     final code = widget.friendsCode!;
     final isHost = data.host == _uid;
-    final left = MenuPanel(
+    final left = KeyedSubtree(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -824,7 +839,7 @@ class _CupScreenState extends State<CupScreen> {
         Text(t.cupWaiting, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 16)),
       ]);
     }
-    final panel = MenuPanel(
+    final panel = KeyedSubtree(
       child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
     return _twoPanes(view, panel);

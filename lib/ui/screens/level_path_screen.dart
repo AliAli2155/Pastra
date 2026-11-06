@@ -182,7 +182,7 @@ class _Summary extends StatelessWidget {
         decoration: panelDecoration(radius: 18, highlight: true, shadow: false),
         child: Row(
           children: <Widget>[
-            PlayerAvatar(name: name, frame: settings.avatarFrame, size: 50),
+            PlayerAvatar(name: name, frame: settings.avatarFrame, pic: settings.avatarPic, size: 50),
             const SizedBox(width: 12),
             Flexible(
               flex: 2,

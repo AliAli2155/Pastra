@@ -15,6 +15,7 @@ import '../../online/room_session.dart';
 import '../../online/social_service.dart';
 import '../premium/premium.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/game_header.dart';
 import '../widgets/invite_share.dart';
 import '../widgets/menu_tiles.dart';
@@ -961,7 +962,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             builder: (context, _) {
               final info = _watcher.info;
               final codeCard = cup
-                  ? MenuPanel(
+                  ? _WaitHero(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
@@ -970,16 +971,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           Text(
                             Strings.of(context).vsName(widget.cupOpponent!),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: PastraColors.text, fontSize: 24, fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
                     )
-                  : MenuPanel(
+                  : _WaitHero(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(t.roomCode, style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                    Text(t.roomCode, style: PremiumText.eyebrow),
                     GestureDetector(
                       onTap: () => Clipboard.setData(ClipboardData(text: _code)),
                       child: FittedBox(
@@ -988,9 +989,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           _code,
                           style: const TextStyle(
                             fontSize: 64,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w800,
                             letterSpacing: 12,
-                            color: PastraColors.gold,
+                            color: PastraColors.goldLight,
                           ),
                         ),
                       ),
@@ -998,7 +999,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     Text(
                       t.shareCode,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14),
                     ),
                     if (!quick || widget.rematch) ...<Widget>[
                       const SizedBox(height: 12),
@@ -1039,7 +1040,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           cup
                               ? t.cupOpponentWait(widget.cupOpponent!)
                               : (widget.rematch ? SocialStrings(SettingsScope.of(context).language).rematchWait : t.searching),
-                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: PastraColors.text, fontSize: 17, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ],
@@ -1056,7 +1057,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Text(
                     t.botFills,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white60, fontSize: 13),
+                    style: const TextStyle(color: PastraColors.text2, fontSize: 13),
                   ),
                   const SizedBox(height: 10),
                   BigButton(icon: Icons.play_arrow_rounded, label: t.start, onPressed: _starting ? null : _start),
@@ -1071,30 +1072,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
               return LayoutBuilder(
                 builder: (context, box) {
                   if (box.maxWidth >= 640) {
+                    // The room code (or the cup match) on the left, the table
+                    // with its seats and the buttons on the right: two equal
+                    // columns of the same height.
                     return Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000),
+                        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 520),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
-                              // Shrinks when the screen is short, so the buttons
-                              // never stick out of the card.
-                              Expanded(
-                                flex: 4,
-                                child: Center(
-                                  child: FittedBox(fit: BoxFit.scaleDown, child: SizedBox(width: 330, child: codeCard)),
-                                ),
-                              ),
+                              Expanded(child: Center(child: SingleChildScrollView(child: codeCard))),
                               const SizedBox(width: 16),
                               Expanded(
-                                flex: 5,
-                                child: Center(
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: <Widget>[...seats, const SizedBox(height: 8), ...actions],
+                                child: SectionPanel(
+                                  expand: true,
+                                  child: Center(
+                                    child: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: <Widget>[
+                                          _RoomTable(info: info),
+                                          const SizedBox(height: 14),
+                                          ...seats,
+                                          const SizedBox(height: 8),
+                                          ...actions,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1116,6 +1122,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           children: <Widget>[
                             codeCard,
                             const SizedBox(height: 16),
+                            _RoomTable(info: info),
+                            const SizedBox(height: 14),
                             ...seats,
                             const SizedBox(height: 8),
                             ...actions,
@@ -1141,37 +1149,156 @@ class _LobbyScreenState extends State<LobbyScreen> {
       if (i == 0) t.host,
       if (mine) t.you,
     ];
+    final taken = seat.uid != null;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: PastraColors.panel,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: mine ? PastraColors.gold : Colors.white24),
-      ),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 14, 8),
+      decoration: glassDecoration(radius: 14, selected: mine),
       child: Row(
         children: <Widget>[
-          Icon(
-            seat.uid == null ? Icons.hourglass_empty : Icons.person,
-            color: seat.uid == null ? Colors.white38 : (seat.online ? Colors.greenAccent : Colors.orangeAccent),
-          ),
-          const SizedBox(width: 10),
+          if (taken)
+            Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                PlayerAvatar(name: label, size: 40),
+                Positioned(
+                  right: -1,
+                  bottom: -1,
+                  child: Container(
+                    width: 13,
+                    height: 13,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: seat.online ? PastraColors.teal : PastraColors.coral,
+                      border: Border.all(color: PastraColors.nightMid, width: 2.5),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white24, width: 1.5),
+              ),
+              child: const Icon(Icons.hourglass_empty_rounded, color: PastraColors.muted, size: 18),
+            ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              tags.isEmpty ? label : '$label  (${tags.join(', ')})',
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: seat.uid == null ? Colors.white54 : Colors.white,
-                fontSize: 17,
-                fontWeight: seat.uid == null ? FontWeight.w500 : FontWeight.w700,
+                color: taken ? (mine ? PastraColors.goldLight : PastraColors.text) : PastraColors.muted,
+                fontSize: 16,
+                fontWeight: taken ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
-          if (info.players == 4)
-            Text(
-              t.team(i % 2 + 1),
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+          for (final tag in tags)
+            Container(
+              margin: const EdgeInsetsDirectional.only(start: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: PastraColors.gold.withValues(alpha: 0.5)),
+              ),
+              child: Text(tag, style: const TextStyle(color: PastraColors.goldLight, fontSize: 11, fontWeight: FontWeight.w600)),
             ),
+          if (info.players == 4) ...<Widget>[
+            const SizedBox(width: 8),
+            Text(t.team(i % 2 + 1), style: const TextStyle(color: PastraColors.muted, fontSize: 12)),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// The waiting room's emerald card (the room code, or the cup match).
+class _WaitHero extends StatelessWidget {
+  const _WaitHero({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF0F6A51), Color(0xFF0A4637), Color(0xFF072C23)],
+          stops: <double>[0.0, 0.6, 1.0],
+        ),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35)),
+      ),
+      child: Material(type: MaterialType.transparency, child: child),
+    );
+  }
+}
+
+/// The room's table seen from above: a gold dot on every taken seat.
+class _RoomTable extends StatelessWidget {
+  const _RoomTable({required this.info});
+
+  final RoomInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    const w = 170.0;
+    const h = 84.0;
+    final four = info.players == 4;
+    final spots = four
+        ? const <Offset>[Offset(w / 2, h), Offset(w, h / 2), Offset(w / 2, 0), Offset(0, h / 2)]
+        : const <Offset>[Offset(w / 2, h), Offset(w / 2, 0)];
+    bool taken(int i) => info.seats.length > i && info.seats[i].uid != null;
+    return Center(
+      child: SizedBox(
+        width: w + 28,
+        height: h + 28,
+        child: Stack(
+          children: <Widget>[
+            Positioned(
+              left: 14,
+              top: 14,
+              width: w,
+              height: h,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.elliptical(w / 2, h / 2)),
+                  gradient: const RadialGradient(
+                    colors: <Color>[PastraColors.emeraldLight, PastraColors.emerald, PastraColors.emeraldDark],
+                    stops: <double>[0.0, 0.6, 1.0],
+                  ),
+                  border: Border.all(color: PastraColors.wood, width: 5),
+                  boxShadow: <BoxShadow>[BoxShadow(color: PastraColors.gold.withValues(alpha: 0.9), spreadRadius: 1.5)],
+                ),
+              ),
+            ),
+            for (var i = 0; i < spots.length; i++)
+              Positioned(
+                left: spots[i].dx + 14 - 12,
+                top: spots[i].dy + 14 - 12,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: taken(i) ? PastraColors.gold : PastraColors.raised,
+                    border: Border.all(color: taken(i) ? PastraColors.goldLight : Colors.white24, width: 2),
+                  ),
+                  child: taken(i) ? const Icon(Icons.person_rounded, size: 14, color: PastraColors.goldInk) : null,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

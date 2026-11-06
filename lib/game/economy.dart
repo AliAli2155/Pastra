@@ -166,11 +166,17 @@ class Economy {
     ShopItem.table('t_sunset', TableTheme.sunset, diamonds: 120),
     ShopItem.table('t_rose', TableTheme.rose, chips: 60000),
     ShopItem.table('t_aurora', TableTheme.aurora, diamonds: 150),
+    ShopItem.table('t_marble', TableTheme.marble, chips: 50000),
+    ShopItem.table('t_velvet', TableTheme.velvet, diamonds: 100),
+    ShopItem.table('t_leather', TableTheme.leather, chips: 70000),
     ShopItem.back('b_emerald', CardBackStyle.emerald, chips: 25000),
     ShopItem.back('b_ruby', CardBackStyle.ruby, diamonds: 60),
     ShopItem.back('b_diamond', CardBackStyle.diamond, diamonds: 100),
     ShopItem.back('b_copper', CardBackStyle.copper, chips: 30000),
     ShopItem.back('b_galaxy', CardBackStyle.galaxy, diamonds: 90),
+    ShopItem.back('b_onyx', CardBackStyle.onyx, chips: 35000),
+    ShopItem.back('b_bordeaux', CardBackStyle.bordeaux, diamonds: 70),
+    ShopItem.back('b_ivory', CardBackStyle.ivory, diamonds: 110),
   ];
 
   static ShopItem? itemForTable(TableTheme t) {

@@ -9,6 +9,7 @@ import '../engine/rules.dart';
 import '../ui/fx/fx.dart';
 import '../ui/theme.dart';
 import 'achievements.dart';
+import 'avatar_pic.dart';
 import 'economy.dart';
 import 'friends.dart';
 import 'progression.dart';
@@ -188,6 +189,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kLoginDay = 'loginDay';
   static const String _kLoginStreak = 'loginStreak';
   static const String _kFrame = 'avatarFrame';
+  static const String _kPic = 'avatarPic';
   static const String _kSeason = 'season';
   static const String _kSeasonXp = 'seasonXp';
   static const String _kSeasonWins = 'seasonWins';
@@ -889,6 +891,20 @@ class AppSettings extends ChangeNotifier {
   set avatarFrame(AvatarFrame f) {
     if (!isFrameUnlocked(f)) return;
     _prefs.setString(_kFrame, f.name);
+    notifyListeners();
+  }
+
+  bool isPicUnlocked(AvatarPic p) => p.level <= playerLevel;
+
+  /// The picture in the avatar (the initial until another one is chosen).
+  AvatarPic get avatarPic {
+    final chosen = AvatarPic.byName(_prefs.getString(_kPic));
+    return isPicUnlocked(chosen) ? chosen : AvatarPic.letter;
+  }
+
+  set avatarPic(AvatarPic p) {
+    if (!isPicUnlocked(p)) return;
+    _prefs.setString(_kPic, p.name);
     notifyListeners();
   }
 

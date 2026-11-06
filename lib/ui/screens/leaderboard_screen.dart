@@ -176,7 +176,7 @@ class _Step extends StatelessWidget {
         children: <Widget>[
           Icon(Icons.emoji_events_rounded, color: medal, size: first ? 30 : 24),
           const SizedBox(height: 8),
-          PlayerAvatar(name: name, frame: entry.frame, size: first ? 60 : 50),
+          PlayerAvatar(name: name, frame: entry.frame, pic: entry.pic, size: first ? 60 : 50),
           const SizedBox(height: 8),
           Text(
             name,
@@ -228,7 +228,7 @@ class _Row extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          PlayerAvatar(name: name, frame: entry.frame, size: 38),
+          PlayerAvatar(name: name, frame: entry.frame, pic: entry.pic, size: 38),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

@@ -7,6 +7,7 @@ import 'game/app_settings.dart';
 import 'l10n/strings.dart';
 import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/widgets/friend_request_banner.dart';
 import 'ui/widgets/invite_banner.dart';
 import 'ui/theme.dart';
 
@@ -56,6 +57,8 @@ class PastraApp extends StatelessWidget {
                   child ?? const SizedBox.shrink(),
                   // A friend's invitation, over every screen.
                   Positioned.fill(child: InviteBanner(navigator: _navigator)),
+                  // A friend request: accept or decline it on any screen.
+                  const Positioned.fill(child: FriendRequestBanner()),
                   if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
                 ],
               ),

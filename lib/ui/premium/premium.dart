@@ -481,15 +481,30 @@ class ModeRow extends StatelessWidget {
 
 /// A small square tile: an icon over a short label.
 class LobbyTile extends StatelessWidget {
-  const LobbyTile({super.key, required this.icon, required this.label, required this.onTap, this.height = 64});
+  const LobbyTile({super.key, required this.icon, required this.label, required this.onTap, this.height = 64, this.badge = 0});
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
   final double height;
 
+  /// Things waiting behind the tile (a coral count in its corner).
+  final int badge;
+
   @override
   Widget build(BuildContext context) {
+    final tile = _tile();
+    if (badge <= 0) return tile;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        tile,
+        Positioned(top: -6, right: -6, child: IgnorePointer(child: CountBadge(count: badge))),
+      ],
+    );
+  }
+
+  Widget _tile() {
     return Pressable(
       onTap: onTap,
       radius: BorderRadius.circular(14),

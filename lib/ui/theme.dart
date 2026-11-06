@@ -223,7 +223,11 @@ enum TableTheme {
   royal(Color(0xFF3446A8), Color(0xFF1C2466), Color(0xFF0A0D2E)),
   sunset(Color(0xFFD9733A), Color(0xFF9C3446), Color(0xFF3E1230)),
   aurora(Color(0xFF2FB38A), Color(0xFF2A5FA8), Color(0xFF1A1440)),
-  rose(Color(0xFFC0587A), Color(0xFF7A2848), Color(0xFF2E0C1C));
+  rose(Color(0xFFC0587A), Color(0xFF7A2848), Color(0xFF2E0C1C)),
+  // Premium store tables.
+  marble(Color(0xFF4A4E57), Color(0xFF26292F), Color(0xFF0E0F12)),
+  velvet(Color(0xFF2A4C8A), Color(0xFF152A55), Color(0xFF070F22)),
+  leather(Color(0xFF8E2A3A), Color(0xFF581522), Color(0xFF24070D));
 
   const TableTheme(this.light, this.mid, this.dark);
 
@@ -256,7 +260,11 @@ enum CardBackStyle {
   ruby(Color(0xFF4A0618), Color(0xFFD01E4A), PastraColors.gold),
   diamond(Color(0xFF0B4A6E), Color(0xFF7FD8F5), Colors.white),
   copper(Color(0xFF4A2410), Color(0xFFC46A2E), Color(0xFFFFE0B2)),
-  galaxy(Color(0xFF140A36), Color(0xFF6A3FD0), Color(0xFFE6D7FF));
+  galaxy(Color(0xFF140A36), Color(0xFF6A3FD0), Color(0xFFE6D7FF)),
+  // Premium store backs.
+  onyx(Color(0xFF060607), Color(0xFF2A2D33), Color(0xFFF7E2B0)),
+  bordeaux(Color(0xFF3A0A12), Color(0xFF7A1F2A), PastraColors.gold),
+  ivory(Color(0xFFCFC4AE), Color(0xFFF4EEE2), Color(0xFF8A6A2A));
 
   const CardBackStyle(this.dark, this.light, this.accent);
 
