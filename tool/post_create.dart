@@ -3,8 +3,10 @@
 //     dart run tool/post_create.dart
 //
 // * app name: "Pastra", and "Πάστρα" on Greek phones
-// * launcher icons (Android legacy + adaptive, iOS)
+// * launcher icons (Android legacy + adaptive, iOS, Windows)
 // * landscape only (the game is played sideways)
+// * Windows: the window title, a smallest window size the table fits in and
+//   a dark title bar
 //
 // Safe to run again; it only touches the files listed here.
 import 'dart:io';
@@ -16,6 +18,7 @@ void main() {
   }
   _android();
   _ios();
+  _windows();
   stdout.writeln('Done.');
 }
 
@@ -99,6 +102,62 @@ void _ios() {
     plist.writeAsStringSync(text);
   }
   stdout.writeln('iOS: $copied icons replaced.');
+}
+
+void _windows() {
+  final runner = Directory('windows/runner');
+  if (!runner.existsSync()) return;
+
+  final icon = File('tool/launcher_icons/windows/app_icon.ico');
+  if (icon.existsSync()) {
+    Directory('windows/runner/resources').createSync(recursive: true);
+    icon.copySync('windows/runner/resources/app_icon.ico');
+  }
+
+  _patch('windows/runner/main.cpp', 'window title', (text) => text.replaceFirst('L"pastra"', 'L"Pastra"'));
+  _patch(
+    'windows/runner/Runner.rc',
+    'app name',
+    (text) => text
+        .replaceFirst('VALUE "FileDescription", "pastra"', 'VALUE "FileDescription", "Pastra"')
+        .replaceFirst('VALUE "ProductName", "pastra"', 'VALUE "ProductName", "Pastra"'),
+  );
+  _patch('windows/runner/win32_window.cpp', 'smallest size and dark title bar', (text) {
+    // The table needs some room: the window cannot be made smaller than
+    // 800 x 450 (at 100 % scaling).
+    if (!text.contains('WM_GETMINMAXINFO')) {
+      text = text.replaceFirst(
+        '  switch (message) {\n    case WM_DESTROY:',
+        '  switch (message) {\n'
+            '    case WM_GETMINMAXINFO: {\n'
+            '      // Pastra: the table needs at least this much room.\n'
+            '      const double scale = FlutterDesktopGetDpiForHWND(hwnd) / 96.0;\n'
+            '      auto info = reinterpret_cast<MINMAXINFO*>(lparam);\n'
+            '      info->ptMinTrackSize.x = static_cast<LONG>(800 * scale);\n'
+            '      info->ptMinTrackSize.y = static_cast<LONG>(450 * scale);\n'
+            '      return 0;\n'
+            '    }\n'
+            '    case WM_DESTROY:',
+      );
+    }
+    // The game is dark: a dark title bar also when Windows is set to light.
+    return text.replaceFirst('BOOL enable_dark_mode = light_mode == 0;', 'BOOL enable_dark_mode = TRUE;  // Pastra: always dark');
+  });
+  stdout.writeln('Windows: icon, title, smallest window size, dark title bar.');
+}
+
+/// Changes a generated file with [change]; tells when it found nothing to
+/// change (a newer Flutter may have moved things around).
+void _patch(String path, String what, String Function(String text) change) {
+  final file = File(path);
+  if (!file.existsSync()) return;
+  final before = file.readAsStringSync();
+  final after = change(before);
+  if (after == before) {
+    stdout.writeln('$path: $what already set or not found.');
+    return;
+  }
+  file.writeAsStringSync(after);
 }
 
 String _strings(String name) => '<?xml version="1.0" encoding="utf-8"?>\n'

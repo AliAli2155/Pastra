@@ -56,6 +56,21 @@
       padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
                env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     }
+    /* The splash until Flutter draws: a fan of three cards, the name in
+       gold (the app's own fonts, Manrope for Greek and Cyrillic) and a thin
+       gold bar. It fades out when the lobby is there. */
+    @font-face {
+      font-family: 'Pastra Outfit';
+      src: url('assets/assets/fonts/Outfit-ExtraBold.ttf') format('truetype');
+      font-weight: 800;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Pastra Manrope';
+      src: url('assets/assets/fonts/Manrope-ExtraBold.ttf') format('truetype');
+      font-weight: 800;
+      font-display: swap;
+    }
     #loading {
       position: fixed;
       inset: 0;
@@ -63,21 +78,66 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
-      color: #fff;
+      gap: 20px;
       pointer-events: none;
       transition: opacity 0.35s ease;
     }
-    #loading .title { font-size: 44px; font-weight: 800; letter-spacing: 1px; }
-    #loading .spinner {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      border: 4px solid rgba(255, 255, 255, 0.2);
-      border-top-color: #E6B54A;
-      animation: spin 0.9s linear infinite;
+    #loading .fan { position: relative; width: 132px; height: 100px; }
+    #loading .card {
+      position: absolute;
+      left: 40px;
+      top: 8px;
+      width: 52px;
+      height: 74px;
+      box-sizing: border-box;
+      border-radius: 7px;
+      border: 1.5px solid #E6B54A;
+      background: linear-gradient(160deg, #2A2E36, #15171B);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+      transform-origin: 50% 120%;
+      animation: fan 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading .card.left { --turn: -17deg; }
+    #loading .card.right {
+      --turn: 17deg;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #FBF8F1, #F4EFE3);
+      font: 800 30px/1 'Pastra Manrope', 'Pastra Outfit', sans-serif;
+      color: #0D7356;
+    }
+    @keyframes fan { from { transform: rotate(0deg) translateY(6px); opacity: 0; } to { transform: rotate(var(--turn, 0deg)); opacity: 1; } }
+    #loading .title {
+      font: 800 54px/1.05 'Pastra Outfit', 'Pastra Manrope', -apple-system, 'Segoe UI', Roboto, sans-serif;
+      letter-spacing: -1px;
+      background: linear-gradient(180deg, #F7E2B0 0%, #E6B54A 55%, #B8862B 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rise 0.6s 0.1s ease-out both;
+    }
+    @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+    #loading .bar {
+      width: 128px;
+      height: 3px;
+      border-radius: 3px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    #loading .bar i {
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #D9A033, #F2C866);
+      animation: slide 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes slide { from { transform: translateX(-10%); } to { transform: translateX(160%); } }
+    @media (prefers-reduced-motion: reduce) {
+      #loading .card, #loading .title, #loading .bar i { animation: none; }
+      #loading .card { transform: rotate(var(--turn, 0deg)); }
+    }
   </style>
 </head>
 <body>
@@ -144,8 +204,13 @@
     };
   </script>
   <div id="loading">
+    <div class="fan" aria-hidden="true">
+      <div class="card left"></div>
+      <div class="card"></div>
+      <div class="card right">Π</div>
+    </div>
     <div class="title" id="splash-title">Pastra</div>
-    <div class="spinner"></div>
+    <div class="bar"><i></i></div>
   </div>
   <script>
     // Splash title in the language the player chose (English the first time).
