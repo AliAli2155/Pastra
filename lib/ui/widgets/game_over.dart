@@ -152,12 +152,16 @@ class _GameOverViewState extends State<GameOverView> {
               ),
             ),
           ),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: content,
+          // A low screen (a phone held sideways): everything is scaled down
+          // to fit, so the buttons never end up below the edge.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: LayoutBuilder(
+              builder: (context, box) => Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(width: min(460.0, box.maxWidth), child: content),
+                ),
               ),
             ),
           ),
