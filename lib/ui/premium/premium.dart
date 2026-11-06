@@ -425,12 +425,16 @@ class ModeRow extends StatelessWidget {
     this.subtitle,
     this.badge = 0,
     this.height = 76,
+    this.subtitleLines = 1,
   });
 
   final IconData icon;
   final Color accent;
   final String title;
   final String? subtitle;
+
+  /// Lines the subtitle may take before it is cut with "…".
+  final int subtitleLines;
   final VoidCallback? onTap;
   final int badge;
   final double height;
@@ -462,7 +466,12 @@ class ModeRow extends StatelessWidget {
                       style: const TextStyle(color: PastraColors.text, fontSize: 18, fontWeight: FontWeight.w700),
                     ),
                     if (subtitle != null)
-                      Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: PremiumText.secondary),
+                      Text(
+                        subtitle!,
+                        maxLines: subtitleLines,
+                        overflow: TextOverflow.ellipsis,
+                        style: PremiumText.secondary,
+                      ),
                   ],
                 ),
               ),

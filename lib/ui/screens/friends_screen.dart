@@ -230,9 +230,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, box) {
-                        // Wide: my code and the requests on the left, the
-                        // friends on the right. Narrow: one column.
-                        if (box.maxWidth >= 720) {
+                        // Wide with friends: my code and the requests on the
+                        // left, the friends on the right. Otherwise (narrow,
+                        // or nobody to list yet) one centred column.
+                        if (box.maxWidth >= 720 && friends.isNotEmpty) {
                           return Padding(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                             child: Row(
@@ -247,7 +248,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: ListView(
-                                    padding: const EdgeInsets.only(bottom: 20),
+                                    // Starts level with my code card (its top margin).
+                                    padding: const EdgeInsets.only(top: 4, bottom: 20),
                                     children: <Widget>[
                                       for (var i = 0; i < lists.length; i++) ...<Widget>[
                                         if (i > 0) const SizedBox(height: 14),

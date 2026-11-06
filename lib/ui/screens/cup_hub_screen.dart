@@ -63,6 +63,7 @@ class _CupHubScreenState extends State<CupHubScreen> {
       accent: accent,
       title: cupTitle(t, type),
       subtitle: '${t.cupAt(_time(next))} · $hint',
+      subtitleLines: 2,
       height: height,
       onTap: () => _open(type),
     );
@@ -145,6 +146,7 @@ class _CupHubScreenState extends State<CupHubScreen> {
                   accent: PastraColors.coral,
                   title: t.cupFriends,
                   subtitle: t.cupFriendsHint,
+                  subtitleLines: 2,
                   height: h,
                   onTap: _friendsDialog,
                 ),
