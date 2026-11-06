@@ -47,67 +47,67 @@ class PlayingCardView extends StatelessWidget {
   /// White glow: the human's selected card.
   final bool selected;
 
+  static final BorderRadius _radius = BorderRadius.circular(baseWidth * 0.08);
+
   @override
   Widget build(BuildContext context) {
     const w = baseWidth;
     const h = baseHeight;
-    final radius = BorderRadius.circular(w * 0.08);
     final glow = highlighted || selected;
     final glowColor = highlighted ? PastraColors.gold : Colors.white;
+    // The shadow belongs to each side, so that a card being turned over
+    // narrows together with its shadow.
+    final shadow = BoxDecoration(
+      borderRadius: _radius,
+      boxShadow: <BoxShadow>[
+        BoxShadow(color: Colors.black.withValues(alpha: 0.28), offset: const Offset(0, 3)),
+        if (glow) BoxShadow(color: glowColor.withValues(alpha: 0.9), spreadRadius: 5),
+        if (glow) BoxShadow(color: glowColor.withValues(alpha: 0.35), spreadRadius: 10),
+      ],
+    );
     final Widget content = !faceUp
-        ? CardBack(
+        ? DecoratedBox(
             key: const ValueKey<String>('back'),
-            width: w,
-            height: h,
-            style: backStyle ?? Look.back,
-            simple: simple,
+            decoration: shadow,
+            child: RepaintBoundary(
+              child: CardBack(width: w, height: h, style: backStyle ?? Look.back, simple: simple),
+            ),
           )
         // Face and blank share one key, so covering a card (another one lands
         // on it) swaps the picture without a flip; only back <-> front flips.
-        : KeyedSubtree(
+        : DecoratedBox(
             key: const ValueKey<String>('front'),
-            child: covered
-                ? const _BlankCard(width: w, height: h)
-                : CardFace(
-                    card: card,
-                    width: w,
-                    height: h,
-                    highlighted: highlighted,
-                  ),
+            decoration: shadow,
+            child: RepaintBoundary(
+              child: covered
+                  ? const _BlankCard(width: w, height: h)
+                  : CardFace(card: card, width: w, height: h, highlighted: highlighted),
+            ),
           );
     return FittedBox(
       fit: BoxFit.fill,
       child: SizedBox(
         width: w,
         height: h,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            boxShadow: <BoxShadow>[
-              BoxShadow(color: Colors.black.withValues(alpha: 0.28), offset: const Offset(0, 3)),
-              if (glow) BoxShadow(color: glowColor.withValues(alpha: 0.9), spreadRadius: 5),
-              if (glow) BoxShadow(color: glowColor.withValues(alpha: 0.35), spreadRadius: 10),
-            ],
+        // Turning a card over: a short flip around the vertical axis.
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          transitionBuilder: _flip,
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.center,
+            children: <Widget>[...previous, if (current != null) current],
           ),
-          child: RepaintBoundary(
-            // Turning a card over: a short flip around the vertical axis.
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              transitionBuilder: _flip,
-              layoutBuilder: (current, previous) => Stack(
-                alignment: Alignment.center,
-                children: <Widget>[...previous, if (current != null) current],
-              ),
-              child: content,
-            ),
-          ),
+          child: content,
         ),
       ),
     );
   }
 }
 
-/// The old side turns away (first half), the new side turns in (second half).
+/// Turning a card over, drawn flat (a perspective turn is slow in a
+/// browser): the old side narrows to its edge while the card lifts a little
+/// and darkens, then the new side opens out of the edge. The old side does
+/// the first half, the new side the second.
 Widget _flip(Widget child, Animation<double> animation) {
   return AnimatedBuilder(
     animation: animation,
@@ -116,13 +116,30 @@ Widget _flip(Widget child, Animation<double> animation) {
       final v = animation.value;
       // Hidden while the other side is still turning.
       if (v < 0.5) return const SizedBox.shrink();
-      final angle = (1 - v) * pi;
+      // 0 = lying flat, 1 = seen edge on.
+      final turn = (1 - v) * 2;
+      final narrow = cos(turn * pi / 2);
+      final lift = 1 + 0.07 * sin(turn * pi / 2);
       return Transform(
         alignment: Alignment.center,
-        transform: Matrix4.identity()
-          ..setEntry(3, 2, 0.0015)
-          ..rotateY(angle),
-        child: child,
+        transform: Matrix4.diagonal3Values(narrow * lift, lift, 1),
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: <Widget>[
+            child!,
+            if (turn > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: PlayingCardView._radius,
+                      color: Colors.black.withValues(alpha: 0.32 * turn),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
     },
   );

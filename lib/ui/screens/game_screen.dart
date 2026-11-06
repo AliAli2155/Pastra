@@ -459,14 +459,28 @@ class _GameScreenState extends State<GameScreen> {
                 bottom: 8,
                 child: IgnorePointer(child: _myPlate(s)),
               ),
+              // A card put down on the table: a soft ring on the cloth
+              // around it when it lands.
+              if (_landed(layout) case final rect?)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _LandingRing(
+                      key: ValueKey<int>(c.lastMove!.id),
+                      geometry: geo,
+                      rect: rect,
+                      flight: duration,
+                    ),
+                  ),
+                ),
               // The cards lie on it. They are not drawn through the
               // perspective (slow, above all in a browser): each one is
               // placed, sized and slanted like the part of the table under it.
               for (final e in entries) _card(e.key, e.value, duration, geo),
               if (state.deck.isNotEmpty)
-                // At the top right of the tilted deck: the face-up cards under it
-                // go to the bottom right, and a side hand may be below it.
-                _badge(screen(layout.deckRect), '${state.deck.length}', Icons.layers_outlined, topRight: true),
+                // On the deck itself: beside it the card a player has just
+                // played may show, the face-up cards under it stick out at the
+                // bottom right, and a side hand may be below it.
+                _badge(screen(layout.deckRect), '${state.deck.length}', Icons.layers_outlined, onTop: true),
               for (var t = 0; t < 2; t++)
                 if (state.piles[t].isNotEmpty)
                   _badge(
@@ -475,6 +489,11 @@ class _GameScreenState extends State<GameScreen> {
                         ? '${state.piles[t].length}'
                         : '${state.piles[t].length} · Π${state.pastraCards[t].length}',
                     Icons.style_outlined,
+                    // It bumps when captured cards arrive. A new pile's counter
+                    // grows in when they first get there (all its cards were
+                    // just taken: from the table, and the card that took them).
+                    bumpKey: state.piles[t].length,
+                    fresh: state.piles[t].where((card) => !_gathered.containsKey(card)).length <= 1,
                   ),
               for (final entry in layout.seatRects.entries)
                 _seatLabel(
@@ -814,29 +833,51 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  /// A small counter (cards in the deck or in a pile) next to a place on the
-  /// table. [anchor] is where that place is seen on the screen.
-  Widget _badge(Rect anchor, String text, IconData icon, {bool topRight = false}) {
-    return Positioned(
-      left: topRight ? anchor.right - 4 : anchor.left - 14,
-      width: anchor.width + 28,
-      top: topRight ? anchor.top - 4 : anchor.bottom - 9,
-      child: IgnorePointer(
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(7)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(icon, size: 12, color: const Color(0xFFC9D6CF)),
-                const SizedBox(width: 4),
-                Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFFE4ECE7), fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-        ),
+  /// A small counter (cards in the deck or in a pile) under a place on the
+  /// table, or [onTop] of it. [anchor] is where that place is seen on the
+  /// screen.
+  Widget _badge(Rect anchor, String text, IconData icon, {bool onTop = false, int? bumpKey, bool fresh = false}) {
+    Widget chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(7)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 12, color: const Color(0xFFC9D6CF)),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFFE4ECE7), fontWeight: FontWeight.w700)),
+        ],
       ),
+    );
+    if (bumpKey != null) chip = _Bump(key: ValueKey<int>(bumpKey), fresh: fresh, child: chip);
+    return Positioned(
+      left: anchor.left - 14,
+      width: anchor.width + 28,
+      top: onTop ? anchor.center.dy - 10 : anchor.bottom - 9,
+      child: IgnorePointer(child: Center(child: chip)),
+    );
+  }
+
+  /// Where the card just put down lies on the flat table, while it is a
+  /// card that stays on the table (not a capture). Null otherwise and in low
+  /// graphics quality.
+  Rect? _landed(TableLayout layout) {
+    final move = c.lastMove;
+    if (move == null || move.captured || Fx.low.value) return null;
+    if (!c.state.table.contains(move.card)) return null;
+    return layout.cards[move.card]?.rect;
+  }
+
+  /// A player's round picture; when their turn starts a gold ring grows out
+  /// of it once (not in low graphics quality).
+  Widget _withTurnPing(bool active, Widget avatar) {
+    if (!active || Fx.low.value) return avatar;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Positioned.fill(child: _TurnPing(key: ValueKey<int>(c.turnId))),
+        avatar,
+      ],
     );
   }
 
@@ -852,18 +893,21 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 30,
-            height: 30,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: PastraColors.raised,
-              border: Border.all(color: PastraColors.gold, width: 2),
-            ),
-            child: Text(
-              name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: PastraColors.gold),
+          _withTurnPing(
+            mine,
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: PastraColors.raised,
+                border: Border.all(color: PastraColors.gold, width: 2),
+              ),
+              child: Text(
+                name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: PastraColors.gold),
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -924,7 +968,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          avatar,
+          _withTurnPing(active, avatar),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -1032,7 +1076,11 @@ class _GameScreenState extends State<GameScreen> {
     return Center(
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: Container(
+        // A new message pops in; during my turn it changes with the chosen
+        // card, and pops only when the turn starts.
+        child: _PopIn(
+          key: ValueKey<String>(c.isHumanTurn && leftover == null ? 'turn-${c.turnId}' : main),
+          child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
           decoration: plateDecoration(radius: 14, glow: gold, edge: 0.3),
           child: Row(
@@ -1058,6 +1106,7 @@ class _GameScreenState extends State<GameScreen> {
                   style: const TextStyle(fontSize: 12, color: PastraColors.text2, fontWeight: FontWeight.w500),
                 ),
             ],
+          ),
           ),
         ),
       ),
@@ -1106,21 +1155,8 @@ class _TopBar extends StatelessWidget {
             style: const TextStyle(fontSize: 14, color: Color(0xFFC9D0D8), fontWeight: FontWeight.w600),
           ),
         );
-    // The score counts up to its new value.
-    Widget score(int value, bool ours) => TweenAnimationBuilder<int>(
-          tween: IntTween(end: value),
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-          builder: (context, v, _) => Text(
-            '$v',
-            style: TextStyle(
-              fontSize: 22,
-              height: 1.1,
-              fontWeight: FontWeight.w800,
-              color: ours ? PastraColors.gold : PastraColors.text,
-            ),
-          ),
-        );
+    // The score counts up to its new value (and pops when it changes).
+    Widget score(int value, bool ours) => _ScoreNumber(value: value, ours: ours);
     final board = Container(
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1176,7 +1212,8 @@ class _TopBar extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: sideRoom),
-            child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: board)),
+            // Its own layer: a score counting up does not repaint the rest.
+            child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: RepaintBoundary(child: board))),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -1327,6 +1364,244 @@ class _ThinkingDotsState extends State<_ThinkingDots> {
       ),
     );
   }
+}
+
+/// A score in the top bar. It counts up to a new value and, while it does,
+/// grows and lights up for a moment.
+class _ScoreNumber extends StatefulWidget {
+  const _ScoreNumber({required this.value, required this.ours});
+
+  final int value;
+
+  /// Our team's score is gold.
+  final bool ours;
+
+  @override
+  State<_ScoreNumber> createState() => _ScoreNumberState();
+}
+
+class _ScoreNumberState extends State<_ScoreNumber> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+  late int _from = widget.value;
+  late int _to = widget.value;
+
+  int _at(double t) => (_from + (_to - _from) * Curves.easeOutCubic.transform(t)).round();
+
+  @override
+  void didUpdateWidget(_ScoreNumber old) {
+    super.didUpdateWidget(old);
+    if (widget.value == _to) return;
+    _from = _at(_c.value);
+    _to = widget.value;
+    _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = widget.ours ? PastraColors.gold : PastraColors.text;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        // Up and back in the first half of the count.
+        final pop = _c.isAnimating ? sin(pi * min(1.0, t / 0.5)) : 0.0;
+        return Transform.scale(
+          scale: 1 + 0.22 * pop,
+          child: Text(
+            '${_at(t)}',
+            style: TextStyle(
+              fontSize: 22,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+              color: Color.lerp(base, PastraColors.goldLight, pop),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Pops its child in (grows from a little smaller and fades in) once, when
+/// it is first shown. A new key shows it again.
+class _PopIn extends StatelessWidget {
+  const _PopIn({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0.0, 1.0).toDouble(),
+        child: Transform.scale(scale: 0.82 + 0.18 * t, child: child),
+      ),
+    );
+  }
+}
+
+/// Grows its child for a moment, a little after it is shown (when the cards
+/// flying to a pile arrive there). A new key bumps it again. A [fresh] one
+/// is hidden until then and grows in.
+class _Bump extends StatelessWidget {
+  const _Bump({super.key, required this.child, this.fresh = false});
+
+  final Widget child;
+  final bool fresh;
+
+  static const double _wait = 0.45;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 720),
+      child: child,
+      builder: (context, t, child) {
+        final double scale;
+        if (t < _wait) {
+          scale = fresh ? 0 : 1;
+        } else {
+          final k = (t - _wait) / (1 - _wait);
+          scale = fresh ? Curves.easeOutBack.transform(k) : 1 + 0.3 * sin(pi * k);
+        }
+        return Transform.scale(scale: scale, child: child);
+      },
+    );
+  }
+}
+
+/// Gold rings that grow out of a player's round picture once, when their
+/// turn starts. It fills the picture and draws around it.
+class _TurnPing extends StatefulWidget {
+  const _TurnPing({super.key});
+
+  @override
+  State<_TurnPing> createState() => _TurnPingState();
+}
+
+class _TurnPingState extends State<_TurnPing> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 950))..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: _PingPainter(_c))));
+  }
+}
+
+class _PingPainter extends CustomPainter {
+  _PingPainter(this.anim) : super(repaint: anim);
+
+  final Animation<double> anim;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = anim.value;
+    if (t <= 0 || t >= 1 || size.isEmpty) return;
+    final center = size.center(Offset.zero);
+    final base = size.shortestSide / 2;
+    final paint = Paint()..style = PaintingStyle.stroke;
+    // Two rings, the second a little later.
+    for (var i = 0; i < 2; i++) {
+      final lt = ((t - i * 0.25) / 0.75).clamp(0.0, 1.0);
+      if (lt <= 0 || lt >= 1) continue;
+      final e = Curves.easeOutCubic.transform(lt);
+      paint
+        ..strokeWidth = 2.4 * (1 - e) + 0.4
+        ..color = PastraColors.gold.withValues(alpha: 0.85 * (1 - lt));
+      canvas.drawCircle(center, base + e * base * 0.95, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PingPainter oldDelegate) => false;
+}
+
+/// A soft light ring on the cloth around a card that was put down: it
+/// grows out from the card's edge and fades as the card lands. [rect] is the
+/// card's place on the flat table; the ring is drawn where it is seen. It
+/// waits for the [flight] of the card first.
+class _LandingRing extends StatefulWidget {
+  const _LandingRing({super.key, required this.geometry, required this.rect, required this.flight});
+
+  final StageGeometry geometry;
+  final Rect rect;
+  final Duration flight;
+
+  @override
+  State<_LandingRing> createState() => _LandingRingState();
+}
+
+class _LandingRingState extends State<_LandingRing> with SingleTickerProviderStateMixin {
+  static const int _ringMs = 520;
+
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.flight + const Duration(milliseconds: _ringMs),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flight = widget.flight.inMilliseconds;
+    // Starts just before the card touches the cloth.
+    final start = flight * 0.85 / (flight + _ringMs);
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _LandingPainter(_c, widget.geometry, widget.rect, start),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _LandingPainter extends CustomPainter {
+  _LandingPainter(this.anim, this.geometry, this.rect, this.start) : super(repaint: anim);
+
+  final Animation<double> anim;
+  final StageGeometry geometry;
+  final Rect rect;
+  final double start;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = (anim.value - start) / (1 - start);
+    if (t <= 0 || t >= 1) return;
+    final e = Curves.easeOutCubic.transform(t);
+    final ring = geometry.projectRect(rect.inflate(rect.width * (0.04 + 0.3 * e)));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(ring, Radius.circular(ring.width * 0.12)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3 * (1 - e) + 0.5
+        ..color = PastraColors.goldLight.withValues(alpha: 0.5 * (1 - t)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LandingPainter oldDelegate) => false;
 }
 
 /// Four of a kind: the hand is shown face up to everybody.
