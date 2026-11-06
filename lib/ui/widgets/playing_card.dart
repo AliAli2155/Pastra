@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -9,10 +10,10 @@ import 'suit_icon.dart';
 /// A card that fills the space it is given (aspect ratio is up to the parent,
 /// normally 1 : 1.42).
 ///
-/// For smooth animations the card is always drawn at one fixed size and
-/// scaled to fit: a card that moves or grows only re-composites its cached
-/// picture instead of being rebuilt and repainted every frame. Shadows are
-/// solid (no blur), which is much cheaper on phones and in browsers.
+/// The face and the back are pictures made once ([CardArt]): a card that
+/// flies, turns or lies slanted on the table is then one picture to draw,
+/// not its letters, suit shapes and edges again in every frame (that is
+/// what made dealing stutter on phones). Shadows are solid (no blur).
 class PlayingCardView extends StatelessWidget {
   const PlayingCardView({
     super.key,
@@ -23,6 +24,7 @@ class PlayingCardView extends StatelessWidget {
     this.covered = false,
     this.simple = false,
     this.backStyle,
+    this.flipDelay = Duration.zero,
   });
 
   static const double baseWidth = 120;
@@ -38,7 +40,7 @@ class PlayingCardView extends StatelessWidget {
   final bool covered;
 
   /// Face down deep in a stack, where nobody can see it: the back is drawn
-  /// without its pattern (much less to paint for a deck of 36 cards).
+  /// without its pattern.
   final bool simple;
 
   /// Gold glow: this table card is (about to be) captured.
@@ -46,6 +48,10 @@ class PlayingCardView extends StatelessWidget {
 
   /// White glow: the human's selected card.
   final bool selected;
+
+  /// When [faceUp] changes: how long the card waits before it turns over
+  /// (a dealt card turns on its way, not while it still lies on the deck).
+  final Duration flipDelay;
 
   static final BorderRadius _radius = BorderRadius.circular(baseWidth * 0.08);
 
@@ -65,40 +71,20 @@ class PlayingCardView extends StatelessWidget {
         if (glow) BoxShadow(color: glowColor.withValues(alpha: 0.35), spreadRadius: 10),
       ],
     );
-    final Widget content = !faceUp
-        ? DecoratedBox(
-            key: const ValueKey<String>('back'),
-            decoration: shadow,
-            child: RepaintBoundary(
-              child: CardBack(width: w, height: h, style: backStyle ?? Look.back, simple: simple),
-            ),
-          )
-        // Face and blank share one key, so covering a card (another one lands
-        // on it) swaps the picture without a flip; only back <-> front flips.
-        : DecoratedBox(
-            key: const ValueKey<String>('front'),
-            decoration: shadow,
-            child: RepaintBoundary(
-              child: covered
-                  ? const _BlankCard(width: w, height: h)
-                  : CardFace(card: card, width: w, height: h, highlighted: highlighted),
-            ),
-          );
+    final back = DecoratedBox(
+      decoration: shadow,
+      child: CardArt.picture(CardArt.back(backStyle ?? Look.back, simple: simple)),
+    );
+    final front = DecoratedBox(
+      decoration: shadow,
+      child: CardArt.picture(covered ? CardArt.blank() : CardArt.face(card, highlighted: highlighted)),
+    );
     return FittedBox(
       fit: BoxFit.fill,
       child: SizedBox(
         width: w,
         height: h,
-        // Turning a card over: a short flip around the vertical axis.
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 280),
-          transitionBuilder: _flip,
-          layoutBuilder: (current, previous) => Stack(
-            alignment: Alignment.center,
-            children: <Widget>[...previous, if (current != null) current],
-          ),
-          child: content,
-        ),
+        child: _Flip(faceUp: faceUp, delay: flipDelay, front: front, back: back),
       ),
     );
   }
@@ -106,28 +92,78 @@ class PlayingCardView extends StatelessWidget {
 
 /// Turning a card over, drawn flat (a perspective turn is slow in a
 /// browser): the old side narrows to its edge while the card lifts a little
-/// and darkens, then the new side opens out of the edge. The old side does
-/// the first half, the new side the second.
-Widget _flip(Widget child, Animation<double> animation) {
-  return AnimatedBuilder(
-    animation: animation,
-    child: child,
-    builder: (context, child) {
-      final v = animation.value;
-      // Hidden while the other side is still turning.
-      if (v < 0.5) return const SizedBox.shrink();
-      // 0 = lying flat, 1 = seen edge on.
-      final turn = (1 - v) * 2;
-      final narrow = cos(turn * pi / 2);
-      final lift = 1 + 0.07 * sin(turn * pi / 2);
-      return Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.diagonal3Values(narrow * lift, lift, 1),
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: <Widget>[
-            child!,
-            if (turn > 0)
+/// and darkens, then the new side opens out of the edge.
+class _Flip extends StatefulWidget {
+  const _Flip({required this.faceUp, required this.delay, required this.front, required this.back});
+
+  final bool faceUp;
+  final Duration delay;
+  final Widget front;
+  final Widget back;
+
+  @override
+  State<_Flip> createState() => _FlipState();
+}
+
+class _FlipState extends State<_Flip> with SingleTickerProviderStateMixin {
+  static const Duration _turn = Duration(milliseconds: 280);
+
+  /// Only made for a card that turns over (most never do).
+  AnimationController? _c;
+
+  /// The side shown before the turn.
+  late bool _from = widget.faceUp;
+
+  /// Part of the animation spent waiting ([_Flip.delay]).
+  double _wait = 0;
+
+  @override
+  void didUpdateWidget(_Flip old) {
+    super.didUpdateWidget(old);
+    if (widget.faceUp == old.faceUp) return;
+    final c = _c ??= AnimationController(vsync: this);
+    // Turned again before the last turn ended: start from the side seen now.
+    _from = c.isAnimating && _progress(c) < 0.5 ? _from : old.faceUp;
+    final total = _turn + widget.delay;
+    _wait = widget.delay.inMicroseconds / total.inMicroseconds;
+    c.duration = total;
+    c.forward(from: 0);
+  }
+
+  double _progress(AnimationController c) => _wait >= 1 ? 1 : ((c.value - _wait) / (1 - _wait)).clamp(0.0, 1.0);
+
+  bool _sideAt(double t) => t < 0.5 ? _from : widget.faceUp;
+
+  @override
+  void dispose() {
+    _c?.dispose();
+    super.dispose();
+  }
+
+  Widget _side(bool up) => up ? widget.front : widget.back;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _c;
+    if (c == null) return _side(widget.faceUp);
+    return AnimatedBuilder(
+      animation: c,
+      builder: (context, _) {
+        final t = c.isAnimating ? _progress(c) : 1.0;
+        final child = _side(_sideAt(t));
+        if (t <= 0 || t >= 1) return child;
+        // 0 = lying flat, 1 = seen edge on.
+        final turn = t < 0.5 ? t * 2 : (1 - t) * 2;
+        final narrow = cos(turn * pi / 2);
+        final lift = 1 + 0.07 * sin(turn * pi / 2);
+        return Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.diagonal3Values(narrow * lift, lift, 1),
+          child: Stack(
+            alignment: Alignment.center,
+            fit: StackFit.passthrough,
+            children: <Widget>[
+              child,
               Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(
@@ -138,13 +174,78 @@ Widget _flip(Widget child, Animation<double> animation) {
                   ),
                 ),
               ),
-          ],
-        ),
-      );
-    },
-  );
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
+/// The faces and backs of the cards as pictures, each made once and then
+/// reused: drawing a picture costs the same however the card is turned,
+/// slanted or scaled, while letters, suit shapes and edges drawn under such
+/// a transform are worked out again in every frame (slow on phones and in
+/// browsers).
+class CardArt {
+  CardArt._();
+
+  static final Map<int, ui.Image> _images = <int, ui.Image>{};
+  static double? _ratio;
+
+  /// Pixels per point of a card [PlayingCardView.baseWidth] wide: about as
+  /// sharp as the largest card on the screen.
+  static double get ratio {
+    final views = ui.PlatformDispatcher.instance.views;
+    final dpr = views.isEmpty ? 2.0 : views.first.devicePixelRatio;
+    return _ratio ??= (dpr * 0.9).clamp(1.5, 2.5).toDouble();
+  }
+
+  /// The face of [card] (with a gold edge when [highlighted]).
+  static ui.Image face(int card, {bool highlighted = false}) => _image(
+        card * 2 + (highlighted ? 1 : 0),
+        (canvas, size) => paintCardFace(canvas, size, card, highlighted: highlighted),
+      );
+
+  /// A back in [style]; [simple] without its pattern.
+  static ui.Image back(CardBackStyle style, {bool simple = false}) =>
+      _image(1000 + style.index * 2 + (simple ? 1 : 0), CardBackPainter(style, simple).paint);
+
+  /// A face-up card seen from the side of a pile: just the cream card.
+  static ui.Image blank() => _image(2000, _paintBlank);
+
+  static ui.Image _image(int key, void Function(Canvas canvas, Size size) paint) {
+    return _images[key] ??= () {
+      const size = Size(PlayingCardView.baseWidth, PlayingCardView.baseHeight);
+      final r = ratio;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder)..scale(r);
+      paint(canvas, size);
+      final picture = recorder.endRecording();
+      final image = picture.toImageSync((size.width * r).ceil(), (size.height * r).ceil());
+      picture.dispose();
+      return image;
+    }();
+  }
+
+  /// Shows [image] filling the space it is given.
+  static Widget picture(ui.Image image) => RawImage(
+        image: image,
+        width: PlayingCardView.baseWidth,
+        height: PlayingCardView.baseHeight,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.medium,
+      );
+
+  static void _paintBlank(Canvas canvas, Size size) {
+    final card = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(size.width * 0.08));
+    canvas.drawRRect(card, Paint()..color = PastraColors.cream);
+    canvas.drawDRRect(card, card.deflate(1), Paint()..color = const Color(0xFFD8D0BE));
+  }
+}
+
+/// The face of a card drawn as vectors (letters and suit shapes); used where
+/// a card is shown on its own, still. Moving cards use [CardArt].
 class CardFace extends StatelessWidget {
   const CardFace({
     super.key,
@@ -161,152 +262,127 @@ class CardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = width;
-    final h = height;
-    final color = Cards.isRed(card) ? PastraColors.cardRed : PastraColors.cardBlack;
-    final suit = Cards.suit(card);
-    final label = Cards.rankLabel(card);
-    final corner = _Corner(label: label, suit: suit, color: color, cardWidth: w);
-    // A plain cream card with a fine edge (gold when it is about to be
-    // captured) and a faint sheen towards the bottom.
-    return Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[PastraColors.cream, Color(0xFFF4EFE3)],
-        ),
-        borderRadius: BorderRadius.circular(w * 0.08),
-        border: Border.all(
-          color: highlighted ? PastraColors.gold : const Color(0xFFD8D0BE),
-          width: highlighted ? max(1.5, w * 0.035) : 1.0,
-        ),
-      ),
-      child: Stack(
-        children: <Widget>[
-          Positioned(left: w * 0.06, top: w * 0.05, child: corner),
-          Positioned(
-            right: w * 0.06,
-            bottom: w * 0.05,
-            child: Transform.rotate(angle: pi, child: corner),
-          ),
-          Positioned(
-            left: w * 0.22,
-            right: w * 0.22,
-            top: h * 0.12,
-            bottom: h * 0.12,
-            child: _CardCenter(card: card, color: color, cardWidth: w),
-          ),
-        ],
-      ),
-    );
+    return CustomPaint(size: Size(width, height), painter: _FacePainter(card, highlighted));
   }
 }
 
-/// A face-up card seen from the side of a pile: just the cream card.
-class _BlankCard extends StatelessWidget {
-  const _BlankCard({required this.width, required this.height});
-
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: PastraColors.cream,
-        borderRadius: BorderRadius.circular(width * 0.08),
-        border: Border.all(color: const Color(0xFFD8D0BE), width: 1.0),
-      ),
-    );
-  }
-}
-
-class _Corner extends StatelessWidget {
-  const _Corner({required this.label, required this.suit, required this.color, required this.cardWidth});
-
-  final String label;
-  final int suit;
-  final Color color;
-  final double cardWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = cardWidth;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: w * 0.23,
-            height: 1.0,
-            fontWeight: FontWeight.w700,
-            letterSpacing: label.length > 1 ? -w * 0.02 : 0,
-          ),
-        ),
-        SizedBox(height: w * 0.015),
-        SuitIcon(suit: suit, size: w * 0.15, color: color),
-      ],
-    );
-  }
-}
-
-class _CardCenter extends StatelessWidget {
-  const _CardCenter({required this.card, required this.color, required this.cardWidth});
+class _FacePainter extends CustomPainter {
+  const _FacePainter(this.card, this.highlighted);
 
   final int card;
-  final Color color;
-  final double cardWidth;
-
-  /// Pip positions (0..1 inside the centre box) for 2..10.
-  static const Map<int, List<List<double>>> pips = <int, List<List<double>>>{
-    2: [[0.5, 0.0], [0.5, 1.0]],
-    3: [[0.5, 0.0], [0.5, 0.5], [0.5, 1.0]],
-    4: [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
-    5: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.5], [0.0, 1.0], [1.0, 1.0]],
-    6: [[0.0, 0.0], [1.0, 0.0], [0.0, 0.5], [1.0, 0.5], [0.0, 1.0], [1.0, 1.0]],
-    7: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.25], [0.0, 0.5], [1.0, 0.5], [0.0, 1.0], [1.0, 1.0]],
-    8: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.25], [0.0, 0.5], [1.0, 0.5], [0.5, 0.75], [0.0, 1.0], [1.0, 1.0]],
-    9: [[0.0, 0.0], [1.0, 0.0], [0.0, 0.333], [1.0, 0.333], [0.5, 0.5], [0.0, 0.667], [1.0, 0.667], [0.0, 1.0], [1.0, 1.0]],
-    10: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.167], [0.0, 0.333], [1.0, 0.333], [0.0, 0.667], [1.0, 0.667], [0.5, 0.833], [0.0, 1.0], [1.0, 1.0]],
-  };
+  final bool highlighted;
 
   @override
-  Widget build(BuildContext context) {
-    final rank = Cards.rank(card);
-    final suit = Cards.suit(card);
-    final w = cardWidth;
-    if (rank == Cards.ace || w < 40) {
-      final big = rank == Cards.ace ? w * 0.42 : w * 0.34;
-      return Center(child: SuitIcon(suit: suit, size: big, color: color));
+  void paint(Canvas canvas, Size size) => paintCardFace(canvas, size, card, highlighted: highlighted);
+
+  @override
+  bool shouldRepaint(_FacePainter old) => old.card != card || old.highlighted != highlighted;
+}
+
+/// Pip positions (0..1 inside the centre box) for 2..10.
+const Map<int, List<List<double>>> _pips = <int, List<List<double>>>{
+  2: [[0.5, 0.0], [0.5, 1.0]],
+  3: [[0.5, 0.0], [0.5, 0.5], [0.5, 1.0]],
+  4: [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+  5: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.5], [0.0, 1.0], [1.0, 1.0]],
+  6: [[0.0, 0.0], [1.0, 0.0], [0.0, 0.5], [1.0, 0.5], [0.0, 1.0], [1.0, 1.0]],
+  7: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.25], [0.0, 0.5], [1.0, 0.5], [0.0, 1.0], [1.0, 1.0]],
+  8: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.25], [0.0, 0.5], [1.0, 0.5], [0.5, 0.75], [0.0, 1.0], [1.0, 1.0]],
+  9: [[0.0, 0.0], [1.0, 0.0], [0.0, 0.333], [1.0, 0.333], [0.5, 0.5], [0.0, 0.667], [1.0, 0.667], [0.0, 1.0], [1.0, 1.0]],
+  10: [[0.0, 0.0], [1.0, 0.0], [0.5, 0.167], [0.0, 0.333], [1.0, 0.333], [0.0, 0.667], [1.0, 0.667], [0.5, 0.833], [0.0, 1.0], [1.0, 1.0]],
+};
+
+/// Draws the face of [card] filling [size]: a cream card with a fine edge
+/// (gold when [highlighted]), the rank and suit in two corners and the pips,
+/// a large suit (ace) or the court artwork (J, Q, K) in the middle.
+void paintCardFace(Canvas canvas, Size size, int card, {bool highlighted = false}) {
+  final w = size.width;
+  final h = size.height;
+  final color = Cards.isRed(card) ? PastraColors.cardRed : PastraColors.cardBlack;
+  final suit = Cards.suit(card);
+  final rank = Cards.rank(card);
+
+  final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
+  canvas.drawRRect(
+    outer,
+    Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[PastraColors.cream, Color(0xFFF4EFE3)],
+      ).createShader(Offset.zero & size),
+  );
+  final edge = highlighted ? max(1.5, w * 0.035) : 1.0;
+  canvas.drawDRRect(
+    outer,
+    outer.deflate(edge),
+    Paint()..color = highlighted ? PastraColors.gold : const Color(0xFFD8D0BE),
+  );
+
+  void suitAt(Offset topLeft, double s, {bool turned = false}) {
+    canvas.save();
+    canvas.translate(topLeft.dx, topLeft.dy);
+    if (turned) {
+      canvas.translate(s, s);
+      canvas.rotate(pi);
     }
-    if (rank > 10) return _FaceCardArt(card: card, color: color, cardWidth: w);
-    final layout = pips[rank]!;
+    SuitPainter(suit, color).paint(canvas, Size(s, s));
+    canvas.restore();
+  }
+
+  // The corners: the rank over a small suit, top left and (turned round)
+  // bottom right.
+  final label = Cards.rankLabel(card);
+  final text = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: TextStyle(
+        fontFamily: appFont,
+        fontFamilyFallback: appFontFallback,
+        color: color,
+        fontSize: w * 0.23,
+        height: 1.0,
+        leadingDistribution: TextLeadingDistribution.even,
+        fontWeight: FontWeight.w700,
+        letterSpacing: label.length > 1 ? -w * 0.02 : 0,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final small = w * 0.15;
+  final cornerWidth = max(text.width, small);
+  for (final turned in <bool>[false, true]) {
+    canvas.save();
+    if (turned) {
+      canvas.translate(w, h);
+      canvas.rotate(pi);
+    }
+    final origin = Offset(w * 0.06, w * 0.05);
+    text.paint(canvas, origin + Offset((cornerWidth - text.width) / 2, 0));
+    suitAt(origin + Offset((cornerWidth - small) / 2, text.height + w * 0.015), small);
+    canvas.restore();
+  }
+  text.dispose();
+
+  // The middle.
+  final box = Rect.fromLTRB(w * 0.22, h * 0.12, w - w * 0.22, h - h * 0.12);
+  if (rank == Cards.ace || w < 40) {
+    final big = rank == Cards.ace ? w * 0.42 : w * 0.34;
+    suitAt(box.center - Offset(big / 2, big / 2), big);
+  } else if (rank > 10) {
+    canvas.save();
+    canvas.translate(box.left, box.top);
+    _CourtPainter(rank, suit, color).paint(canvas, box.size);
+    canvas.restore();
+  } else {
     final pip = rank >= 9 ? w * 0.17 : w * 0.19;
-    return LayoutBuilder(builder: (context, box) {
-      final bw = box.maxWidth;
-      final bh = box.maxHeight;
-      return Stack(
-        children: <Widget>[
-          for (final p in layout)
-            Positioned(
-              left: p[0] * (bw - pip),
-              top: p[1] * (bh - pip),
-              width: pip,
-              height: pip,
-              child: p[1] > 0.5
-                  ? Transform.rotate(angle: pi, child: SuitIcon(suit: suit, size: pip, color: color))
-                  : SuitIcon(suit: suit, size: pip, color: color),
-            ),
-        ],
+    for (final p in _pips[rank]!) {
+      suitAt(
+        box.topLeft + Offset(p[0] * (box.width - pip), p[1] * (box.height - pip)),
+        pip,
+        turned: p[1] > 0.5,
       );
-    });
+    }
   }
 }
 
@@ -315,22 +391,6 @@ class _CardCenter extends StatelessWidget {
 /// crown and a beard, the queen with a tiara and long hair, the jack with a
 /// plumed cap — on a deep panel in a gold frame, and the suit in a cream
 /// medallion on the gold band between the two halves.
-class _FaceCardArt extends StatelessWidget {
-  const _FaceCardArt({required this.card, required this.color, required this.cardWidth});
-
-  final int card;
-  final Color color;
-  final double cardWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _CourtPainter(Cards.rank(card), Cards.suit(card), color),
-      child: const SizedBox.expand(),
-    );
-  }
-}
-
 class _CourtPainter extends CustomPainter {
   _CourtPainter(this.rank, this.suit, this.ink);
 

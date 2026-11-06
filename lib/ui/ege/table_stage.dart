@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -172,6 +173,69 @@ class TableStage extends StatelessWidget {
   }
 }
 
+/// The table (rim, cloth and the emblem in the middle) as it is seen on the
+/// screen, drawn once into a picture of the screen's size. Drawn every frame
+/// through the perspective, its gradients, edges and clip are worked out
+/// again pixel by pixel each time a card moves (the slowest part of a frame
+/// on phones and in browsers); a picture is just copied.
+///
+/// It fills the area of [geometry]; [zone] is the playing area on the flat
+/// table (see [TableZonePainter]).
+class TableCloth extends StatefulWidget {
+  const TableCloth({super.key, required this.geometry, required this.table, required this.zone});
+
+  final StageGeometry geometry;
+  final TableTheme table;
+  final Rect zone;
+
+  @override
+  State<TableCloth> createState() => _TableClothState();
+}
+
+class _TableClothState extends State<TableCloth> {
+  ui.Image? _image;
+  Object? _key;
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  ui.Image? _imageFor(double ratio) {
+    final g = widget.geometry;
+    final key = Object.hash(g.area, g.size, g.tilted, widget.table, widget.zone, ratio);
+    if (key == _key) return _image;
+    _key = key;
+    _image?.dispose();
+    _image = null;
+    final width = (g.area.width * ratio).ceil();
+    final height = (g.area.height * ratio).ceil();
+    if (width <= 0 || height <= 0) return null;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(ratio);
+    // As [TableStage] shows the flat table: hung from the bottom centre of
+    // the area and leaned back about it.
+    canvas.translate(g.area.width / 2, g.area.height);
+    canvas.transform(g.matrix.storage);
+    canvas.translate(-g.size.width / 2, -g.size.height);
+    StageFeltPainter(table: widget.table, rim: g.rim).paint(canvas, g.size);
+    canvas.translate(widget.zone.left, widget.zone.top);
+    const TableZonePainter(highlight: false).paint(canvas, widget.zone.size);
+    final picture = recorder.endRecording();
+    _image = picture.toImageSync(width, height);
+    picture.dispose();
+    return _image;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _imageFor(MediaQuery.devicePixelRatioOf(context));
+    if (image == null) return const SizedBox.expand();
+    return RawImage(image: image, width: widget.geometry.area.width, height: widget.geometry.area.height, fit: BoxFit.fill);
+  }
+}
+
 /// The table itself: a wooden rim with a gold edge around the cloth in the
 /// colour the player chose, lit from the middle and darker towards the rim.
 /// It is drawn on the flat table and may go beyond its edges (the rim).
@@ -267,9 +331,13 @@ class StageFeltPainter extends CustomPainter {
 /// a "Π" in it. While a card is dragged over it, a soft light and a gold
 /// edge show where it can be dropped.
 class TableZonePainter extends CustomPainter {
-  const TableZonePainter({required this.highlight});
+  const TableZonePainter({required this.highlight, this.emblem = true});
 
   final bool highlight;
+
+  /// False: only the light of [highlight] (the ring and the "Π" are part of
+  /// the [TableCloth] picture).
+  final bool emblem;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -292,6 +360,7 @@ class TableZonePainter extends CustomPainter {
           ..color = PastraColors.gold.withValues(alpha: 0.75),
       );
     }
+    if (!this.emblem) return;
     // The "Π" emblem in the middle of the cloth.
     final c = rect.center;
     final er = math.min(rect.height, rect.width) * 0.32;
@@ -321,5 +390,5 @@ class TableZonePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(TableZonePainter old) => old.highlight != highlight;
+  bool shouldRepaint(TableZonePainter old) => old.highlight != highlight || old.emblem != emblem;
 }

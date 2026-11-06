@@ -430,7 +430,13 @@ class _GameScreenState extends State<GameScreen> {
               Positioned.fill(
                 child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: c.clearSelection),
               ),
-              // The table itself, leaned back.
+              // The table itself, leaned back: a picture made once.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: TableCloth(geometry: geo, table: Look.table, zone: layout.tableRect.inflate(6)),
+                ),
+              ),
+              // While a card is dragged over the playing area: its light.
               Positioned.fill(
                 child: IgnorePointer(
                   child: TableStage(
@@ -438,15 +444,11 @@ class _GameScreenState extends State<GameScreen> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: <Widget>[
-                        Positioned.fill(
-                          child: RepaintBoundary(
-                            child: CustomPaint(painter: StageFeltPainter(table: Look.table, rim: geo.rim)),
+                        if (_overTable)
+                          Positioned.fromRect(
+                            rect: layout.tableRect.inflate(6),
+                            child: const CustomPaint(painter: TableZonePainter(highlight: true, emblem: false)),
                           ),
-                        ),
-                        Positioned.fromRect(
-                          rect: layout.tableRect.inflate(6),
-                          child: RepaintBoundary(child: CustomPaint(painter: TableZonePainter(highlight: _overTable))),
-                        ),
                       ],
                     ),
                   ),
@@ -822,6 +824,8 @@ class _GameScreenState extends State<GameScreen> {
           child: PlayingCardView(
             card: card,
             faceUp: p.faceUp,
+            // A dealt card turns over on its way, not on the deck.
+            flipDelay: Duration(milliseconds: inHand ? delay + duration.inMilliseconds ~/ 5 : 0),
             covered: p.covered,
             simple: p.simple,
             highlighted: p.highlighted || (card == c.hintCard && p.interactive),

@@ -130,43 +130,45 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
         final center = g == null ? place : g.project(place);
         // The same widgets whether the card flies or not, and on a flat or a
         // tilted table, so that a card that is being turned over keeps its
-        // state.
+        // state. Each part is moved by one transform (fewer layers to put
+        // together in every frame).
+        final slant = g == null ? Matrix4.identity() : g.slantAt(place);
+        final scale = 1 + 0.14 * lift + bump;
+        final cardMatrix = slant.clone()
+          ..multiply(Matrix4.diagonal3Values(scale, scale, 1))
+          ..rotateZ(angle + spin);
         return Positioned(
           left: center.dx - rect.width / 2,
           top: center.dy - rect.height / 2,
           width: rect.width,
           height: rect.height,
-          child: Transform(
-            alignment: Alignment.center,
-            transform: g == null ? Matrix4.identity() : g.slantAt(place),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                // The shadow on the table, further away the higher the card.
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Transform.translate(
-                      offset: Offset(0, lift * rect.height * 0.22),
-                      child: Transform.rotate(
-                        angle: angle,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: radius,
-                            color: Colors.black.withValues(alpha: 0.3 * lift),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              // The shadow on the table, further away the higher the card
+              // (nothing while it lies on the table).
+              Positioned.fill(
+                child: lift <= 0
+                    ? const SizedBox.shrink()
+                    : IgnorePointer(
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: slant.clone()
+                            ..translateByDouble(0, lift * rect.height * 0.22, 0, 1)
+                            ..rotateZ(angle),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: radius,
+                              color: Colors.black.withValues(alpha: 0.3 * lift),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Transform.scale(
-                    scale: 1 + 0.14 * lift + bump,
-                    child: Transform.rotate(angle: angle + spin, child: child),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Positioned.fill(
+                child: Transform(alignment: Alignment.center, transform: cardMatrix, child: child),
+              ),
+            ],
           ),
         );
       },
