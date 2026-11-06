@@ -640,18 +640,30 @@ class _SideTabsState extends State<SideTabs> {
           child: TabScope(wide: wide, child: Builder(builder: widget.tabs[_index].builder)),
         );
         if (wide) {
+          // On a low screen (a phone held sideways) the rows get closer and
+          // a little lower, so that every section fits without scrolling.
+          final n = widget.tabs.length;
+          final roomy = 32 + n * 48.0 + (n - 1) * 8 <= box.maxHeight;
+          final pad = roomy ? 16.0 : 8.0;
+          final gap = roomy ? 8.0 : 4.0;
+          final rowHeight = roomy ? 48.0 : ((box.maxHeight - 2 * pad + gap) / n - gap).clamp(34.0, 48.0).toDouble();
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               SizedBox(
                 width: box.maxWidth >= 1000 ? 248 : 206,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                  padding: EdgeInsets.fromLTRB(16, pad, 8, pad),
                   children: <Widget>[
-                    for (var i = 0; i < widget.tabs.length; i++)
+                    for (var i = 0; i < n; i++)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _RailItem(tab: widget.tabs[i], selected: i == _index, onTap: () => _select(i)),
+                        padding: EdgeInsets.only(bottom: i < n - 1 ? gap : 0),
+                        child: _RailItem(
+                          tab: widget.tabs[i],
+                          selected: i == _index,
+                          onTap: () => _select(i),
+                          height: rowHeight,
+                        ),
                       ),
                   ],
                 ),
@@ -698,11 +710,12 @@ class TabScope extends InheritedWidget {
 }
 
 class _RailItem extends StatelessWidget {
-  const _RailItem({required this.tab, required this.selected, required this.onTap});
+  const _RailItem({required this.tab, required this.selected, required this.onTap, this.height = 48});
 
   final PageTab tab;
   final bool selected;
   final VoidCallback onTap;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -717,7 +730,7 @@ class _RailItem extends StatelessWidget {
             ? glassDecoration(radius: 12, selected: true)
             : BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.transparent)),
         child: SizedBox(
-          height: 48,
+          height: height,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(

@@ -459,13 +459,46 @@ class _HeroCard extends StatelessWidget {
             final w = box.maxWidth;
             final h = box.maxHeight;
             final pad = compact ? 20.0 : 30.0;
-            final tableW = w * 0.74;
-            final tableH = min(h * 0.7, tableW * 0.62);
+            var tableW = w * 0.74;
+            var tableH = min(h * 0.7, tableW * 0.62);
+            final titleSize = compact ? 46.0 : 62.0;
+            // Where the subtitle and the title end (on an upright phone the
+            // subtitle takes two lines), so that the cards of the drawing
+            // (from about a fifth to four fifths of its height) never cover
+            // them or the buttons.
+            final textWidth = w - pad - w * 0.32;
+            final direction = Directionality.of(context);
+            final scaler = MediaQuery.textScalerOf(context);
+            final eyebrow = TextPainter(
+              text: TextSpan(text: s.appSubtitle, style: PremiumText.eyebrow),
+              maxLines: 2,
+              textDirection: direction,
+              textScaler: scaler,
+            )..layout(maxWidth: textWidth);
+            final title = TextPainter(
+              text: TextSpan(text: s.appTitle, style: PremiumText.display.copyWith(fontSize: titleSize)),
+              maxLines: 1,
+              textDirection: direction,
+              textScaler: scaler,
+            )..layout();
+            final titleBottom = pad + eyebrow.height + 8 + title.height * min(1.0, textWidth / title.width);
+            eyebrow.dispose();
+            title.dispose();
+            var artTop = (h - tableH) * 0.42;
+            if (artTop + tableH * 0.2 < titleBottom + 6) {
+              // Not enough room under the title: a smaller drawing in the
+              // band between the title and the buttons.
+              final band = (h - pad - buttonHeight - 6) - (titleBottom + 6);
+              final scale = (band / (tableH * 0.6)).clamp(0.6, 1.0).toDouble();
+              tableW *= scale;
+              tableH *= scale;
+              artTop = titleBottom + 6 - tableH * 0.2;
+            }
             return Stack(
               children: <Widget>[
                 Positioned(
-                  right: -w * 0.14,
-                  top: (h - tableH) * 0.42,
+                  right: -tableW * 0.19,
+                  top: artTop,
                   width: tableW,
                   height: tableH,
                   child: const RepaintBoundary(child: _TableArt()),
@@ -486,7 +519,7 @@ class _HeroCard extends StatelessWidget {
                         child: Text(
                           s.appTitle,
                           maxLines: 1,
-                          style: PremiumText.display.copyWith(fontSize: compact ? 46 : 62),
+                          style: PremiumText.display.copyWith(fontSize: titleSize),
                         ),
                       ),
                     ],
