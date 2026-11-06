@@ -111,14 +111,21 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
         // 0 on the ground, 1 at the top of the arc. Short moves (a card
         // sliding along its own hand) stay flat.
         var lift = 0.0;
+        // A turn on the way (towards the side it flies to) and a little
+        // bump when it lands: the card feels thrown, not slid.
+        var spin = 0.0;
+        var bump = 0.0;
         if (widget.hop && !widget.still && _c.isAnimating) {
-          final far = ((_to.center - _from.center).distance / (_to.height * 2.2)).clamp(0.0, 1.0).toDouble();
+          final way = _to.center - _from.center;
+          final far = (way.distance / (_to.height * 2.2)).clamp(0.0, 1.0).toDouble();
           lift = math.sin(math.pi * t) * far;
+          spin = math.sin(math.pi * t) * 0.14 * far * (way.dx >= 0 ? 1 : -1);
+          if (far > 0.5 && t > 0.8) bump = math.sin(math.pi * (t - 0.8) / 0.2) * 0.05 * far;
         }
         final radius = BorderRadius.circular(rect.width * 0.09);
         // The place on the table (a flying card is a little higher), and
         // where it is seen on the screen.
-        final place = rect.center - Offset(0, lift * rect.height * 0.35);
+        final place = rect.center - Offset(0, lift * rect.height * 0.45);
         final g = widget.geometry;
         final center = g == null ? place : g.project(place);
         // The same widgets whether the card flies or not, and on a flat or a
@@ -154,8 +161,8 @@ class _FlyCardState extends State<FlyCard> with SingleTickerProviderStateMixin {
                 ),
                 Positioned.fill(
                   child: Transform.scale(
-                    scale: 1 + 0.1 * lift,
-                    child: Transform.rotate(angle: angle, child: child),
+                    scale: 1 + 0.14 * lift + bump,
+                    child: Transform.rotate(angle: angle + spin, child: child),
                   ),
                 ),
               ],

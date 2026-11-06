@@ -26,6 +26,7 @@ import '../premium/premium.dart';
 import '../table_layout.dart';
 import '../theme.dart';
 import '../widgets/fullscreen_button.dart';
+import '../widgets/game_over.dart';
 import '../widgets/game_review.dart';
 import '../widgets/name_prompt.dart';
 import '../widgets/playing_card.dart';
@@ -52,6 +53,9 @@ class _GameScreenState extends State<GameScreen> {
 
   /// Hand card being dragged and how far it has moved.
   int? _dragCard;
+
+  /// The playable card under the mouse (computers).
+  int? _hoverCard;
   Offset _dragDelta = Offset.zero;
   bool _overTable = false;
 
@@ -557,18 +561,38 @@ class _GameScreenState extends State<GameScreen> {
                 // stack do not rebuild the panel (it would open a second time).
                 Positioned.fill(
                   key: const ValueKey<String>('round-summary'),
-                  child: RoundSummaryPanel(
-                    state: state,
-                    teamNames: _teamNames(s),
-                    onNextRound: c.nextRound,
-                    onMainMenu: () => Navigator.of(context).pop(),
-                    onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
-                    playAgainLabel: c.isOnline ? _rematchLabel() : null,
-                    xpGain: c.xpGain,
-                    tournament: c.tournament,
-                    onReview: () => showGameReview(context, c.misses),
-                    reviewCount: c.misses.length,
-                  ),
+                  child: state.phase == GamePhase.gameOver
+                      // The end of the game: the trophy, the score and the XP
+                      // first; the score sheet on request.
+                      ? GameOverView(
+                          state: state,
+                          teamNames: _teamNames(s),
+                          onNextRound: c.nextRound,
+                          onMainMenu: () => Navigator.of(context).pop(),
+                          onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
+                          playAgainLabel: c.isOnline ? _rematchLabel() : null,
+                          xpGain: c.xpGain,
+                          tournament: c.tournament,
+                          onReview: () => showGameReview(context, c.misses),
+                          reviewCount: c.misses.length,
+                        )
+                      : RoundSummaryPanel(
+                          state: state,
+                          teamNames: _teamNames(s),
+                          onNextRound: c.nextRound,
+                          onMainMenu: () => Navigator.of(context).pop(),
+                          onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,
+                          playAgainLabel: c.isOnline ? _rematchLabel() : null,
+                          xpGain: c.xpGain,
+                          tournament: c.tournament,
+                          onReview: () => showGameReview(context, c.misses),
+                          reviewCount: c.misses.length,
+                        ),
+                ),
+              // Confetti over everything when we won the game.
+              if (state.phase == GamePhase.gameOver && !c.busy && !c.onlineClosed && state.winner == 0)
+                Positioned.fill(
+                  child: IgnorePointer(child: _Confetti(key: ValueKey<String>('won-${state.round}'))),
                 ),
             ],
           ),
@@ -738,7 +762,11 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _card(int card, CardPlacement p, Duration duration, StageGeometry geo) {
     final dragging = card == _dragCard;
-    final rect = dragging ? p.rect.shift(_dragDelta) : p.rect;
+    // On a computer a playable card rises a little under the mouse.
+    final hovered = card == _hoverCard && p.interactive && !p.selected && c.isHumanTurn;
+    final rect = dragging
+        ? p.rect.shift(_dragDelta)
+        : (hovered ? p.rect.shift(Offset(0, -p.rect.height * 0.08)) : p.rect);
     final canDrag = p.interactive && c.isHumanTurn;
     final fast = c.settings.fastAnimations;
     final state = c.state;
@@ -761,7 +789,11 @@ class _GameScreenState extends State<GameScreen> {
       hop: !Fx.low.value,
       geometry: geo,
       child: RepaintBoundary(
-        child: GestureDetector(
+        child: MouseRegion(
+          cursor: p.interactive && c.isHumanTurn ? SystemMouseCursors.click : MouseCursor.defer,
+          onEnter: p.interactive ? (_) => setState(() => _hoverCard = card) : null,
+          onExit: p.interactive ? (_) => setState(() => _hoverCard = _hoverCard == card ? null : _hoverCard) : null,
+          child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: p.interactive ? () => c.tapHandCard(card) : null,
           onPanStart: canDrag ? (_) => _dragStart(card) : null,
@@ -776,6 +808,7 @@ class _GameScreenState extends State<GameScreen> {
             highlighted: p.highlighted || (card == c.hintCard && p.interactive),
             selected: p.selected,
           ),
+        ),
         ),
       ),
     );

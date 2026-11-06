@@ -320,39 +320,51 @@ class _CourtPainter extends CustomPainter {
   final int suit;
   final Color ink;
 
-  static const Color gold = Color(0xFFD4A43A);
+  static const Color gold = Color(0xFFE6B54A);
+  static const Color goldDark = Color(0xFF9A6E14);
 
+  /// A court card of the premium look: a deep panel (burgundy for the red
+  /// suits, charcoal for the black ones) in a gold frame, a gold emblem at
+  /// each end (crown, tiara, plumed cap) and the letter in a gold medallion.
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
     if (w <= 0 || h <= 0) return;
     final red = suit == Cards.diamonds || suit == Cards.hearts;
-    final tint = red ? const Color(0xFFFBE3DE) : const Color(0xFFE2E8F5);
     final frame = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
-    // Panel: the tint at both ends, white in the middle.
     canvas.drawRRect(
       frame,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[tint, Colors.white, tint],
+          colors: red
+              ? const <Color>[Color(0xFF8A2A22), Color(0xFF6A1C16), Color(0xFF8A2A22)]
+              : const <Color>[Color(0xFF2E333B), Color(0xFF181B20), Color(0xFF2E333B)],
         ).createShader(Offset.zero & size),
     );
+    // Gold frame with a fine line inside it.
     canvas.drawRRect(
       frame,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.8, w * 0.025)
-        ..color = ink.withValues(alpha: 0.6),
+        ..strokeWidth = max(0.9, w * 0.035)
+        ..color = gold,
+    );
+    canvas.drawRRect(
+      frame.deflate(w * 0.07),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.5, w * 0.01)
+        ..color = gold.withValues(alpha: 0.45),
     );
     // The diagonal line that splits the two ends.
     canvas.drawLine(
       Offset(w * 0.1, h * 0.62),
       Offset(w * 0.9, h * 0.38),
       Paint()
-        ..color = ink.withValues(alpha: 0.18)
+        ..color = gold.withValues(alpha: 0.35)
         ..strokeWidth = max(0.6, w * 0.012),
     );
     // Emblem at the top, the same turned round at the bottom.
@@ -365,20 +377,20 @@ class _CourtPainter extends CustomPainter {
     canvas.restore();
     // Medallion with the letter.
     final c = Offset(w / 2, h / 2);
-    final r = min(w, h) * 0.22;
-    canvas.drawCircle(c, r, Paint()..color = Colors.white);
+    final r = min(w, h) * 0.24;
+    canvas.drawCircle(c, r, Paint()..color = const Color(0xFF14161A));
     canvas.drawCircle(
       c,
       r,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(0.8, w * 0.03)
+        ..strokeWidth = max(0.9, w * 0.04)
         ..color = gold,
     );
     final tp = TextPainter(
       text: TextSpan(
         text: Cards.rankLabel(Cards.make(suit, rank)),
-        style: TextStyle(color: ink, fontSize: r * 1.25, fontWeight: FontWeight.w900, fontFamily: 'serif', height: 1),
+        style: TextStyle(color: gold, fontSize: r * 1.2, fontWeight: FontWeight.w800, fontFamily: 'Outfit', height: 1),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -387,13 +399,15 @@ class _CourtPainter extends CustomPainter {
   }
 
   void _emblem(Canvas canvas, Rect r) {
+    final red = suit == Cards.diamonds || suit == Cards.hearts;
     final fill = Paint()..color = gold;
     final line = Paint()
-      ..color = ink
+      ..color = goldDark
       ..style = PaintingStyle.stroke
       ..strokeWidth = max(0.7, r.width * 0.035)
       ..strokeJoin = StrokeJoin.round;
-    final jewel = Paint()..color = ink;
+    // Rubies on the red cards, turquoise on the black ones.
+    final jewel = Paint()..color = red ? const Color(0xFFE05A47) : const Color(0xFF5FD3C2);
     switch (rank) {
       case Cards.king:
         // Crown: three points on a band, a jewel on each point.
@@ -455,7 +469,7 @@ class _CourtPainter extends CustomPainter {
           ..quadraticBezierTo(r.right + r.width * 0.05, r.top - r.height * 0.1, r.right - r.width * 0.02, r.top + r.height * 0.05)
           ..quadraticBezierTo(r.right - r.width * 0.2, r.top + r.height * 0.12, r.center.dx + r.width * 0.05, r.top + r.height * 0.4)
           ..close();
-        canvas.drawPath(feather, Paint()..color = ink.withValues(alpha: 0.85));
+        canvas.drawPath(feather, Paint()..color = jewel.color);
     }
   }
 
