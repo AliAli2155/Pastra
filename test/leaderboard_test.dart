@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pastra/game/app_settings.dart';
 import 'package:pastra/online/leaderboard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   limitTests();
@@ -12,6 +14,15 @@ void main() {
     });
     expect(rows.map((r) => r.uid).toList(), <String>['b', 'c', 'a', 'd']);
     expect(rows.first.level, greaterThan(1));
+  });
+
+  test('no row before the first game or when hidden', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    expect(Leaderboard.wantsRow(await AppSettings.load()), isFalse);
+    SharedPreferences.setMockInitialValues(<String, Object>{'gamesPlayed': 1});
+    expect(Leaderboard.wantsRow(await AppSettings.load()), isTrue);
+    SharedPreferences.setMockInitialValues(<String, Object>{'gamesPlayed': 1, 'showOnLeaderboard': false});
+    expect(Leaderboard.wantsRow(await AppSettings.load()), isFalse);
   });
 
   test('broken rows are skipped', () {

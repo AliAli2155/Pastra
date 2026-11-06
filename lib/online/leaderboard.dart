@@ -84,9 +84,13 @@ class Leaderboard {
 
   static const int maxNameLength = 16;
 
-  /// Writes the local player's row (when they chose to appear on the board).
+  /// Whether the local player gets a row: they chose to appear on the board
+  /// and played at least one game (just opening the board writes nothing).
+  static bool wantsRow(AppSettings settings) => settings.showOnLeaderboard && settings.gamesPlayed > 0;
+
+  /// Writes the local player's row (see [wantsRow]).
   static Future<void> submit(AppSettings settings) async {
-    if (!settings.showOnLeaderboard) return;
+    if (!wantsRow(settings)) return;
     try {
       if (await OnlineService.ensureReady() != null) return;
       final raw = settings.playerName.trim();
