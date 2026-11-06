@@ -549,7 +549,19 @@ class PremiumDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         side: const BorderSide(color: PastraColors.edge),
       ),
-      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        // A low screen (a phone held sideways): the whole dialog is scaled
+        // down to fit instead of scrolling.
+        child: MediaQuery.sizeOf(context).height < 480
+            ? LayoutBuilder(
+                builder: (context, box) => FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(width: box.maxWidth, child: child),
+                ),
+              )
+            : child,
+      ),
     );
   }
 }

@@ -347,6 +347,7 @@ class _GameScreenState extends State<GameScreen> {
         body: Felt(
           // The cards are the show here: the sky stands still.
           animated: false,
+          fit: false,
           child: SafeArea(
             child: AnimatedBuilder(
               animation: Listenable.merge(<Listenable?>[c, c.link?.social]),

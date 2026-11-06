@@ -280,15 +280,53 @@ BoxDecoration get feltDecoration => Look.table.decoration;
 /// The background of the menu screens: the still charcoal gradient of
 /// [PremiumBackdrop]. [ambient] and [animated] are kept for the callers;
 /// the background never moves.
+///
+/// A phone held sideways is low: with [fit] the screen is laid out for a
+/// height of [fitHeight] and scaled down to the real one, so the menus fit
+/// without scrolling (the game table has its own layout and passes false).
 class Felt extends StatelessWidget {
-  const Felt({super.key, required this.child, this.ambient = false, this.animated = true});
+  const Felt({super.key, required this.child, this.ambient = false, this.animated = true, this.fit = true});
 
   final Widget child;
   final bool ambient;
   final bool animated;
+  final bool fit;
+
+  static const double fitHeight = 430;
 
   @override
-  Widget build(BuildContext context) => PremiumBackdrop(child: child);
+  Widget build(BuildContext context) {
+    if (!fit) return PremiumBackdrop(child: child);
+    return PremiumBackdrop(
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final h = box.maxHeight;
+          final w = box.maxWidth;
+          if (!h.isFinite || !w.isFinite || h >= fitHeight || w <= h || h <= 0) return child;
+          final k = h / fitHeight;
+          final data = MediaQuery.of(context);
+          EdgeInsets scaled(EdgeInsets e) => e / k;
+          return FittedBox(
+            fit: BoxFit.fill,
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: w / k,
+              height: fitHeight,
+              child: MediaQuery(
+                data: data.copyWith(
+                  size: Size(data.size.width / k, data.size.height / k),
+                  padding: scaled(data.padding),
+                  viewPadding: scaled(data.viewPadding),
+                  viewInsets: scaled(data.viewInsets),
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// The table cloth of the game screen: the chosen colour, a fine woven

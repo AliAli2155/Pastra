@@ -397,7 +397,7 @@ class _QuestCard extends StatelessWidget {
     );
     final reward = _RewardPill(xp: def.xp, chips: Economy.enabled ? Quests.chipsFor(def) : 0);
     final button = SizedBox(
-      height: 38,
+      height: 42,
       width: tall ? double.infinity : null,
       child: quest.claimed
           ? Center(
