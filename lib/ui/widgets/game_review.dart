@@ -5,6 +5,7 @@ import '../../engine/move_review.dart';
 import '../../game/app_settings.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import 'playing_card.dart';
 
@@ -23,7 +24,7 @@ Future<void> showGameReview(BuildContext context, List<MissedChance> misses) {
   final shown = list.take(6).toList();
   return showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => DialogPop(child: AlertDialog(
       icon: Icon(misses.isEmpty ? Icons.verified_rounded : Icons.manage_search_rounded, color: PastraColors.gold, size: 40),
       title: Text(t.analysis, textAlign: TextAlign.center),
       content: SizedBox(
@@ -49,7 +50,7 @@ Future<void> showGameReview(BuildContext context, List<MissedChance> misses) {
       actions: <Widget>[
         FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
       ],
-    ),
+    )),
   );
 }
 

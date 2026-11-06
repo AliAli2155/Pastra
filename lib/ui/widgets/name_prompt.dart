@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
 import '../../l10n/social_strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 
 /// Asks the player's name (first game, joining by link) and saves it.
@@ -15,7 +16,7 @@ Future<String?> askPlayerName(BuildContext context) async {
     barrierDismissible: false,
     builder: (ctx) {
       void done() => Navigator.of(ctx).pop(controller.text.trim());
-      return AlertDialog(
+      return DialogPop(child: AlertDialog(
         icon: const Icon(Icons.badge_rounded, color: PastraColors.gold, size: 40),
         title: Text(t.yourName, textAlign: TextAlign.center),
         content: Column(
@@ -43,7 +44,7 @@ Future<String?> askPlayerName(BuildContext context) async {
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(t.later)),
           FilledButton(onPressed: done, child: Text(t.save)),
         ],
-      );
+      ));
     },
   );
   if (name == null || name.isEmpty) return null;

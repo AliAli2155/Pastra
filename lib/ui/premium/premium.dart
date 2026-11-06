@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../fx/fx.dart';
 import '../palette.dart';
 
 /// Building blocks of the dark premium look: charcoal panels, glass
-/// controls and gold for the main action. Nothing here moves by itself:
-/// a control only animates while it is pressed or under the mouse.
+/// controls and gold for the main action. Nothing here keeps moving by
+/// itself: a control animates while it is pressed or under the mouse, a
+/// screen, a section or a dialog only as it arrives.
 
 /// Text styles of the look (the font family comes from the theme).
 abstract final class PremiumText {
@@ -558,6 +560,7 @@ class LobbyTile extends StatelessWidget {
 }
 
 /// A dialog in the premium look: a charcoal panel with a hairline edge.
+/// It grows a little while it fades in (and shrinks while it goes).
 class PremiumDialog extends StatelessWidget {
   const PremiumDialog({super.key, required this.child, this.maxWidth = 580});
 
@@ -565,7 +568,9 @@ class PremiumDialog extends StatelessWidget {
   final double maxWidth;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => DialogPop(child: _dialog(context));
+
+  Widget _dialog(BuildContext context) {
     return Dialog(
       backgroundColor: PastraColors.nightMid,
       surfaceTintColor: Colors.transparent,
@@ -587,6 +592,26 @@ class PremiumDialog extends StatelessWidget {
               )
             : child,
       ),
+    );
+  }
+}
+
+/// Lets a dialog grow a little while it fades in (and shrink while it
+/// goes), with the animation of its route.
+class DialogPop extends StatelessWidget {
+  const DialogPop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final route = ModalRoute.of(context)?.animation;
+    if (route == null) return child;
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.92, end: 1).animate(
+        CurvedAnimation(parent: route, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic),
+      ),
+      child: child,
     );
   }
 }
@@ -636,9 +661,20 @@ class _SideTabsState extends State<SideTabs> {
     return LayoutBuilder(
       builder: (context, box) {
         final wide = box.maxWidth >= SideTabs.wideFrom;
-        final content = KeyedSubtree(
-          key: ValueKey<int>(_index),
-          child: TabScope(wide: wide, child: Builder(builder: widget.tabs[_index].builder)),
+        // A new section fades in and rises a little into place.
+        final content = AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: _sectionTransition,
+          layoutBuilder: (current, previous) => Stack(
+            fit: StackFit.expand,
+            children: <Widget>[...previous, if (current != null) current],
+          ),
+          child: KeyedSubtree(
+            key: ValueKey<int>(_index),
+            child: TabScope(wide: wide, child: Builder(builder: widget.tabs[_index].builder)),
+          ),
         );
         if (wide) {
           // On a low screen (a phone held sideways) the rows get closer and
@@ -695,6 +731,17 @@ class _SideTabsState extends State<SideTabs> {
       },
     );
   }
+}
+
+Widget _sectionTransition(Widget child, Animation<double> animation) {
+  return FadeTransition(
+    opacity: animation,
+    child: AnimatedBuilder(
+      animation: animation,
+      child: child,
+      builder: (context, child) => Transform.translate(offset: Offset(0, 10 * (1 - animation.value)), child: child),
+    ),
+  );
 }
 
 /// Tells a section whether it is shown next to the column of tabs.
@@ -973,6 +1020,91 @@ class ResponsiveGrid extends StatelessWidget {
           children: <Widget>[for (final c in children) SizedBox(width: itemWidth, child: c)],
         );
       },
+    );
+  }
+}
+
+/// Plays the arrival of a screen once: its parts ([EntranceItem]) fade in
+/// and rise into place one after the other. Nothing moves afterwards, and
+/// in low graphics quality nothing moves at all.
+class Entrance extends StatefulWidget {
+  const Entrance({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<Entrance> createState() => _EntranceState();
+}
+
+class _EntranceState extends State<Entrance> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 950),
+    value: Fx.low.value ? 1 : 0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (_c.value < 1) _c.forward();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _EntranceScope(animation: _c, child: widget.child);
+}
+
+class _EntranceScope extends InheritedWidget {
+  const _EntranceScope({required this.animation, required super.child});
+
+  final Animation<double> animation;
+
+  @override
+  bool updateShouldNotify(_EntranceScope oldWidget) => oldWidget.animation != animation;
+}
+
+/// One part of an [Entrance]: the [order]-th to arrive (0 first). The
+/// [builder] gets how far it has arrived (0 → 1; 1 outside an [Entrance]).
+class EntranceBuilder extends StatelessWidget {
+  const EntranceBuilder({super.key, required this.order, required this.builder, this.child});
+
+  final int order;
+  final ValueWidgetBuilder<double> builder;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final parent = context.dependOnInheritedWidgetOfExactType<_EntranceScope>()?.animation;
+    if (parent == null) return builder(context, 1, child);
+    final start = (order * 0.08).clamp(0.0, 0.5).toDouble();
+    final t = CurvedAnimation(parent: parent, curve: Interval(start, start + 0.5, curve: Curves.easeOutCubic));
+    return AnimatedBuilder(animation: t, child: child, builder: (context, child) => builder(context, t.value, child));
+  }
+}
+
+/// One part of an [Entrance] that fades in and rises [rise] pixels into
+/// place, the [order]-th to arrive (0 first).
+class EntranceItem extends StatelessWidget {
+  const EntranceItem({super.key, required this.order, required this.child, this.rise = 16});
+
+  final int order;
+  final double rise;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return EntranceBuilder(
+      order: order,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0.0, 1.0).toDouble(),
+        child: Transform.translate(offset: Offset(0, rise * (1 - t)), child: child),
+      ),
     );
   }
 }

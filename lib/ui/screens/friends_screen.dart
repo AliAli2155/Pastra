@@ -390,7 +390,7 @@ class _AddFriendDialogState extends State<_AddFriendDialog> {
   Widget build(BuildContext context) {
     final t = SocialStrings(SettingsScope.of(context).language);
     void done() => Navigator.of(context).pop(_text.text);
-    return AlertDialog(
+    return DialogPop(child: AlertDialog(
       icon: const Icon(Icons.person_add_alt_1_rounded, color: PastraColors.gold, size: 40),
       title: Text(t.addFriend, textAlign: TextAlign.center),
       content: TextField(
@@ -412,7 +412,7 @@ class _AddFriendDialogState extends State<_AddFriendDialog> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(Strings.of(context).cancel)),
         FilledButton(onPressed: done, child: Text(t.add)),
       ],
-    );
+    ));
   }
 }
 

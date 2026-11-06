@@ -304,7 +304,7 @@ class _GameScreenState extends State<GameScreen> {
     c.pauseTurnTimer();
     final leave = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => DialogPop(child: AlertDialog(
         title: Text(s.leaveTitle),
         content: Text(
           c.isOnline
@@ -315,7 +315,7 @@ class _GameScreenState extends State<GameScreen> {
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(s.cancel)),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(s.leave)),
         ],
-      ),
+      )),
     );
     if (leave != true || !mounted) {
       c.resumeTurnTimer();

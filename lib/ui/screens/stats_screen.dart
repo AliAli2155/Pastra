@@ -21,13 +21,13 @@ class StatsScreen extends StatelessWidget {
     final s = Strings.of(context);
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => DialogPop(child: AlertDialog(
         title: Text(s.resetStatsConfirm),
         actions: <Widget>[
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(s.cancel)),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(s.delete)),
         ],
-      ),
+      )),
     );
     if (ok == true && context.mounted) SettingsScope.read(context).resetStats();
   }

@@ -4,6 +4,7 @@ import '../../game/app_settings.dart';
 import '../../game/seasons.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
+import '../premium/premium.dart';
 import '../theme.dart';
 import 'leaderboard_screen.dart';
 
@@ -158,7 +159,7 @@ Future<void> showSeasonResult(BuildContext context, SeasonBadge badge) {
   final color = seasonTierColor(badge.tier);
   return showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => DialogPop(child: AlertDialog(
       icon: Icon(Icons.emoji_events_rounded, color: color, size: 56),
       title: Text(p.seasonOver(p.seasonName(badge.season)), textAlign: TextAlign.center),
       content: Column(
@@ -177,6 +178,6 @@ Future<void> showSeasonResult(BuildContext context, SeasonBadge badge) {
       actions: <Widget>[
         FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
       ],
-    ),
+    )),
   );
 }

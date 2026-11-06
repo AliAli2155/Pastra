@@ -147,7 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Felt(
         child: SafeArea(
-          child: LayoutBuilder(
+          // The lobby comes in once: the parts rise into place one by one.
+          child: Entrance(
+            child: LayoutBuilder(
             builder: (context, box) {
               // A big window: everything is drawn a little larger.
               final zoom = min(box.maxWidth / 1000, box.maxHeight / 600).clamp(1.0, 1.35).toDouble();
@@ -163,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Transform.scale(scale: zoom, child: SizedBox(width: w, height: h, child: layout)),
               );
             },
+            ),
           ),
         ),
       ),
@@ -177,10 +180,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final wide = w > h && w >= 640;
     final saved = settings.hasSavedGame;
 
-    final hero = _HeroCard(
-      compact: compact,
-      onPlay: _play,
-      onContinue: saved ? _continue : null,
+    final hero = EntranceItem(
+      order: 1,
+      child: _HeroCard(
+        compact: compact,
+        onPlay: _play,
+        onContinue: saved ? _continue : null,
+      ),
     );
     final tiles = <_Tile>[
       if (Economy.enabled) _Tile(Icons.storefront_rounded, ShopStrings(settings.language).store, _openStore),
@@ -201,11 +207,15 @@ class _HomeScreenState extends State<HomeScreen> {
       onTournament: () => _open(const TournamentScreen()),
       onQuests: () => _open(const QuestsScreen()),
     );
-    final top = _TopBar(
-      compact: compact,
-      stacked: w < 560,
-      onProfile: () => _open(const LevelPathScreen()),
-      onStore: _openStore,
+    final top = EntranceItem(
+      order: 0,
+      rise: 10,
+      child: _TopBar(
+        compact: compact,
+        stacked: w < 560,
+        onProfile: () => _open(const LevelPathScreen()),
+        onStore: _openStore,
+      ),
     );
 
     if (wide) {
@@ -565,9 +575,29 @@ class _HeroCard extends StatelessWidget {
 }
 
 /// The drawing on the hero card: an oval table with a wooden rim and two
-/// cards on it. Still (nothing moves).
+/// cards on it. The cards slide onto it once, when the lobby comes in.
 class _TableArt extends StatelessWidget {
   const _TableArt();
+
+  /// A card that slides in from [from] (relative to its place), turning to
+  /// its [angle] on the way, as the [order]-th part of the lobby's entrance.
+  static Widget _dealt({required int order, required double angle, required Offset from, required Widget child}) {
+    return EntranceBuilder(
+      order: order,
+      child: child,
+      builder: (context, t, child) {
+        // Right to left the drawing is on the left: the cards come from there.
+        final rtl = Directionality.of(context) == TextDirection.rtl;
+        return Opacity(
+          opacity: (t * 3).clamp(0.0, 1.0).toDouble(),
+          child: Transform.translate(
+            offset: Offset(rtl ? -from.dx : from.dx, from.dy) * (1 - t),
+            child: Transform.rotate(angle: angle + 0.6 * (1 - t), child: child),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -599,15 +629,16 @@ class _TableArt extends StatelessWidget {
                 ),
               ),
             ),
+            // The two cards are dealt onto the table when the lobby comes in.
             Positioned(
               left: w * 0.5 - cardW * 1.2,
               top: h * 0.5 - cardH * 0.45,
-              child: Transform.rotate(angle: -0.24, child: _MiniCard(width: cardW, height: cardH, faceUp: true)),
+              child: _dealt(order: 3, angle: -0.24, from: Offset(w * 0.5, -h * 0.25), child: _MiniCard(width: cardW, height: cardH, faceUp: true)),
             ),
             Positioned(
               left: w * 0.5 - cardW * 0.1,
               top: h * 0.5 - cardH * 0.55,
-              child: Transform.rotate(angle: 0.17, child: _MiniCard(width: cardW, height: cardH, faceUp: false)),
+              child: _dealt(order: 4, angle: 0.17, from: Offset(w * 0.4, -h * 0.3), child: _MiniCard(width: cardW, height: cardH, faceUp: false)),
             ),
           ],
         );
@@ -761,7 +792,11 @@ class _SideMenu extends StatelessWidget {
       children: <Widget>[
         for (var i = 0; i < rows.length; i++) ...<Widget>[
           if (i > 0) SizedBox(height: gap),
-          if (fill) Expanded(child: rows[i]) else rows[i],
+          // After the hero card, one row after the other.
+          if (fill)
+            Expanded(child: EntranceItem(order: 2 + i, child: rows[i]))
+          else
+            EntranceItem(order: 2 + i, child: rows[i]),
         ],
       ],
     );
