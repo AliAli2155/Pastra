@@ -157,6 +157,7 @@ class AppSettings extends ChangeNotifier {
 
   /// Time per move (0 = no limit).
   static const List<int> turnSecondsOptions = [0, 10, 15, 20, 30];
+  static const int defaultTurnSeconds = 15;
   static const String _kPlayed = 'gamesPlayed';
   static const String _kWon = 'gamesWon';
   static const String _kStats = 'stats';
@@ -214,7 +215,7 @@ class AppSettings extends ChangeNotifier {
   bool _fastAnimations = false;
   bool _haptics = true;
   FxMode _fxMode = FxMode.auto;
-  int _turnSeconds = 15;
+  int _turnSeconds = defaultTurnSeconds;
   double _volume = 1.0;
   bool _tutorialDone = false;
   int _xp = 0;
@@ -262,7 +263,7 @@ class AppSettings extends ChangeNotifier {
     _fxMode = fx != null && fx >= 0 && fx < FxMode.values.length ? FxMode.values[fx] : FxMode.auto;
     Fx.setMode(_fxMode);
     final turn = _prefs.getInt(_kTurnSeconds);
-    _turnSeconds = turn != null && turnSecondsOptions.contains(turn) ? turn : 15;
+    _turnSeconds = turn != null && turnSecondsOptions.contains(turn) ? turn : defaultTurnSeconds;
     // Older versions only had an on/off switch.
     _volume = (_prefs.getDouble(_kVolume) ?? ((_prefs.getBool(_kSound) ?? true) ? 1.0 : 0.0)).clamp(0.0, 1.0).toDouble();
     _tutorialDone = _prefs.getBool(_kTutorial) ?? false;
@@ -579,7 +580,7 @@ class AppSettings extends ChangeNotifier {
   }
 
   set turnSeconds(int value) {
-    _turnSeconds = turnSecondsOptions.contains(value) ? value : 15;
+    _turnSeconds = turnSecondsOptions.contains(value) ? value : defaultTurnSeconds;
     _prefs.setInt(_kTurnSeconds, _turnSeconds);
     notifyListeners();
   }
