@@ -112,9 +112,11 @@ class Economy {
   /// A calendar day as a number (local time), to compare days.
   static int dayNumber(DateTime t) => DateTime.utc(t.year, t.month, t.day).millisecondsSinceEpoch ~/ 86400000;
 
-  /// The streak after claiming on [today]; null when today was already claimed.
+  /// The streak after claiming on [today]; null when today was already
+  /// claimed, or when [today] is before the last claim (the clock was turned
+  /// back: no second bonus for an old day).
   static int? nextStreak({required int lastDay, required int streak, required int today}) {
-    if (lastDay == today) return null;
+    if (today <= lastDay) return null;
     return lastDay == today - 1 ? streak + 1 : 1;
   }
 

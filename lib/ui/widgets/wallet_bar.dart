@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
+import '../../online/online_service.dart';
 import '../premium/premium.dart';
 import '../theme.dart';
 
@@ -50,7 +53,46 @@ class DiamondIcon extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => Icon(Icons.diamond_rounded, size: size, color: diamondColor);
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: const _GemPainter());
+}
+
+/// A cut gem: a light table on top, darker facets below, a small glint.
+class _GemPainter extends CustomPainter {
+  const _GemPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    Offset p(double x, double y) => Offset(x * w, y * h);
+    final tl = p(0.24, 0.14), tr = p(0.76, 0.14), r = p(0.98, 0.4), l = p(0.02, 0.4), b = p(0.5, 0.94);
+    final ml = p(0.36, 0.4), mr = p(0.64, 0.4), mt = p(0.5, 0.14);
+    Path poly(List<Offset> pts) => Path()..addPolygon(pts, true);
+    void fill(List<Offset> pts, Color c) => canvas.drawPath(poly(pts), Paint()..color = c);
+    // Crown (the band above the widest line).
+    fill(<Offset>[tl, mt, ml], const Color(0xFFB8F5EC));
+    fill(<Offset>[mt, tr, mr], const Color(0xFF8EE8DB));
+    fill(<Offset>[mt, mr, ml], const Color(0xFFD6FBF5));
+    fill(<Offset>[tl, ml, l], const Color(0xFF7FDFD1));
+    fill(<Offset>[tr, r, mr], const Color(0xFF4FC2B1));
+    // Pavilion (the point below).
+    fill(<Offset>[l, ml, b], const Color(0xFF3FB3A2));
+    fill(<Offset>[ml, mr, b], diamondColor);
+    fill(<Offset>[mr, r, b], const Color(0xFF238C7D));
+    // A fine light edge and a glint.
+    canvas.drawPath(
+      poly(<Offset>[tl, tr, r, b, l]),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.8, w * 0.03)
+        ..strokeJoin = StrokeJoin.round
+        ..color = const Color(0xFF1C6F64),
+    );
+    canvas.drawCircle(p(0.38, 0.26), w * 0.055, Paint()..color = Colors.white.withValues(alpha: 0.85));
+  }
+
+  @override
+  bool shouldRepaint(_GemPainter oldDelegate) => false;
 }
 
 /// An amount with its icon: "🪙 12.500".
@@ -100,20 +142,37 @@ class WalletBar extends StatelessWidget {
           decoration: glassDecoration(radius: 10),
           child: Center(child: amount),
         );
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        pill(_Counting(value: settings.chips, builder: (v) => Amount(chips: v, size: size))),
+        SizedBox(width: compact ? 6 : 8),
+        pill(_Counting(value: settings.diamonds, builder: (v) => Amount(diamonds: v, size: size))),
+      ],
+    );
+    // In the store itself it only shows the balance (not a dimmed button).
+    if (onTap == null) return row;
     return Tooltip(
       message: shop.store,
-      child: Pressable(
-        onTap: onTap,
-        radius: BorderRadius.circular(10),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            pill(Amount(chips: settings.chips, size: size)),
-            SizedBox(width: compact ? 6 : 8),
-            pill(Amount(diamonds: settings.diamonds, size: size)),
-          ],
-        ),
-      ),
+      child: Pressable(onTap: onTap, radius: BorderRadius.circular(10), child: row),
+    );
+  }
+}
+
+/// Counts up (or down) to a new [value] once, when it changes.
+class _Counting extends StatelessWidget {
+  const _Counting({required this.value, required this.builder});
+
+  final int value;
+  final Widget Function(int value) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: value.toDouble()),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      builder: (context, v, _) => builder(v.round()),
     );
   }
 }
@@ -136,7 +195,7 @@ class _DailyBonusCardState extends State<DailyBonusCard> {
   Widget build(BuildContext context) {
     final settings = SettingsScope.of(context);
     final shop = ShopStrings(settings.language);
-    final next = settings.dailyNext(DateTime.now());
+    final next = settings.dailyNext(OnlineService.rewardTime);
     // The day to highlight: the one to collect, or the one just collected.
     final today = next != null ? Economy.streakDay(next) : Economy.streakDay(settings.dailyStreak < 1 ? 1 : settings.dailyStreak);
     final narrow = MediaQuery.sizeOf(context).width < 420;
@@ -203,11 +262,13 @@ class _DailyBonusCardState extends State<DailyBonusCard> {
             ),
           )
         else if (next != null)
-          FilledButton.icon(
-            icon: const Icon(Icons.redeem_rounded),
-            label: Text('${shop.claim}  +${Economy.group(Economy.dailyReward(next))}'),
+          GoldButton(
+            icon: Icons.redeem_rounded,
+            label: '${shop.claim}  +${Economy.group(Economy.dailyReward(next))}',
+            height: 46,
+            fontSize: 17,
             onPressed: () {
-              final got = settings.claimDaily(DateTime.now());
+              final got = settings.claimDaily(OnlineService.rewardTime);
               if (got == null) return;
               setState(() => _claimed = got);
               widget.onClaimed?.call();
@@ -230,7 +291,7 @@ bool dailyBonusAutoShow = true;
 Future<void> showDailyBonusIfReady(BuildContext context) async {
   if (_shownThisRun || !dailyBonusAutoShow) return;
   final settings = SettingsScope.read(context);
-  if (settings.dailyNext(DateTime.now()) == null) return;
+  if (settings.dailyNext(OnlineService.rewardTime) == null) return;
   _shownThisRun = true;
   await showDialog<void>(
     context: context,

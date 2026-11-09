@@ -36,6 +36,11 @@ class OnlineService {
   /// The server's time in milliseconds since the epoch (estimated).
   static int get serverNow => DateTime.now().millisecondsSinceEpoch + _offset;
 
+  /// The time for daily bonuses and free chips: the server's once it is
+  /// known (moving the device clock does not give extra rewards), the
+  /// device's before that and without a connection.
+  static DateTime get rewardTime => DateTime.fromMillisecondsSinceEpoch(serverNow);
+
   static String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   static DatabaseReference ref(String path) => FirebaseDatabase.instance.ref(path);

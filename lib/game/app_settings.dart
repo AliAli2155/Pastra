@@ -467,12 +467,21 @@ class AppSettings extends ChangeNotifier {
     return (chips: chips, diamonds: diamonds, day: Economy.streakDay(streak));
   }
 
-  /// When the next free chips can be taken.
-  DateTime get freeChipsAt => DateTime.fromMillisecondsSinceEpoch(_prefs.getInt(_kFreeAt) ?? 0);
+  /// When the next free chips can be taken, seen at [now]: never more than
+  /// one wait away (a clock that was ahead and has been put right does not
+  /// lock them for longer).
+  DateTime freeChipsAt(DateTime now) {
+    final saved = DateTime.fromMillisecondsSinceEpoch(_prefs.getInt(_kFreeAt) ?? 0);
+    final latest = now.add(Economy.freeChipsEvery);
+    if (!saved.isAfter(latest)) return saved;
+    // Kept, so that the wait does not start again at every look.
+    _prefs.setInt(_kFreeAt, latest.millisecondsSinceEpoch);
+    return latest;
+  }
 
   /// Takes the free chips; returns how many (0 = not yet).
   int claimFreeChips(DateTime now) {
-    if (now.isBefore(freeChipsAt)) return 0;
+    if (now.isBefore(freeChipsAt(now))) return 0;
     final amount = Economy.freeChipsFor(_chips);
     _prefs.setInt(_kFreeAt, now.add(Economy.freeChipsEvery).millisecondsSinceEpoch);
     addWallet(chips: amount);
