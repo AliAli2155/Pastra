@@ -301,6 +301,7 @@ class StageFeltPainter extends CustomPainter {
           stops: const <double>[0.6, 1.0],
         ).createShader(felt.outerRect),
     );
+    _pattern(canvas, felt.outerRect, short);
     // A soft shadow just inside the rim, as if the cloth lay a little lower.
     for (var i = 0; i < 4; i++) {
       canvas.drawRRect(
@@ -321,6 +322,85 @@ class StageFeltPainter extends CustomPainter {
         ..strokeWidth = 1.6
         ..color = PastraColors.gold.withValues(alpha: 0.45),
     );
+  }
+
+  /// The fine pattern of some cloths, in the table's ink.
+  void _pattern(Canvas canvas, Rect r, double short) {
+    final ink = table.ink;
+    switch (table.pattern) {
+      case ClothPattern.plain:
+        return;
+      case ClothPattern.stars:
+        // Small stars in a fixed pseudo-random sky, a few brighter ones.
+        var seed = 7;
+        double next() {
+          seed = (seed * 48271) % 2147483647;
+          return seed / 2147483647;
+        }
+        final count = (r.width * r.height / (short * short) * 90).clamp(60, 600).toInt();
+        for (var i = 0; i < count; i++) {
+          final p = Offset(r.left + next() * r.width, r.top + next() * r.height);
+          final big = next() > 0.9;
+          canvas.drawCircle(
+            p,
+            short * (big ? 0.006 : 0.0028) * (0.6 + next()),
+            Paint()..color = Colors.white.withValues(alpha: big ? 0.5 : 0.18 + next() * 0.2),
+          );
+        }
+      case ClothPattern.veins:
+        // Long soft veins like in marble.
+        var seed = 11;
+        double next() {
+          seed = (seed * 48271) % 2147483647;
+          return seed / 2147483647;
+        }
+        for (var i = 0; i < 9; i++) {
+          final y = r.top + next() * r.height;
+          final path = Path()..moveTo(r.left - 20, y);
+          var x = r.left - 20;
+          var yy = y;
+          while (x < r.right + 20) {
+            final dx = short * (0.15 + next() * 0.25);
+            final dy = short * (next() - 0.5) * 0.35;
+            path.quadraticBezierTo(x + dx / 2, yy + dy * 1.6, x + dx, yy + dy);
+            x += dx;
+            yy += dy;
+          }
+          canvas.drawPath(
+            path,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = short * (0.003 + next() * 0.006)
+              ..color = ink,
+          );
+        }
+      case ClothPattern.harlequin:
+        // A fine diamond grid.
+        final step = short * 0.11;
+        final line = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.6, short * 0.0025)
+          ..color = ink;
+        for (var d = -r.height; d < r.width + r.height; d += step) {
+          canvas.drawLine(Offset(r.left + d, r.top), Offset(r.left + d + r.height, r.bottom), line);
+          canvas.drawLine(Offset(r.left + d + r.height, r.top), Offset(r.left + d, r.bottom), line);
+        }
+      case ClothPattern.waves:
+        // Soft rows of waves (or dunes).
+        final step = short * 0.09;
+        final line = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.8, short * 0.004)
+          ..color = ink;
+        for (var y = r.top + step / 2; y < r.bottom; y += step) {
+          final path = Path()..moveTo(r.left, y);
+          for (var x = r.left; x < r.right; x += step * 2) {
+            path.quadraticBezierTo(x + step / 2, y - step * 0.35, x + step, y);
+            path.quadraticBezierTo(x + step * 1.5, y + step * 0.35, x + step * 2, y);
+          }
+          canvas.drawPath(path, line);
+        }
+    }
   }
 
   @override

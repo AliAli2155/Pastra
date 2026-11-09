@@ -17,15 +17,36 @@ import '../widgets/game_header.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/wallet_bar.dart';
 
-/// The store: daily bonus and free chips, tables and card backs, diamonds
-/// to chips and the packs sold for real money. Every section fits on a
-/// phone held sideways without scrolling.
-class StoreScreen extends StatelessWidget {
+/// The store: daily bonus and free chips, VIP, offers, tables and card
+/// backs, diamonds to chips and the packs sold for real money.
+class StoreScreen extends StatefulWidget {
   const StoreScreen({super.key, this.initialTab = 0});
 
   final int initialTab;
 
   static const double _gap = 12;
+
+  // The sections, in order.
+  static const int bonusTab = 0;
+  static const int vipTab = 1;
+  static const int offersTab = 2;
+  static const int tablesTab = 3;
+  static const int backsTab = 4;
+
+  @override
+  State<StoreScreen> createState() => _StoreScreenState();
+}
+
+class _StoreScreenState extends State<StoreScreen> {
+  late int _tab = widget.initialTab;
+
+  /// A new one rebuilds the tabs on the section to go to.
+  int _jumps = 0;
+
+  void _goTo(int tab) => setState(() {
+        _tab = tab;
+        _jumps++;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -33,78 +54,124 @@ class StoreScreen extends StatelessWidget {
     final shop = ShopStrings(settings.language);
     final tables = Economy.items.where((i) => i.table != null).toList();
     final backs = Economy.items.where((i) => i.back != null).toList();
-    return Scaffold(
-      appBar: GameAppBar(
-        icon: Icons.storefront_rounded,
-        title: Text(shop.store, style: const TextStyle(fontWeight: FontWeight.w900)),
-        actions: const <Widget>[
-          Padding(padding: EdgeInsets.only(right: 12), child: Center(child: WalletBar(onTap: null, compact: true))),
-        ],
-      ),
-      body: Felt(
-        child: SafeArea(
-          top: false,
-          bottom: false,
-          // Sections on the left (pills at the top on a narrow screen).
-          child: SideTabs(
-            initial: initialTab,
-            tabs: <PageTab>[
-              PageTab(icon: Icons.redeem_rounded, label: shop.dailyBonus, builder: (_) => const _BonusTab()),
-              PageTab(
-                icon: Icons.table_restaurant_rounded,
-                label: shop.tables,
-                builder: (_) => _Section(
-                  title: shop.tables,
+    return _StoreNav(
+      goTo: _goTo,
+      child: Scaffold(
+        appBar: GameAppBar(
+          icon: Icons.storefront_rounded,
+          title: Text(shop.store, style: const TextStyle(fontWeight: FontWeight.w900)),
+          actions: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                // Smaller rather than cut on a narrow phone.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.42),
+                  child: const FittedBox(fit: BoxFit.scaleDown, child: WalletBar(onTap: null, compact: true)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: Felt(
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            // Sections on the left (pills at the top on a narrow screen).
+            child: SideTabs(
+              key: ValueKey<int>(_jumps),
+              initial: _tab,
+              onChanged: (i) => _tab = i,
+              tabs: <PageTab>[
+                PageTab(icon: Icons.redeem_rounded, label: shop.dailyBonus, builder: (_) => const _BonusTab()),
+                PageTab(icon: Icons.workspace_premium_rounded, label: shop.vip, builder: (_) => const _VipTab()),
+                PageTab(
+                  icon: Icons.local_offer_rounded,
+                  label: shop.offers,
+                  builder: (_) => _Section(
+                    title: shop.offers,
+                    icon: Icons.local_offer_rounded,
+                    accent: PastraColors.coral,
+                    child: const _Bundles(),
+                  ),
+                ),
+                PageTab(
                   icon: Icons.table_restaurant_rounded,
-                  child: _ItemGrid(items: tables),
+                  label: shop.tables,
+                  builder: (_) => _Section(
+                    title: shop.tables,
+                    icon: Icons.table_restaurant_rounded,
+                    child: _ItemGrid(items: tables),
+                  ),
                 ),
-              ),
-              PageTab(
-                icon: Icons.style_rounded,
-                label: shop.backs,
-                builder: (_) => _Section(
-                  title: shop.backs,
+                PageTab(
                   icon: Icons.style_rounded,
-                  accent: PastraColors.coral,
-                  child: _ItemGrid(items: backs),
+                  label: shop.backs,
+                  builder: (_) => _Section(
+                    title: shop.backs,
+                    icon: Icons.style_rounded,
+                    accent: PastraColors.coral,
+                    child: _ItemGrid(items: backs),
+                  ),
                 ),
-              ),
-              PageTab(
-                icon: Icons.swap_horiz_rounded,
-                label: shop.exchange,
-                builder: (_) => _Section(
-                  title: shop.exchange,
+                PageTab(
                   icon: Icons.swap_horiz_rounded,
-                  accent: PastraColors.teal,
-                  child: const _Exchanges(),
+                  label: shop.exchange,
+                  builder: (_) => _Section(
+                    title: shop.exchange,
+                    icon: Icons.swap_horiz_rounded,
+                    accent: PastraColors.teal,
+                    child: const _Exchanges(),
+                  ),
                 ),
-              ),
-              PageTab(
-                icon: Icons.toll_rounded,
-                label: shop.chipPacks,
-                builder: (_) => _Section(
-                  title: shop.chipPacks,
+                PageTab(
                   icon: Icons.toll_rounded,
-                  child: const _Packs(diamonds: false),
+                  label: shop.chipPacks,
+                  builder: (_) => _Section(
+                    title: shop.chipPacks,
+                    icon: Icons.toll_rounded,
+                    child: const _Packs(diamonds: false),
+                  ),
                 ),
-              ),
-              PageTab(
-                icon: Icons.diamond_rounded,
-                label: shop.diamondPacks,
-                builder: (_) => _Section(
-                  title: shop.diamondPacks,
+                PageTab(
                   icon: Icons.diamond_rounded,
-                  accent: PastraColors.teal,
-                  child: const _Packs(diamonds: true),
+                  label: shop.diamondPacks,
+                  builder: (_) => _Section(
+                    title: shop.diamondPacks,
+                    icon: Icons.diamond_rounded,
+                    accent: PastraColors.teal,
+                    child: const _Packs(diamonds: true),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+/// Lets a tile (or the dialog it opens) send the store to another section.
+class _StoreNav extends InheritedWidget {
+  const _StoreNav({required this.goTo, required super.child});
+
+  final ValueChanged<int> goTo;
+
+  static ValueChanged<int> of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_StoreNav>()?.goTo ?? (_) {};
+
+  @override
+  bool updateShouldNotify(_StoreNav oldWidget) => false;
+}
+
+/// The colour of a rarity label.
+Color rarityColor(Rarity r) => switch (r) {
+      Rarity.common => PastraColors.text2,
+      Rarity.rare => const Color(0xFF5AAEFF),
+      Rarity.epic => const Color(0xFFB98AFF),
+      Rarity.legendary => PastraColors.gold,
+    };
 
 /// One store section: a titled panel, centred and as wide as the grid in it
 /// needs.
@@ -128,11 +195,18 @@ class _Section extends StatelessWidget {
 /// Lays out tiles in rows of equal tiles, centred; [columns] at most per row
 /// (fewer on a narrow screen).
 class _TileGrid extends StatelessWidget {
-  const _TileGrid({required this.count, required this.height, required this.builder, this.columns = 4});
+  const _TileGrid({
+    required this.count,
+    required this.height,
+    required this.builder,
+    this.columns = 4,
+    this.maxTileWidth = 220,
+  });
 
   final int count;
   final double height;
   final int columns;
+  final double maxTileWidth;
   final Widget Function(int i) builder;
 
   @override
@@ -143,7 +217,7 @@ class _TileGrid extends StatelessWidget {
         final w = box.maxWidth;
         final fit = w >= 600 ? columns : (w >= 420 ? min(columns, 3) : min(columns, 2));
         final perRow = min(fit, count);
-        final width = min(220.0, (w - gap * (perRow - 1)) / perRow);
+        final width = min(maxTileWidth, (w - gap * (perRow - 1)) / perRow);
         return Wrap(
           spacing: gap,
           runSpacing: gap,
@@ -344,7 +418,7 @@ class _ItemGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TileGrid(count: items.length, height: 146, builder: (i) => _ItemTile(item: items[i]));
+    return _TileGrid(count: items.length, height: 164, builder: (i) => _ItemTile(item: items[i]));
   }
 }
 
@@ -380,14 +454,20 @@ class _ItemTile extends StatelessWidget {
     final shop = ShopStrings(settings.language);
     final owned = settings.owns(item.id);
     final inUse = owned && _inUse(settings, item);
+    final goTo = _StoreNav.of(context);
     final Widget state;
     if (inUse) {
       state = _StatePill(icon: Icons.check_rounded, text: shop.inUse, gold: true);
     } else if (owned) {
       state = _StatePill(icon: Icons.touch_app_rounded, text: shop.use);
+    } else if (item.source == ItemSource.vip) {
+      state = _StatePill(icon: Icons.workspace_premium_rounded, text: shop.vip, gold: true);
+    } else if (item.source == ItemSource.bundle) {
+      state = _StatePill(icon: Icons.local_offer_rounded, text: shop.offers);
     } else {
       state = _Price(chips: item.chips, diamonds: item.diamonds, affordable: _affordable(settings, item));
     }
+    final legendary = item.rarity == Rarity.legendary;
     return Pressable(
       radius: BorderRadius.circular(16),
       onTap: inUse
@@ -395,6 +475,8 @@ class _ItemTile extends StatelessWidget {
           : () {
               if (owned) {
                 _use(settings, item);
+              } else if (!item.forSale) {
+                showDialog<void>(context: context, builder: (_) => _OnlyDialog(item: item, goTo: goTo));
               } else {
                 showDialog<void>(context: context, builder: (_) => _BuyDialog(item: item));
               }
@@ -402,7 +484,12 @@ class _ItemTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: inUse ? PastraColors.gold.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: inUse ? PastraColors.gold : Colors.white.withValues(alpha: 0.12), width: 1.5),
+        border: Border.all(
+          color: inUse
+              ? PastraColors.gold
+              : (legendary ? PastraColors.gold.withValues(alpha: 0.35) : Colors.white.withValues(alpha: 0.12)),
+          width: 1.5,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
@@ -417,6 +504,17 @@ class _ItemTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: PastraColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              shop.rarity(item.rarity).toUpperCase(),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: TextStyle(
+                color: rarityColor(item.rarity),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 6),
             Center(child: state),
@@ -596,11 +694,7 @@ class _BuyDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              item.table != null ? s.tableColor : s.cardBackLabel,
-              textAlign: TextAlign.center,
-              style: PremiumText.eyebrow,
-            ),
+            _ItemEyebrow(item: item),
             const SizedBox(height: 4),
             Text(
               shop.buyTitle(_itemName(item, settings.language)),
@@ -676,6 +770,7 @@ class _Exchanges extends StatelessWidget {
         return _OfferTile(
           onTap: () => showDialog<void>(context: context, builder: (_) => _ExchangeDialog(exchange: e)),
           top: Amount(diamonds: e.diamonds, size: 18, color: PastraColors.text),
+          arrow: true,
           art: _CoinPile(tier: i + 2, size: 34),
           amount: Amount(chips: e.chips, size: 20, color: PastraColors.goldLight),
           button: _ActionPill(text: shop.exchangeDo, enabled: can),
@@ -779,7 +874,13 @@ class _Packs extends StatelessWidget {
       builder: (i) {
         final p = packs[i];
         return _OfferTile(
-          onTap: () => showDialog<void>(context: context, builder: (_) => const _SoonDialog()),
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (_) => _SoonDialog(
+              title: '${Economy.group(p.chips > 0 ? p.chips : p.diamonds)} · \$${p.usd.toStringAsFixed(2)}',
+              header: Center(child: diamonds ? _GemPile(tier: i + 1, size: 30) : _CoinPile(tier: i + 1, size: 34)),
+            ),
+          ),
           ribbon: p.bonusPercent > 0 ? shop.bonus(p.bonusPercent) : null,
           art: diamonds ? _GemPile(tier: i + 1, size: 30) : _CoinPile(tier: i + 1, size: 34),
           amount: Text(
@@ -798,7 +899,11 @@ class _Packs extends StatelessWidget {
 }
 
 class _SoonDialog extends StatelessWidget {
-  const _SoonDialog();
+  const _SoonDialog({this.title, this.header});
+
+  /// What was tapped (a pack, a plan); null: the plain "coming soon".
+  final String? title;
+  final Widget? header;
 
   @override
   Widget build(BuildContext context) {
@@ -812,11 +917,19 @@ class _SoonDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const Center(child: IconSquare(icon: Icons.shopping_bag_rounded, color: PastraColors.gold, size: 52)),
+            header ?? const Center(child: IconSquare(icon: Icons.shopping_bag_rounded, color: PastraColors.gold, size: 52)),
             const SizedBox(height: 12),
-            Text(shop.soonTitle, textAlign: TextAlign.center, style: PremiumText.title.copyWith(fontSize: 24)),
+            if (title != null) ...<Widget>[
+              Text(title!, textAlign: TextAlign.center, style: PremiumText.title.copyWith(fontSize: 22)),
+              const SizedBox(height: 2),
+            ],
+            Text(
+              shop.soonTitle,
+              textAlign: TextAlign.center,
+              style: title != null ? PremiumText.eyebrow : PremiumText.title.copyWith(fontSize: 24),
+            ),
             const SizedBox(height: 8),
-            Text(shop.soon, textAlign: TextAlign.center, style: PremiumText.secondary.copyWith(fontSize: 14)),
+            Text(shop.packSoon, textAlign: TextAlign.center, style: PremiumText.secondary.copyWith(fontSize: 14)),
             const SizedBox(height: 6),
             Text(shop.howToEarn, textAlign: TextAlign.center, style: PremiumText.secondary),
             const SizedBox(height: 18),
@@ -826,6 +939,400 @@ class _SoonDialog extends StatelessWidget {
               fontSize: 17,
               onPressed: () => Navigator.of(context).pop(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Table · Rare" over an item's name.
+class _ItemEyebrow extends StatelessWidget {
+  const _ItemEyebrow({required this.item});
+
+  final ShopItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final shop = ShopStrings(SettingsScope.of(context).language);
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(text: item.table != null ? s.tableColor : s.cardBackLabel),
+          const TextSpan(text: '  ·  '),
+          TextSpan(text: shop.rarity(item.rarity), style: TextStyle(color: rarityColor(item.rarity))),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      style: PremiumText.eyebrow,
+    );
+  }
+}
+
+/// An item that only comes with VIP or in a pack: where to get it.
+class _OnlyDialog extends StatelessWidget {
+  const _OnlyDialog({required this.item, required this.goTo});
+
+  final ShopItem item;
+  final ValueChanged<int> goTo;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final shop = ShopStrings(settings.language);
+    final s = Strings.of(context);
+    final vip = item.source == ItemSource.vip;
+    final bundle = Economy.bundleWith(item.id);
+    final where = vip ? shop.vipOnly : shop.bundleOnly(bundle != null ? shop.bundleName(bundle) : shop.offers);
+    return PremiumDialog(
+      maxWidth: 440,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _ItemEyebrow(item: item),
+            const SizedBox(height: 4),
+            Text(
+              _itemName(item, settings.language),
+              textAlign: TextAlign.center,
+              style: PremiumText.title.copyWith(fontSize: 24),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(height: 130, child: _ItemPreview(item: item)),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(vip ? Icons.workspace_premium_rounded : Icons.local_offer_rounded, color: PastraColors.gold, size: 20),
+                const SizedBox(width: 8),
+                Flexible(child: Text(where, style: PremiumText.body)),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: GlassButton(
+                    label: s.ok,
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GoldButton(
+                    label: vip ? shop.showVip : shop.showOffers,
+                    icon: vip ? Icons.workspace_premium_rounded : Icons.local_offer_rounded,
+                    height: 48,
+                    fontSize: 16,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      goTo(vip ? StoreScreen.vipTab : StoreScreen.offersTab);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---- VIP
+
+class _VipTab extends StatelessWidget {
+  const _VipTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final shop = ShopStrings(settings.language);
+    final wide = TabScope.wideOf(context);
+    Widget perk(IconData icon, String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: <Widget>[
+              IconSquare(icon: icon, color: PastraColors.gold, size: 30),
+              const SizedBox(width: 10),
+              Expanded(child: Text(text, style: PremiumText.body.copyWith(fontSize: 14))),
+            ],
+          ),
+        );
+    final perks = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(shop.vipHint, style: PremiumText.secondary),
+        const SizedBox(height: 8),
+        perk(Icons.redeem_rounded, shop.perkDaily),
+        perk(Icons.toll_rounded, shop.perkFree),
+        perk(Icons.emoji_events_rounded, shop.perkWins),
+        perk(Icons.style_rounded, shop.perkLook),
+        perk(Icons.verified_rounded, shop.perkBadge),
+      ],
+    );
+    final looks = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(width: 200, height: 90, child: _ItemPreview(item: Economy.itemById('t_vip')!)),
+        const SizedBox(height: 8),
+        SizedBox(width: 200, height: 80, child: _ItemPreview(item: Economy.itemById('b_vip')!)),
+      ],
+    );
+    final plans = Economy.vipPlans;
+    return TabBody(
+      maxWidth: 880,
+      children: <Widget>[
+        SectionPanel(
+          title: shop.vipTitle,
+          icon: Icons.workspace_premium_rounded,
+          highlight: true,
+          child: wide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[Expanded(child: perks), const SizedBox(width: 16), looks],
+                )
+              : Column(children: <Widget>[perks, const SizedBox(height: 12), looks]),
+        ),
+        _TileGrid(
+          count: plans.length,
+          height: 200,
+          columns: 3,
+          maxTileWidth: 260,
+          builder: (i) => _PlanTile(plan: plans[i], tier: i + 1),
+        ),
+      ],
+    );
+  }
+}
+
+/// One VIP plan: its days, the diamonds it gives at once, its price.
+class _PlanTile extends StatelessWidget {
+  const _PlanTile({required this.plan, required this.tier});
+
+  final VipPlan plan;
+  final int tier;
+
+  @override
+  Widget build(BuildContext context) {
+    final shop = ShopStrings(SettingsScope.of(context).language);
+    final days = shop.vipDays(plan.days);
+    final price = '\$${plan.usd.toStringAsFixed(2)}';
+    return Pressable(
+      radius: BorderRadius.circular(16),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => _SoonDialog(
+          title: '${shop.vip} · $days · $price',
+          header: const Center(child: _Crown(size: 56)),
+        ),
+      ),
+      decoration: BoxDecoration(
+        color: plan.best ? PastraColors.gold.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: plan.best ? PastraColors.gold : Colors.white.withValues(alpha: 0.12),
+          width: 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SizedBox(
+              height: 24,
+              child: Center(
+                child: plan.best
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        decoration: BoxDecoration(gradient: goldGradient, borderRadius: BorderRadius.circular(10)),
+                        child: Text(
+                          shop.bestValue,
+                          style: const TextStyle(color: PastraColors.goldInk, fontSize: 12, fontWeight: FontWeight.w900),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            Expanded(child: Center(child: _Crown(size: 30.0 + tier * 8))),
+            Center(
+              child: FittedBox(
+                child: Text(
+                  days,
+                  style: const TextStyle(color: PastraColors.goldLight, fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Center(
+              child: FittedBox(
+                child: Text(
+                  shop.vipDiamonds(plan.diamonds),
+                  style: const TextStyle(color: diamondColor, fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _ActionPill(text: price, enabled: true),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A gold crown in a dark round badge (VIP).
+class _Crown extends StatelessWidget {
+  const _Crown({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(colors: <Color>[Color(0xFF3A2F14), Color(0xFF14110A)]),
+        border: Border.all(color: PastraColors.gold, width: max(1.5, size * 0.05)),
+      ),
+      child: Icon(Icons.workspace_premium_rounded, size: size * 0.58, color: PastraColors.gold),
+    );
+  }
+}
+
+// ---- offers (packs of several things)
+
+class _Bundles extends StatelessWidget {
+  const _Bundles();
+
+  @override
+  Widget build(BuildContext context) {
+    const list = Economy.bundles;
+    return _TileGrid(
+      count: list.length,
+      height: 262,
+      columns: 2,
+      maxTileWidth: 420,
+      builder: (i) => _BundleCard(bundle: list[i]),
+    );
+  }
+}
+
+class _BundleCard extends StatelessWidget {
+  const _BundleCard({required this.bundle});
+
+  final Bundle bundle;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsScope.of(context);
+    final shop = ShopStrings(settings.language);
+    final b = bundle;
+    final items = <ShopItem>[...b.items.map(Economy.itemById).whereType<ShopItem>()];
+    final price = '\$${b.usd.toStringAsFixed(2)}';
+    final contents = Wrap(
+      spacing: 14,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        if (b.chips > 0) Amount(chips: b.chips, size: 17, color: PastraColors.goldLight),
+        if (b.diamonds > 0) Amount(diamonds: b.diamonds, size: 17, color: diamondColor),
+        if (b.vipDays > 0)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(Icons.workspace_premium_rounded, size: 18, color: PastraColors.gold),
+              const SizedBox(width: 4),
+              Text(
+                shop.plusVip(b.vipDays),
+                style: const TextStyle(color: PastraColors.gold, fontSize: 15, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+      ],
+    );
+    final looks = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        for (final item in items)
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SizedBox(width: item.table != null ? 120 : 64, height: 64, child: _ItemPreview(item: item)),
+            ),
+          ),
+      ],
+    );
+    return Pressable(
+      radius: BorderRadius.circular(18),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => _SoonDialog(
+          title: '${shop.bundleName(b)} · $price',
+          header: Column(children: <Widget>[if (items.isNotEmpty) looks, const SizedBox(height: 10), contents]),
+        ),
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[PastraColors.gold.withValues(alpha: 0.10), Colors.white.withValues(alpha: 0.03)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: PastraColors.gold.withValues(alpha: 0.35), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    shop.bundleName(b),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: PremiumText.section.copyWith(color: PastraColors.goldLight),
+                  ),
+                ),
+                if (b.discountPercent > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                    decoration: BoxDecoration(color: PastraColors.coral, borderRadius: BorderRadius.circular(10)),
+                    child: Text(
+                      shop.discount(b.discountPercent),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(
+              height: 18,
+              child: b.once
+                  ? Text(shop.oncePerPlayer, style: PremiumText.secondary.copyWith(fontSize: 12))
+                  : null,
+            ),
+            Expanded(
+              child: Center(
+                child: items.isEmpty ? const _CoinPile(tier: 5, size: 34) : looks,
+              ),
+            ),
+            const SizedBox(height: 8),
+            contents,
+            const SizedBox(height: 10),
+            _ActionPill(text: price, enabled: true),
           ],
         ),
       ),
@@ -845,8 +1352,11 @@ class _OfferTile extends StatelessWidget {
     required this.button,
     this.top,
     this.ribbon,
+    this.arrow = false,
   });
 
+  /// An arrow under [top] (what is given → what is got).
+  final bool arrow;
   final VoidCallback onTap;
   final Widget art;
   final Widget amount;
@@ -884,7 +1394,7 @@ class _OfferTile extends StatelessWidget {
                     : (top ?? const SizedBox.shrink()),
               ),
             ),
-            if (top != null && ribbon == null) const Icon(Icons.arrow_downward_rounded, size: 16, color: PastraColors.text2),
+            if (arrow) const Icon(Icons.arrow_downward_rounded, size: 16, color: PastraColors.text2),
             Expanded(child: Center(child: art)),
             Center(child: FittedBox(child: amount)),
             const SizedBox(height: 10),

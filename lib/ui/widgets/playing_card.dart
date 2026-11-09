@@ -800,15 +800,7 @@ class CardBackPainter extends CustomPainter {
     final inner = outer.deflate(w * 0.1);
     canvas.save();
     canvas.clipRRect(inner);
-    final line = Paint()
-      ..color = style.accent.withValues(alpha: 0.07)
-      ..strokeWidth = max(0.6, w * 0.01)
-      ..style = PaintingStyle.stroke;
-    final step = max(5.0, w * 0.16);
-    for (var d = -h; d < w + h; d += step) {
-      canvas.drawLine(Offset(d, 0), Offset(d + h, h), line);
-      canvas.drawLine(Offset(d + h, 0), Offset(d, h), line);
-    }
+    _pattern(canvas, inner.outerRect, w, h);
     canvas.restore();
     canvas.drawRRect(
       inner,
@@ -833,6 +825,90 @@ class CardBackPainter extends CustomPainter {
       )..layout();
       tp.paint(canvas, Offset(w / 2, h / 2) - Offset(tp.width / 2, tp.height / 2));
       tp.dispose();
+    }
+  }
+
+  /// The faint pattern inside the frame (see [BackPattern]).
+  void _pattern(Canvas canvas, Rect r, double w, double h) {
+    final faint = style.accent.withValues(alpha: 0.07);
+    final line = Paint()
+      ..color = faint
+      ..strokeWidth = max(0.6, w * 0.01)
+      ..style = PaintingStyle.stroke;
+    final step = max(5.0, w * 0.16);
+    switch (style.pattern) {
+      case BackPattern.lattice:
+        for (var d = -h; d < w + h; d += step) {
+          canvas.drawLine(Offset(d, 0), Offset(d + h, h), line);
+          canvas.drawLine(Offset(d + h, 0), Offset(d, h), line);
+        }
+      case BackPattern.dots:
+        final dot = Paint()..color = style.accent.withValues(alpha: 0.12);
+        final gap = w * 0.11;
+        var row = 0;
+        for (var y = r.top; y < r.bottom + gap; y += gap * 0.87, row++) {
+          for (var x = r.left + (row.isOdd ? gap / 2 : 0); x < r.right + gap; x += gap) {
+            canvas.drawCircle(Offset(x, y), w * 0.018, dot);
+          }
+        }
+      case BackPattern.stripes:
+        line
+          ..strokeWidth = w * 0.035
+          ..color = style.accent.withValues(alpha: 0.06);
+        for (var d = -h; d < w + h; d += w * 0.12) {
+          canvas.drawLine(Offset(d, 0), Offset(d + h * 0.6, h), line);
+        }
+      case BackPattern.rays:
+        final c = r.center;
+        final ray = Paint()..color = style.accent.withValues(alpha: 0.08);
+        const n = 18;
+        final far = r.longestSide;
+        for (var i = 0; i < n; i++) {
+          final a = i * 2 * pi / n;
+          final b = a + pi / n * 0.55;
+          canvas.drawPath(
+            Path()
+              ..moveTo(c.dx, c.dy)
+              ..lineTo(c.dx + cos(a) * far, c.dy + sin(a) * far)
+              ..lineTo(c.dx + cos(b) * far, c.dy + sin(b) * far)
+              ..close(),
+            ray,
+          );
+        }
+      case BackPattern.waves:
+        line.color = style.accent.withValues(alpha: 0.1);
+        final g = w * 0.1;
+        for (var y = r.top; y < r.bottom + g; y += g) {
+          final path = Path()..moveTo(r.left - g, y);
+          for (var x = r.left - g; x < r.right + g; x += g * 2) {
+            path.quadraticBezierTo(x + g / 2, y - g * 0.45, x + g, y);
+            path.quadraticBezierTo(x + g * 1.5, y + g * 0.45, x + g * 2, y);
+          }
+          canvas.drawPath(path, line);
+        }
+      case BackPattern.meander:
+        // A Greek key band along the top and the bottom of the frame.
+        final u = r.width / 6;
+        final key = Paint()
+          ..color = style.accent.withValues(alpha: 0.3)
+          ..strokeWidth = max(0.8, w * 0.014)
+          ..style = PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.miter;
+        void band(double top, bool flip) {
+          final s = u / 4;
+          for (var i = 0; i < 6; i++) {
+            final x0 = r.left + i * u;
+            Offset p(double gx, double gy) => Offset(x0 + gx * s, flip ? top - gy * s : top + gy * s);
+            canvas.drawPath(
+              Path()..addPolygon(<Offset>[p(0, 4), p(0, 0), p(3, 0), p(3, 3), p(1, 3), p(1, 1), p(2, 1), p(2, 2)], false),
+              key,
+            );
+            canvas.drawLine(p(0, 4), p(4, 4), key);
+          }
+        }
+        band(r.top + w * 0.04, false);
+        band(r.bottom - w * 0.04, true);
+        canvas.drawLine(Offset(r.left, r.center.dy), Offset(r.right, r.center.dy), line);
     }
   }
 

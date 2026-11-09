@@ -55,7 +55,11 @@ void main() {
   test('store items have unique ids and one price', () {
     expect(Economy.items.map((i) => i.id).toSet(), hasLength(Economy.items.length));
     for (final i in Economy.items) {
-      expect((i.chips > 0) != (i.diamonds > 0), isTrue, reason: i.id);
+      if (i.forSale) {
+        expect((i.chips > 0) != (i.diamonds > 0), isTrue, reason: i.id);
+      } else {
+        expect(i.chips + i.diamonds, 0, reason: i.id);
+      }
       expect((i.table != null) != (i.back != null), isTrue, reason: i.id);
     }
     expect(Economy.itemForTable(TableTheme.green), isNull);

@@ -431,7 +431,7 @@ class AppSettings extends ChangeNotifier {
 
   /// Buys a store item; false when it is owned already or too expensive.
   bool buy(ShopItem item) {
-    if (owns(item.id) || !spend(chips: item.chips, diamonds: item.diamonds, notify: false)) return false;
+    if (!item.forSale || owns(item.id) || !spend(chips: item.chips, diamonds: item.diamonds, notify: false)) return false;
     _owned.add(item.id);
     _prefs.setStringList(_kOwned, _owned.toList());
     notifyListeners();

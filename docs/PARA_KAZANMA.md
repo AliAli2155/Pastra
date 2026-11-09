@@ -27,9 +27,11 @@ Okey Plus, Çanak Okey, 101 Okey ve Pişti gibi uygulamalar aynı modeli kullan�
 | Seviye atlama | 250 × yeni seviye çip + 3 elmas |
 | Offline galibiyet | kolay 20 · orta 40 · zor 80 çip |
 | Turnuvalar | Hızlı 200, Klasik/Takım 500 giriş; 1 galibiyet = giriş geri, final = 2×, şampiyon = 4× |
-| Mağaza | Okyanus masa 40.000 çip · Kraliyet masa 80 elmas · Gün batımı masa 120 elmas · Zümrüt kart arkası 25.000 çip · Yakut 60 elmas · Elmas 100 elmas |
+| Mağaza | 21 masa ve 21 kart arkası; nadirlik: sıradan (20–45 bin çip) · nadir (50–90 bin çip / 60–100 elmas) · epik (110–220 elmas / 250 bin çip) · efsane (350–400 elmas). Olimpos masa + kart arkası sadece Efsane paketinde, VIP altın masa + VIP taç kart arkası sadece VIP ile. Desenler: masalarda yıldız/damar/baklava/dalga, kart arkalarında puantiye/çizgi/ışın/dalga/meandros |
 | Elmas → çip | 10 → 5.000 · 50 → 30.000 · 200 → 150.000 |
-| Gerçek para paketleri (önerilen fiyat) | Çip: 10K 0,99 $ · 60K 4,99 $ · 150K 9,99 $ · 400K 19,99 $ — Elmas: 50 0,99 $ · 300 4,99 $ · 700 9,99 $ |
+| Gerçek para paketleri (önerilen fiyat) | Çip: 4K 0,49 $ · 10K 0,99 $ · 60K 4,99 $ · 150K 9,99 $ · 400K 19,99 $ · 1,2M 49,99 $ · 3M 99,99 $ — Elmas: 50 0,99 $ · 300 4,99 $ · 700 9,99 $ · 1.600 19,99 $ · 4.500 49,99 $ |
+| VIP (sunucu açılınca) | 7 gün 2,99 $ (+20 elmas) · 30 gün 9,99 $ (+100 elmas, en avantajlı) · 90 gün 24,99 $ (+350 elmas). Avantajlar: günlük bonus ×2, bedava çip ×2 ve 2 saatte bir, kazanılan oyunda +%20 çip, VIP masa ve kart arkası, altın VIP rozeti |
+| Teklif paketleri (sunucu açılınca) | Başlangıç 1,99 $ (25K çip, 50 elmas, Yeşim masa; oyuncu başına bir kez) · Koleksiyoncu 9,99 $ (4 nadir kart arkası, 100 elmas) · Kraliyet 14,99 $ (150K çip, 300 elmas, Yaldızlı oniks masa, Anka kuşu kart arkası) · Efsane 39,99 $ (500K çip, 1.000 elmas, Olimpos masa + kart arkası, 30 gün VIP) |
 
 Bütün sayılar `lib/game/economy.dart` içinde; değiştirmek için sadece orayı düzenlemek yeterli.
 

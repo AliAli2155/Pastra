@@ -216,7 +216,14 @@ class _RiseTransitions extends PageTransitionsBuilder {
   }
 }
 
-/// Table cloth colours (light centre → dark edge).
+/// A fine pattern on a table cloth (drawn once, with the cloth).
+enum ClothPattern { plain, stars, veins, harlequin, waves }
+
+/// A pattern on a card back, inside its frame.
+enum BackPattern { lattice, dots, stripes, rays, waves, meander }
+
+/// Table cloth colours (light centre → dark edge), and an optional pattern
+/// drawn in [ink].
 enum TableTheme {
   green(Color(0xFF16A07A), Color(0xFF0D7356), Color(0xFF064734)),
   blue(Color(0xFF2468B5), Color(0xFF15427A), Color(0xFF0A2142)),
@@ -234,13 +241,29 @@ enum TableTheme {
   // Premium store tables.
   marble(Color(0xFF4A4E57), Color(0xFF26292F), Color(0xFF0E0F12)),
   velvet(Color(0xFF2A4C8A), Color(0xFF152A55), Color(0xFF070F22)),
-  leather(Color(0xFF8E2A3A), Color(0xFF581522), Color(0xFF24070D));
+  leather(Color(0xFF8E2A3A), Color(0xFF581522), Color(0xFF24070D)),
+  // The second store collection.
+  jade(Color(0xFF3FB98F), Color(0xFF1F7A5E), Color(0xFF0A3A2C)),
+  forest(Color(0xFF3C7A3A), Color(0xFF22501F), Color(0xFF0D240C), ClothPattern.veins),
+  sand(Color(0xFFC29A62), Color(0xFF86643A), Color(0xFF3A2912), ClothPattern.waves),
+  sapphire(Color(0xFF2F6FD6), Color(0xFF173F8A), Color(0xFF071B42), ClothPattern.harlequin),
+  amethyst(Color(0xFF9A5BD6), Color(0xFF5B2E91), Color(0xFF22103D), ClothPattern.harlequin),
+  lagoon(Color(0xFF2CC4C4), Color(0xFF137F8F), Color(0xFF06343F), ClothPattern.waves),
+  midnight(Color(0xFF2B3A66), Color(0xFF141D3D), Color(0xFF05081A), ClothPattern.stars),
+  glacier(Color(0xFF7FB8D0), Color(0xFF3E7896), Color(0xFF122E40), ClothPattern.veins),
+  volcano(Color(0xFFD9542C), Color(0xFF861E14), Color(0xFF280705), ClothPattern.veins, Color(0x40FFC27A)),
+  crimson(Color(0xFFC0213A), Color(0xFF7A0E22), Color(0xFF2E030C), ClothPattern.harlequin),
+  gilded(Color(0xFF3E3628), Color(0xFF1E1A12), Color(0xFF080705), ClothPattern.veins, Color(0x80E6B54A)),
+  olympus(Color(0xFFB8B2A6), Color(0xFF7D776B), Color(0xFF35322B), ClothPattern.veins, Color(0x99E6B54A)),
+  vip(Color(0xFF332A12), Color(0xFF181307), Color(0xFF050402), ClothPattern.harlequin, Color(0x66E6B54A));
 
-  const TableTheme(this.light, this.mid, this.dark);
+  const TableTheme(this.light, this.mid, this.dark, [this.pattern = ClothPattern.plain, this.ink = const Color(0x22FFFFFF)]);
 
   final Color light;
   final Color mid;
   final Color dark;
+  final ClothPattern pattern;
+  final Color ink;
 
   BoxDecoration get decoration => BoxDecoration(
         gradient: RadialGradient(
@@ -271,13 +294,28 @@ enum CardBackStyle {
   // Premium store backs.
   onyx(Color(0xFF060607), Color(0xFF2A2D33), Color(0xFFF7E2B0)),
   bordeaux(Color(0xFF3A0A12), Color(0xFF7A1F2A), PastraColors.gold),
-  ivory(Color(0xFFCFC4AE), Color(0xFFF4EEE2), Color(0xFF8A6A2A));
+  ivory(Color(0xFFCFC4AE), Color(0xFFF4EEE2), Color(0xFF8A6A2A)),
+  // The second store collection.
+  sky(Color(0xFF0E4C7A), Color(0xFF4FB3E8), Colors.white, BackPattern.dots),
+  mint(Color(0xFF0B5946), Color(0xFF3CC9A0), Colors.white, BackPattern.stripes),
+  coral(Color(0xFF7A2A1E), Color(0xFFF0785A), Color(0xFFFFE6DC), BackPattern.rays),
+  sapphire(Color(0xFF071B42), Color(0xFF2F6FD6), PastraColors.gold),
+  jade(Color(0xFF0A3A2C), Color(0xFF3FB98F), Color(0xFFE9FFF6), BackPattern.waves),
+  amethyst(Color(0xFF22103D), Color(0xFF9A5BD6), Color(0xFFF1E6FF), BackPattern.dots),
+  pearl(Color(0xFFB3A39A), Color(0xFFF6EEEA), Color(0xFF9E5A6C), BackPattern.stripes),
+  obsidian(Color(0xFF050506), Color(0xFF1E2026), PastraColors.gold, BackPattern.rays),
+  sunburst(Color(0xFF7A3A06), Color(0xFFF2A22E), Color(0xFFFFF4D6), BackPattern.rays),
+  aurora(Color(0xFF1A1440), Color(0xFF2FB38A), Colors.white, BackPattern.waves),
+  phoenix(Color(0xFF3A0605), Color(0xFFE0582E), Color(0xFFFFD27A), BackPattern.rays),
+  olympus(Color(0xFF8A7F68), Color(0xFFF4EEE2), Color(0xFF9A7420), BackPattern.meander),
+  vip(Color(0xFF0A0804), Color(0xFF2A2310), PastraColors.gold, BackPattern.meander);
 
-  const CardBackStyle(this.dark, this.light, this.accent);
+  const CardBackStyle(this.dark, this.light, this.accent, [this.pattern = BackPattern.lattice]);
 
   final Color dark;
   final Color light;
   final Color accent;
+  final BackPattern pattern;
 }
 
 /// The look chosen in the settings. Kept here (set by AppSettings) so card
