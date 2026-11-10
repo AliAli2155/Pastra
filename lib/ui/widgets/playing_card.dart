@@ -245,8 +245,8 @@ class CardArt {
   }
 }
 
-/// Pictures used for some court cards instead of the drawn design (the
-/// queens and kings for now). Loaded once at start-up ([load]); a card without a
+/// Pictures of the court cards (J, Q, K of every suit), used instead of
+/// the drawn design. Loaded once at start-up ([load]); a card without a
 /// picture, or one that could not be loaded, keeps the drawn design.
 class CourtImages {
   CourtImages._();
@@ -260,6 +260,10 @@ class CourtImages {
     Cards.make(Cards.diamonds, Cards.king): 'assets/cards/king_diamonds.webp',
     Cards.make(Cards.hearts, Cards.king): 'assets/cards/king_hearts.webp',
     Cards.make(Cards.spades, Cards.king): 'assets/cards/king_spades.webp',
+    Cards.make(Cards.clubs, Cards.jack): 'assets/cards/jack_clubs.webp',
+    Cards.make(Cards.diamonds, Cards.jack): 'assets/cards/jack_diamonds.webp',
+    Cards.make(Cards.hearts, Cards.jack): 'assets/cards/jack_hearts.webp',
+    Cards.make(Cards.spades, Cards.jack): 'assets/cards/jack_spades.webp',
   };
 
   static final Map<int, ui.Image> _images = <int, ui.Image>{};
