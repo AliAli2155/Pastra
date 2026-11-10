@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../engine/cards.dart';
 import '../theme.dart';
@@ -244,6 +245,41 @@ class CardArt {
   }
 }
 
+/// Pictures used for some court cards instead of the drawn design (the
+/// queens for now). Loaded once at start-up ([load]); a card without a
+/// picture, or one that could not be loaded, keeps the drawn design.
+class CourtImages {
+  CourtImages._();
+
+  static final Map<int, String> _assets = <int, String>{
+    Cards.make(Cards.clubs, Cards.queen): 'assets/cards/queen_clubs.webp',
+    Cards.make(Cards.diamonds, Cards.queen): 'assets/cards/queen_diamonds.webp',
+    Cards.make(Cards.hearts, Cards.queen): 'assets/cards/queen_hearts.webp',
+    Cards.make(Cards.spades, Cards.queen): 'assets/cards/queen_spades.webp',
+  };
+
+  static final Map<int, ui.Image> _images = <int, ui.Image>{};
+
+  /// The picture of [card], if it has one.
+  static ui.Image? forCard(int card) => _images[card];
+
+  /// Decodes every picture (call before the first card is drawn).
+  static Future<void> load() async {
+    await Future.wait(<Future<void>>[
+      for (final e in _assets.entries)
+        () async {
+          try {
+            final data = await rootBundle.load(e.value);
+            final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+            _images[e.key] = (await codec.getNextFrame()).image;
+          } catch (_) {
+            // Keeps the drawn design.
+          }
+        }(),
+    ]);
+  }
+}
+
 /// The face of a card drawn as vectors (letters and suit shapes); used where
 /// a card is shown on its own, still. Moving cards use [CardArt].
 class CardFace extends StatelessWidget {
@@ -303,6 +339,28 @@ void paintCardFace(Canvas canvas, Size size, int card, {bool highlighted = false
   final rank = Cards.rank(card);
 
   final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(w * 0.08));
+  final edge = highlighted ? max(1.5, w * 0.035) : 1.0;
+  final edgePaint = Paint()..color = highlighted ? PastraColors.gold : const Color(0xFFD8D0BE);
+
+  // A card with a picture (see CourtImages): the whole face is the picture,
+  // its white turned into the cream of the other cards.
+  final picture = CourtImages.forCard(card);
+  if (picture != null) {
+    canvas.save();
+    canvas.clipRRect(outer);
+    canvas.drawImageRect(
+      picture,
+      Rect.fromLTWH(0, 0, picture.width.toDouble(), picture.height.toDouble()),
+      Offset.zero & size,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..colorFilter = const ColorFilter.mode(PastraColors.cream, BlendMode.multiply),
+    );
+    canvas.restore();
+    canvas.drawDRRect(outer, outer.deflate(edge), edgePaint);
+    return;
+  }
+
   canvas.drawRRect(
     outer,
     Paint()
@@ -312,12 +370,7 @@ void paintCardFace(Canvas canvas, Size size, int card, {bool highlighted = false
         colors: <Color>[PastraColors.cream, Color(0xFFF4EFE3)],
       ).createShader(Offset.zero & size),
   );
-  final edge = highlighted ? max(1.5, w * 0.035) : 1.0;
-  canvas.drawDRRect(
-    outer,
-    outer.deflate(edge),
-    Paint()..color = highlighted ? PastraColors.gold : const Color(0xFFD8D0BE),
-  );
+  canvas.drawDRRect(outer, outer.deflate(edge), edgePaint);
 
   void suitAt(Offset topLeft, double s, {bool turned = false}) {
     canvas.save();

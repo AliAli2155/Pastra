@@ -8,6 +8,7 @@ import 'game/game_controller.dart';
 import 'game/sound.dart';
 import 'online/leaderboard.dart';
 import 'ui/fx/fx.dart';
+import 'ui/widgets/playing_card.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,8 @@ Future<void> main() async {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
   final settings = await AppSettings.load();
+  // The pictures of the court cards that have one (before the first card).
+  await CourtImages.load();
   // Load the sounds in the background so the first ones are not late.
   SoundFx.instance.preload();
   GameController.onGameFinished = (s) => Leaderboard.submit(s);

@@ -26,6 +26,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/
+    - assets/cards/
   # Outfit for Latin scripts; Manrope fills in Greek and Cyrillic (Outfit has
   # neither). Both under the SIL Open Font License (see assets/fonts/*-OFL.txt).
   fonts:
