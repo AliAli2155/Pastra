@@ -50,11 +50,26 @@ class Strings {
   String get mode1v1Hint => _s('mode1v1Hint');
   String get mode2v2Hint => _s('mode2v2Hint');
   String get difficulty => _s('difficulty');
-  String level(AiLevel value) {
-    if (value == AiLevel.easy) return _s('levelEasy');
-    if (value == AiLevel.medium) return _s('levelMedium');
-    return _s('levelHard');
-  }
+  String level(AiLevel value) => _s(switch (value) {
+        AiLevel.beginner => 'levelBeginner',
+        AiLevel.easy => 'levelEasy',
+        AiLevel.medium => 'levelMedium',
+        AiLevel.hard => 'levelHard',
+        AiLevel.expert => 'levelExpert',
+        AiLevel.master => 'levelMaster',
+      });
+
+  /// One line on how a level plays.
+  String levelInfo(AiLevel value) => _s(switch (value) {
+        AiLevel.beginner => 'levelInfoBeginner',
+        AiLevel.easy => 'levelInfoEasy',
+        AiLevel.medium => 'levelInfoMedium',
+        AiLevel.hard => 'levelInfoHard',
+        AiLevel.expert => 'levelInfoExpert',
+        AiLevel.master => 'levelInfoMaster',
+      });
+
+  String get trackerHint => _s('trackerHint');
 
   String get start => _s('start');
   String targetInfo(GameVariant variant, int target, int perDeal) => _s(

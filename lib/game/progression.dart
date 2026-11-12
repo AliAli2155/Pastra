@@ -47,9 +47,12 @@ class Progression {
 
   /// Beating a harder computer is worth more.
   static double levelFactor(AiLevel level) => switch (level) {
+        AiLevel.beginner => 0.6,
         AiLevel.easy => 1.0,
         AiLevel.medium => 1.5,
         AiLevel.hard => 2.0,
+        AiLevel.expert => 2.5,
+        AiLevel.master => 3.0,
       };
 
   /// XP of a finished game (the pastras are paid per round, see [roundXp]).

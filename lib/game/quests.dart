@@ -136,7 +136,7 @@ class Quests {
       'teamWin' => progress + (e.gameOver && e.won && e.players == 4 ? 1 : 0),
       'online' => progress + (e.gameOver && e.online ? 1 : 0),
       'onlineWin' => progress + (e.gameOver && e.online && e.won ? 1 : 0),
-      'hard' => progress + (e.gameOver && e.won && !e.online && e.level == AiLevel.hard ? 1 : 0),
+      'hard' => progress + (e.gameOver && e.won && !e.online && (e.level?.atLeast(AiLevel.hard) ?? false) ? 1 : 0),
       'round' => e.rounds > 0 && e.roundScore >= q.goal ? q.goal : progress,
       'good' => progress + (e.rounds > 0 && e.goodCards ? 1 : 0),
       // Wins in a row: a lost game starts again from zero.

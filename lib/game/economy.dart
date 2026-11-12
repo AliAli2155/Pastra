@@ -201,9 +201,12 @@ class Economy {
 
   /// A won game against the computer (offline).
   static int offlineWin(AiLevel level) => switch (level) {
+        AiLevel.beginner => 10,
         AiLevel.easy => 20,
         AiLevel.medium => 40,
         AiLevel.hard => 80,
+        AiLevel.expert => 120,
+        AiLevel.master => 160,
       };
 
   static int levelUpChips(int newLevel) => 250 * newLevel;

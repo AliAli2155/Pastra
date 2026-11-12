@@ -5,29 +5,55 @@ import 'game_state.dart';
 import 'pastra_engine.dart';
 import 'rules.dart';
 
-enum AiLevel { easy, medium, hard }
+/// How well a computer player plays. The order of the values is the order
+/// they are saved in (an index), so new ones go at the end; [ordered] is the
+/// order from the easiest to the strongest and [rank] compares them.
+enum AiLevel {
+  easy(1),
+  medium(2),
+  hard(3, samples: 24, budgetMs: 35, blend: 0.5),
+  beginner(0),
+  expert(4, samples: 60, budgetMs: 120, blend: 0.4),
+  master(5, samples: 160, budgetMs: 320, blend: 0.3);
+
+  const AiLevel(this.rank, {this.samples = 0, this.budgetMs = 0, this.blend = 0});
+
+  /// 0 = the easiest.
+  final int rank;
+
+  /// Monte Carlo deals to try (0 = no search), the time they may take and
+  /// how much the quick heuristic counts next to them.
+  final int samples;
+  final int budgetMs;
+  final double blend;
+
+  /// Searches the deal (hard and stronger).
+  bool get searches => samples > 0;
+
+  bool atLeast(AiLevel other) => rank >= other.rank;
+
+  /// From the easiest to the strongest.
+  static const List<AiLevel> ordered = <AiLevel>[beginner, easy, medium, hard, expert, master];
+}
 
 /// Computer players. They only use information a real player has: their own
 /// hand, the table, the captured cards and how many cards everybody holds.
 ///
-/// * easy   – mostly greedy, with mistakes.
-/// * medium – greedy + estimates what the next opponent can take.
-/// * hard   – Monte Carlo: deals the unseen cards many ways, plays the rest of
-///   the deal out, blends that with the medium heuristic. In 1v1 with an empty
-///   deck it searches the last cards exactly.
+/// * beginner – mostly random, never thinks ahead.
+/// * easy     – mostly greedy, with mistakes.
+/// * medium   – greedy + estimates what the next opponent can take.
+/// * hard, expert, master – Monte Carlo: deals the unseen cards many ways,
+///   plays the rest of the deal out, blends that with the medium heuristic;
+///   the stronger levels try more deals and trust them more. In 1v1 with an
+///   empty deck they search the last cards exactly.
 class PastraAI {
   PastraAI._();
 
   /// Value of one captured card for the majority race (3 points over ~27 cards).
   static const double cardWeight = 0.2;
 
-  static const int hardSamples = 24;
-  static const double hardBlend = 0.5;
-
-  /// Time budget for the Monte Carlo search so a full hand never stalls the
-  /// UI (on the web this runs on the main thread).
-  static const int hardBudgetMs = 35;
-  static const int hardMinSamples = 4;
+  /// Deals always tried, whatever the time budget.
+  static const int minSamples = 4;
 
   static double _captureValue(PastraRules rules, Iterable<int> cards) {
     var v = 0.0;
@@ -37,35 +63,64 @@ class PastraAI {
     return v;
   }
 
+  static bool _exactEndgame(GameState s) => s.numPlayers == 2 && s.deck.isEmpty && s.cardsInHands <= 8;
+
   static int chooseCard(GameState s, AiLevel level, Random rng) {
     final seat = s.current;
     final hand = s.hands[seat];
     if (hand.length == 1) return hand.first;
-    if (level == AiLevel.hard) {
-      if (s.numPlayers == 2 && s.deck.isEmpty && s.cardsInHands <= 8) {
-        return endgameChoice(s, seat);
+    if (level.searches) {
+      if (_exactEndgame(s)) return endgameChoice(s, seat);
+      final mc = _MonteCarlo(s, seat);
+      final clock = Stopwatch()..start();
+      while (mc.done < level.samples && (mc.done < minSamples || clock.elapsedMilliseconds < level.budgetMs)) {
+        mc.sample(rng);
       }
-      return _monteCarloChoice(s, seat, rng);
+      return mc.best(level);
     }
-    if (level == AiLevel.easy && rng.nextDouble() < 0.35) {
-      return hand[rng.nextInt(hand.length)];
-    }
+    final random = switch (level) {
+      AiLevel.beginner => 0.6,
+      AiLevel.easy => 0.35,
+      _ => 0.0,
+    };
+    if (rng.nextDouble() < random) return hand[rng.nextInt(hand.length)];
     final unseen = PastraEngine.unseenFor(s, seat);
     var best = hand.first;
     var bestScore = double.negativeInfinity;
     for (final c in hand) {
       var score = evaluate(s, seat, c, level, unseen);
-      if (level == AiLevel.easy) {
-        score += (rng.nextDouble() - 0.5) * 3;
-      } else {
-        score += (rng.nextDouble() - 0.5) * 0.6;
-      }
+      final noise = switch (level) {
+        AiLevel.beginner => 4.0,
+        AiLevel.easy => 3.0,
+        _ => 0.6,
+      };
+      score += (rng.nextDouble() - 0.5) * noise;
       if (score > bestScore) {
         bestScore = score;
         best = c;
       }
     }
     return best;
+  }
+
+  /// Like [chooseCard], but a long search (expert, master) is cut into
+  /// short slices with a pause between them, so that on the web, where it
+  /// runs on the main thread, the screen keeps moving while the bot thinks.
+  static Future<int> chooseCardSliced(GameState s, AiLevel level, Random rng) async {
+    final seat = s.current;
+    final hand = s.hands[seat];
+    if (hand.length == 1 || !level.searches || _exactEndgame(s)) return chooseCard(s, level, rng);
+    final mc = _MonteCarlo(s, seat);
+    final clock = Stopwatch()..start();
+    final slice = Stopwatch()..start();
+    while (mc.done < level.samples && (mc.done < minSamples || clock.elapsedMilliseconds < level.budgetMs)) {
+      mc.sample(rng);
+      if (slice.elapsedMilliseconds >= 8) {
+        await Future<void>.delayed(Duration.zero);
+        slice.reset();
+      }
+    }
+    return mc.best(level);
   }
 
   /// P(none of k particular cards is among h cards drawn from U unseen cards).
@@ -150,18 +205,21 @@ class PastraAI {
     } else {
       tableAfter = List<int>.of(s.table)..add(card);
     }
-    final riskWeight = level == AiLevel.easy
-        ? 0.25
-        : level == AiLevel.medium
-            ? 0.7
-            : 1.0;
+    final riskWeight = switch (level) {
+      AiLevel.beginner => 0.0,
+      AiLevel.easy => 0.25,
+      AiLevel.medium => 0.7,
+      AiLevel.hard => 1.0,
+      AiLevel.expert => 1.1,
+      AiLevel.master => 1.2,
+    };
     var score = gain - riskWeight * expectedOpponentGain(s, seat, tableAfter, unseen);
     if (!pv.isCapture) score -= 0.3 * s.rules.pointsOf(card);
-    if (level != AiLevel.easy && Cards.isJack(card) && s.hands[seat].length > 1) {
+    if (level.atLeast(AiLevel.medium) && Cards.isJack(card) && s.hands[seat].length > 1) {
       // A jack sweeps whatever builds up later: keep it if possible.
       score -= s.deck.isNotEmpty ? 1.2 : 0.6;
     }
-    if (level == AiLevel.hard && s.deck.isEmpty && pv.isCapture) {
+    if (level.searches && s.deck.isEmpty && pv.isCapture) {
       score += 0.15 * tableAfter.length;
     }
     return score;
@@ -237,41 +295,6 @@ class PastraAI {
   static double _diff(RoundResult r, int team) =>
       (r.teams[team].total - r.teams[1 - team].total).toDouble();
 
-  static int _monteCarloChoice(GameState s, int seat, Random rng) {
-    final hand = s.hands[seat];
-    final team = GameState.teamOf(seat);
-    final totals = List<double>.filled(hand.length, 0);
-    final clock = Stopwatch()..start();
-    var done = 0;
-    for (var k = 0; k < hardSamples; k++) {
-      if (k >= hardMinSamples && clock.elapsedMilliseconds > hardBudgetMs) break;
-      done++;
-      final world = _sampleWorld(s, seat, rng);
-      for (var i = 0; i < hand.length; i++) {
-        final w = world.copy();
-        final c = hand[i];
-        final pv = PastraEngine.applyMove(w, c);
-        var v = pv.isCapture
-            ? _captureValue(s.rules, pv.captured) + cardWeight + s.rules.pointsOf(c) + pv.pastraPoints
-            : 0.0;
-        v += _playout(w, team);
-        totals[i] += v;
-      }
-    }
-    final unseen = PastraEngine.unseenFor(s, seat);
-    var best = hand.first;
-    var bestScore = double.negativeInfinity;
-    for (var i = 0; i < hand.length; i++) {
-      final score = totals[i] / done +
-          hardBlend * evaluate(s, seat, hand[i], AiLevel.hard, unseen);
-      if (score > bestScore) {
-        bestScore = score;
-        best = hand[i];
-      }
-    }
-    return best;
-  }
-
   /// 1v1 with an empty deck: the opponent holds exactly the unseen cards, so
   /// the rest of the round can be searched exactly (alpha-beta).
   static int endgameChoice(GameState s, int seat) {
@@ -321,5 +344,52 @@ class PastraAI {
       if (b <= a) break;
     }
     return value;
+  }
+}
+
+/// A Monte Carlo search in progress: the value of each card of the hand,
+/// summed over the deals tried so far.
+class _MonteCarlo {
+  _MonteCarlo(this.s, this.seat)
+      : hand = List<int>.of(s.hands[seat]),
+        team = GameState.teamOf(seat),
+        totals = List<double>.filled(s.hands[seat].length, 0);
+
+  final GameState s;
+  final int seat;
+  final List<int> hand;
+  final int team;
+  final List<double> totals;
+  int done = 0;
+
+  /// Deals the unseen cards one way and plays every card of the hand out.
+  void sample(Random rng) {
+    done++;
+    final world = PastraAI._sampleWorld(s, seat, rng);
+    for (var i = 0; i < hand.length; i++) {
+      final w = world.copy();
+      final c = hand[i];
+      final pv = PastraEngine.applyMove(w, c);
+      var v = pv.isCapture
+          ? PastraAI._captureValue(s.rules, pv.captured) + PastraAI.cardWeight + s.rules.pointsOf(c) + pv.pastraPoints
+          : 0.0;
+      v += PastraAI._playout(w, team);
+      totals[i] += v;
+    }
+  }
+
+  /// The best card so far, the deals blended with the quick heuristic.
+  int best(AiLevel level) {
+    final unseen = PastraEngine.unseenFor(s, seat);
+    var best = hand.first;
+    var bestScore = double.negativeInfinity;
+    for (var i = 0; i < hand.length; i++) {
+      final score = totals[i] / done + level.blend * PastraAI.evaluate(s, seat, hand[i], level, unseen);
+      if (score > bestScore) {
+        bestScore = score;
+        best = hand[i];
+      }
+    }
+    return best;
   }
 }

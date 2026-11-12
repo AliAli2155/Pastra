@@ -64,8 +64,8 @@ class GameStats {
   }
 
   /// Indexed by [AiLevel.index].
-  List<int> gamesByLevel = <int>[0, 0, 0];
-  List<int> winsByLevel = <int>[0, 0, 0];
+  List<int> gamesByLevel = List<int>.filled(AiLevel.values.length, 0);
+  List<int> winsByLevel = List<int>.filled(AiLevel.values.length, 0);
 
   GameStats();
 
@@ -106,10 +106,17 @@ class GameStats {
 
   factory GameStats.fromJson(Map<String, dynamic> j) {
     int i(String k) => (j[k] as num?)?.toInt() ?? 0;
+    // Saved with fewer levels (before beginner, expert and master): the
+    // counts are kept and the new levels start at 0.
     List<int> l(String k) {
+      final out = List<int>.filled(AiLevel.values.length, 0);
       final v = j[k];
-      if (v is! List || v.length != 3) return <int>[0, 0, 0];
-      return v.map((e) => (e as num).toInt()).toList();
+      if (v is! List) return out;
+      for (var i = 0; i < v.length && i < out.length; i++) {
+        final e = v[i];
+        if (e is num) out[i] = e.toInt();
+      }
+      return out;
     }
 
     return GameStats()

@@ -45,7 +45,8 @@ class SeatInfo {
     if (players == 2) {
       return <SeatInfo>[const SeatInfo.human(), SeatInfo.bot(level, names[0])];
     }
-    final partnerLevel = level == AiLevel.easy ? AiLevel.medium : level;
+    // A partner who plays too badly spoils the game: at least medium.
+    final partnerLevel = level.atLeast(AiLevel.medium) ? level : AiLevel.medium;
     return <SeatInfo>[
       const SeatInfo.human(),
       SeatInfo.bot(level, names[0]),

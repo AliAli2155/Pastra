@@ -48,7 +48,7 @@ class StatsScreen extends StatelessWidget {
       _Tile(Icons.repeat, s.statRounds, '${st.rounds}'),
       _Tile(Icons.person_outline, s.stat1v1, ratio(st.wins1v1, st.games1v1)),
       _Tile(Icons.groups_outlined, s.stat2v2, ratio(st.wins2v2, st.games2v2)),
-      for (final level in AiLevel.values)
+      for (final level in AiLevel.ordered)
         _Tile(
           Icons.smart_toy_outlined,
           '${s.statByLevel}: ${s.level(level)}',

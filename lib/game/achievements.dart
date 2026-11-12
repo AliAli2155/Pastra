@@ -102,7 +102,7 @@ List<String> earnedAchievements(GameStats stats, {RoundFacts? round, GameFacts? 
     if (round.goodCards) ids.add('good_cards');
   }
   if (game != null && game.won) {
-    if (game.level == AiLevel.hard) ids.add('win_hard');
+    if (game.level.atLeast(AiLevel.hard)) ids.add('win_hard');
     if (game.players == 4) ids.add('win_2v2');
     if (game.maxDeficit >= 50) ids.add('comeback');
     if (game.rounds <= 5 && game.target >= 101) ids.add('quick_win');

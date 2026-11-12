@@ -346,7 +346,7 @@ class HostRoom implements OnlineLink {
         // At a table with an entry fee the bots play their best (nobody
         // collects the pot by beating easy bots).
         final botLevel = this.botLevel ??
-            (stake > 0 ? AiLevel.hard : ((i == 2 && level == AiLevel.easy) ? AiLevel.medium : level));
+            (stake > 0 ? AiLevel.hard : ((i == 2 && !level.atLeast(AiLevel.medium)) ? AiLevel.medium : level));
         final botIndex = seatBots[i] ?? botNames[i];
         seats.add(SeatInfo.bot(botLevel, botIndex));
         await OnlineService.ref('rooms/$code/seats/s$i').set(<String, Object?>{
@@ -580,7 +580,7 @@ class GuestRoom implements OnlineLink {
       final real = (i + mySeat) % n;
       final rs = real < info.seats.length ? info.seats[real] : const RoomSeat();
       if (rs.bot || rs.uid == null) {
-        final botLevel = (real == 2 && info.level == AiLevel.easy) ? AiLevel.medium : info.level;
+        final botLevel = (real == 2 && !info.level.atLeast(AiLevel.medium)) ? AiLevel.medium : info.level;
         seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
       } else {
         seats.add(SeatInfo.remote(rs.name));

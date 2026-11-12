@@ -906,19 +906,32 @@ class _NewGameSheetState extends State<NewGameSheet> {
             SizedBox(height: gap),
             Text(s.difficulty, style: PremiumText.label),
             const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                for (final l in AiLevel.values) ...<Widget>[
-                  if (l != AiLevel.values.first) const SizedBox(width: 10),
-                  Expanded(
-                    child: ChoicePill(
-                      label: s.level(l),
-                      selected: _level == l,
-                      onTap: () => setState(() => _level = l),
+            // Six levels from the easiest to the strongest, in two rows, and
+            // a line on how the chosen one plays.
+            for (var row = 0; row < 2; row++) ...<Widget>[
+              if (row > 0) const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  for (var i = 0; i < 3; i++) ...<Widget>[
+                    if (i > 0) const SizedBox(width: 10),
+                    Expanded(
+                      child: ChoicePill(
+                        label: s.level(AiLevel.ordered[row * 3 + i]),
+                        selected: _level == AiLevel.ordered[row * 3 + i],
+                        onTap: () => setState(() => _level = AiLevel.ordered[row * 3 + i]),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
+            ],
+            const SizedBox(height: 6),
+            Text(
+              s.levelInfo(_level),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: PremiumText.secondary,
             ),
             SizedBox(height: gap),
             // The rules of the game (target, cards per deal, …): changed here,

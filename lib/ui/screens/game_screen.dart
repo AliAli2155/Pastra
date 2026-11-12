@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../engine/cards.dart';
 import '../../engine/game_state.dart';
+import '../../engine/pastra_ai.dart';
 import '../../engine/pastra_engine.dart';
 import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
@@ -32,6 +33,7 @@ import '../widgets/name_prompt.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/quick_chat.dart';
 import '../widgets/round_summary.dart';
+import '../widgets/suit_icon.dart';
 import 'online_screen.dart';
 import 'rules_screen.dart';
 
@@ -205,6 +207,10 @@ class _GameScreenState extends State<GameScreen> {
   /// Hints: offline games except tournament matches.
   bool get _hintsAllowed => !c.isOnline && !c.tournament;
 
+  /// The card tracker helps against beginner bots (offline only).
+  bool get _trackerShown =>
+      !c.isOnline && !c.tournament && c.seats.any((seat) => seat.isBot && seat.level == AiLevel.beginner);
+
   void _tutorialNext() {
     final step = _tutorialStep;
     if (step == null) return;
@@ -366,6 +372,7 @@ class _GameScreenState extends State<GameScreen> {
                       onHint: _hintsAllowed && c.isHumanTurn ? _hint : null,
                       showHint: _hintsAllowed,
                       onChat: c.isOnline ? _openChat : null,
+                      tracker: _trackerShown ? _CardTracker(state: c.state, seat: GameController.humanSeat) : null,
                       onRules: () async {
                         c.pauseTurnTimer();
                         await Navigator.of(context).push(
@@ -1157,9 +1164,13 @@ class _TopBar extends StatelessWidget {
     this.onHint,
     this.showHint = false,
     this.onChat,
+    this.tracker,
   });
 
   final GameState state;
+
+  /// The card tracker (beginner level), left of the scoreboard.
+  final Widget? tracker;
   final List<String> teamNames;
   final VoidCallback onBack;
   final VoidCallback onRules;
@@ -1244,6 +1255,21 @@ class _TopBar extends StatelessWidget {
               child: GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.leave, onPressed: onBack, size: btn),
             ),
           ),
+          if (tracker != null)
+            // Between the back button and the scoreboard; smaller when the
+            // screen is narrow.
+            LayoutBuilder(
+              builder: (context, box) => Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 60),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: max(0.0, min(260.0, (box.maxWidth - 330) / 2 - 64))),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: tracker),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: sideRoom),
             // Its own layer: a score counting up does not repaint the rest.
@@ -1270,6 +1296,102 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Against beginner bots: how many aces and jacks the player has not seen
+/// yet (still in the other hands or the deck), and whether 2♣ and 10♦ are
+/// still to come. Cards that are out of play are dimmed and struck through.
+class _CardTracker extends StatelessWidget {
+  const _CardTracker({required this.state, required this.seat});
+
+  final GameState state;
+  final int seat;
+
+  @override
+  Widget build(BuildContext context) {
+    final unseen = PastraEngine.unseenFor(state, seat);
+    final aces = unseen.where((c) => Cards.rank(c) == Cards.ace).length;
+    final jacks = unseen.where((c) => Cards.rank(c) == Cards.jack).length;
+    final twoClubs = unseen.contains(Cards.twoOfClubs);
+    final tenDiamonds = unseen.contains(Cards.tenOfDiamonds);
+    return Tooltip(
+      message: Strings.of(context).trackerHint,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: glassDecoration(radius: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _TrackerCard(rank: 'A', count: aces),
+            const SizedBox(width: 8),
+            _TrackerCard(rank: 'J', count: jacks),
+            const SizedBox(width: 8),
+            _TrackerCard(rank: '2', suit: Cards.clubs, count: twoClubs ? 1 : 0, single: true),
+            const SizedBox(width: 8),
+            _TrackerCard(rank: '10', suit: Cards.diamonds, count: tenDiamonds ? 1 : 0, single: true),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A tiny card with a count beside it ([single]: just shown, or dimmed and
+/// struck through when it is gone).
+class _TrackerCard extends StatelessWidget {
+  const _TrackerCard({required this.rank, required this.count, this.suit, this.single = false});
+
+  final String rank;
+  final int? suit;
+  final int count;
+  final bool single;
+
+  @override
+  Widget build(BuildContext context) {
+    final gone = count == 0;
+    final red = suit == Cards.diamonds || suit == Cards.hearts;
+    final ink = red ? PastraColors.cardRed : PastraColors.cardBlack;
+    final card = Container(
+      width: rank.length > 1 ? 26 : 20,
+      height: 27,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: PastraColors.cream,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFFD8D0BE)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(rank, style: TextStyle(color: ink, fontSize: 11, height: 1, fontWeight: FontWeight.w800)),
+          if (suit != null) SuitIcon(suit: suit!, size: 8, color: ink),
+        ],
+      ),
+    );
+    return Opacity(
+      opacity: gone ? 0.35 : 1,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              card,
+              if (gone) Transform.rotate(angle: -0.6, child: Container(width: 30, height: 2, color: PastraColors.coral)),
+            ],
+          ),
+          if (!single) ...<Widget>[
+            const SizedBox(width: 3),
+            Text(
+              '×$count',
+              style: const TextStyle(color: PastraColors.goldLight, fontSize: 13, fontWeight: FontWeight.w800),
+            ),
+          ],
         ],
       ),
     );

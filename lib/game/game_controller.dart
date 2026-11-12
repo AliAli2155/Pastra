@@ -726,15 +726,20 @@ class GameController extends ChangeNotifier {
 
   Future<void> _runBot(int seat) async {
     final level = seats[seat].level;
-    await _wait(level == AiLevel.hard ? 450 : 700);
+    await _wait(level.searches ? 450 : 700);
     if (_disposed) return;
     final snapshot = _state.copy();
     final seed = _rng.nextInt(1 << 30);
     int card;
     try {
-      card = level == AiLevel.hard
-          ? await _chooseInBackground(snapshot, level, seed)
-          : PastraAI.chooseCard(snapshot, level, Random(seed));
+      if (!level.searches) {
+        card = PastraAI.chooseCard(snapshot, level, Random(seed));
+      } else if (kIsWeb) {
+        // No isolates on the web: the search runs in slices between frames.
+        card = await PastraAI.chooseCardSliced(snapshot, level, Random(seed));
+      } else {
+        card = await _chooseInBackground(snapshot, level, seed);
+      }
     } catch (_) {
       card = PastraAI.chooseCard(snapshot, level, Random(seed));
     }
@@ -743,9 +748,7 @@ class GameController extends ChangeNotifier {
     await _play(card);
   }
 
-  /// Runs the (slower) hard bot on a background isolate. `compute` also works
-  /// on the web, where it simply runs on the main thread (a hard move takes
-  /// only a few milliseconds).
+  /// Runs a searching bot (hard and stronger) on a background isolate.
   static Future<int> _chooseInBackground(GameState snapshot, AiLevel level, int seed) {
     return compute<_BotTask, int>(_runBotTask, _BotTask(snapshot, level, seed));
   }
