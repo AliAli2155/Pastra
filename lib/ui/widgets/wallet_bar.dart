@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
+import '../../game/sound.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
 import '../../online/online_service.dart';
@@ -270,6 +271,7 @@ class _DailyBonusCardState extends State<DailyBonusCard> {
             onPressed: () {
               final got = settings.claimDaily(OnlineService.rewardTime);
               if (got == null) return;
+              SoundFx.instance.play(Sfx.coins);
               setState(() => _claimed = got);
               widget.onClaimed?.call();
             },

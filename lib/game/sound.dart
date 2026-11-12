@@ -3,28 +3,33 @@ import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'sound_stub.dart' if (dart.library.js_interop) 'sound_web.dart' as web;
 
 /// Sound effects. Card sounds are real recordings from Kenney's "Casino
 /// Audio", the others from "Interface Sounds" and "Music Jingles" (all CC0,
-/// kenney.nl), trimmed by tool/make_sounds.py into assets/sounds.
+/// kenney.nl), trimmed by tool/make_sounds.py and tool/make_sounds_extra.py
+/// into assets/sounds.
 enum Sfx {
-  play(4),
-  deal(4),
-  capture(2),
-  shuffle(1),
-  pastra(1),
-  turn(1),
-  tick(1),
-  win(1),
-  lose(1);
+  play(<String>['play_1.mp3', 'play_2.mp3', 'play_3.mp3', 'play_4.mp3']),
+  deal(<String>['deal_1.mp3', 'deal_2.mp3', 'deal_3.mp3', 'deal_4.mp3', 'deal_5.wav', 'deal_6.wav']),
+  capture(<String>['capture_1.mp3', 'capture_2.mp3', 'capture_3.wav', 'capture_4.wav']),
+  shuffle(<String>['shuffle_1.mp3']),
+  pastra(<String>['pastra_1.mp3']),
+  jackPastra(<String>['jackpastra_1.m4a']),
+  turn(<String>['turn_1.mp3']),
+  tick(<String>['tick_1.mp3']),
+  win(<String>['win_1.mp3']),
+  lose(<String>['lose_1.mp3']),
+  levelUp(<String>['levelup_1.m4a']),
+  coins(<String>['coins_1.wav', 'coins_2.wav']);
 
-  const Sfx(this.variants);
+  const Sfx(this.files);
 
-  /// Number of recordings (`<name>_1.mp3` … `<name>_<n>.mp3`); one is picked
-  /// at random so repeated sounds do not feel mechanical.
-  final int variants;
+  /// The recordings in assets/sounds; one is picked at random so repeated
+  /// sounds do not feel mechanical.
+  final List<String> files;
 }
 
 /// Plays [Sfx] with as little delay as possible.
@@ -59,7 +64,7 @@ class SoundFx {
 
   static List<String> get _files => <String>[
         for (final sfx in Sfx.values)
-          for (var n = 1; n <= sfx.variants; n++) 'sounds/${sfx.name}_$n.mp3',
+          for (final f in sfx.files) 'sounds/$f',
       ];
 
   /// Loads every recording. Call once at start; safe to call again.
@@ -72,8 +77,8 @@ class SoundFx {
       return;
     }
     for (final sfx in Sfx.values) {
-      for (var n = 1; n <= sfx.variants; n++) {
-        final file = 'sounds/${sfx.name}_$n.mp3';
+      for (final f in sfx.files) {
+        final file = 'sounds/$f';
         final players = <AudioPlayer>[];
         for (var v = 0; v < _voices; v++) {
           try {
@@ -96,8 +101,8 @@ class SoundFx {
     try {
       // First sound before anything was loaded: start loading now.
       preload();
-      final n = sfx.variants > 1 ? _rng.nextInt(sfx.variants) + 1 : 1;
-      final file = 'sounds/${sfx.name}_$n.mp3';
+      final files = sfx.files;
+      final file = 'sounds/${files.length > 1 ? files[_rng.nextInt(files.length)] : files.first}';
       final v = (volume * master).clamp(0.0, 1.0).toDouble();
       if (_web) {
         web.webSoundPlay(file, v);
@@ -125,6 +130,73 @@ class SoundFx {
       // (Stop instead of seek: the low-latency mode cannot seek.)
       if (p.state == PlayerState.playing) await p.stop();
       await p.resume();
+    } catch (_) {}
+  }
+}
+
+/// The background music: one quiet loop (assets/sounds/music_1.m4a, made by
+/// tool/make_music.py), off unless the player turns it up in the settings.
+/// It pauses while the app is in the background.
+class Music {
+  Music._();
+
+  static final Music instance = Music._();
+
+  static const String file = 'sounds/music_1.m4a';
+
+  /// Music is a background: full volume on the slider is this loud.
+  static const double _scale = 0.45;
+
+  double _volume = 0;
+  bool _hidden = false;
+  AudioPlayer? _player;
+  AppLifecycleListener? _lifecycle;
+
+  /// The "Music" volume setting (0 = off).
+  double get volume => _volume;
+
+  set volume(double value) {
+    _volume = value.clamp(0.0, 1.0).toDouble();
+    _apply();
+  }
+
+  void _apply() {
+    final v = _hidden ? 0.0 : _volume * _scale;
+    try {
+      if (kIsWeb && web.webSoundAvailable()) {
+        web.webMusic(file, v);
+        return;
+      }
+      if (v <= 0) {
+        unawaited(_player?.pause().catchError((Object _) {}));
+        return;
+      }
+      _lifecycle ??= AppLifecycleListener(
+        onHide: () {
+          _hidden = true;
+          _apply();
+        },
+        onShow: () {
+          _hidden = false;
+          _apply();
+        },
+      );
+      unawaited(_start(v));
+    } catch (_) {
+      // No audio on this device / in tests.
+    }
+  }
+
+  Future<void> _start(double v) async {
+    try {
+      var p = _player;
+      if (p == null) {
+        p = _player = AudioPlayer();
+        await p.setReleaseMode(ReleaseMode.loop);
+        await p.setSource(AssetSource(file));
+      }
+      await p.setVolume(v);
+      if (p.state != PlayerState.playing) await p.resume();
     } catch (_) {}
   }
 }

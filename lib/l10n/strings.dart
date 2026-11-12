@@ -186,6 +186,7 @@ class Strings {
   String get fastAnimations => _s('fastAnimations');
   String get haptics => _s('haptics');
   String get sound => _s('sound');
+  String get music => _s('music');
   String get turnTime => _s('turnTime');
   String get turnTimeHint => _s('turnTimeHint');
   String get noLimit => _s('noLimit');

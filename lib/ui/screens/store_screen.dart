@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../engine/cards.dart';
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
+import '../../game/sound.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/shop_strings.dart';
 import '../../l10n/strings.dart';
@@ -378,7 +379,10 @@ class _FreeChipsPanelState extends State<_FreeChipsPanel> {
               fontSize: 17,
               onPressed: () {
                 final got = settings.claimFreeChips(OnlineService.rewardTime);
-                if (got > 0) setState(() => _got = got);
+                if (got > 0) {
+                  SoundFx.instance.play(Sfx.coins);
+                  setState(() => _got = got);
+                }
               },
             )
           else
@@ -734,6 +738,7 @@ class _BuyDialog extends StatelessWidget {
                         final messenger = ScaffoldMessenger.of(context);
                         Navigator.of(context).pop();
                         if (settings.buy(item)) {
+                          SoundFx.instance.play(Sfx.coins);
                           _use(settings, item);
                           messenger.showSnackBar(SnackBar(content: Text(shop.boughtUse)));
                         }

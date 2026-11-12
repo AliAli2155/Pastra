@@ -518,7 +518,7 @@ class GameController extends ChangeNotifier {
     if (result.isPastra) {
       final event = PastraEvent(++_eventCounter, seat, result.pastraPoints, jack: Cards.isJack(card));
       pastraEvent = event;
-      SoundFx.instance.play(Sfx.pastra);
+      SoundFx.instance.play(event.jack ? Sfx.jackPastra : Sfx.pastra);
       if (settings.haptics) Haptics.big();
       if (seat == humanSeat) {
         _roundPastras++;
@@ -1046,7 +1046,7 @@ class GameController extends ChangeNotifier {
           jack: moved is num && Cards.isJack(moved.toInt()),
         );
         pastraEvent = event;
-        SoundFx.instance.play(Sfx.pastra);
+        SoundFx.instance.play(event.jack ? Sfx.jackPastra : Sfx.pastra);
         if (settings.haptics) Haptics.big();
         _clearEventLater(event.id);
         // An online guest earns pastra XP like the host does.

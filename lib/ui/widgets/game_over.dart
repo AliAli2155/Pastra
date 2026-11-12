@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../engine/game_state.dart';
 import '../../game/app_settings.dart';
 import '../../game/progression.dart';
+import '../../game/sound.dart';
 import '../../l10n/strings.dart';
 import '../premium/premium.dart';
 import '../theme.dart';
@@ -53,16 +54,33 @@ class _GameOverViewState extends State<GameOverView> {
 
   bool _sheet = false;
   Timer? _timer;
+  final List<Timer> _sounds = <Timer>[];
 
   @override
   void initState() {
     super.initState();
     _timer = Timer(showSheetAfter, _showSheet);
+    // In time with the XP bar: the new level when it fills over the top,
+    // then the chips that were won.
+    final gain = widget.xpGain;
+    if (gain != null) {
+      if (gain.leveledUp) {
+        _sounds.add(Timer(const Duration(milliseconds: 1250), () => SoundFx.instance.play(Sfx.levelUp)));
+      }
+      if (gain.chips > 0) {
+        _sounds.add(
+          Timer(Duration(milliseconds: gain.leveledUp ? 2300 : 1700), () => SoundFx.instance.play(Sfx.coins, volume: 0.8)),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    for (final t in _sounds) {
+      t.cancel();
+    }
     super.dispose();
   }
 

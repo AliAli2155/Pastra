@@ -5,3 +5,5 @@ bool webSoundAvailable() => false;
 void webSoundLoad(List<String> files) {}
 
 void webSoundPlay(String file, double volume) {}
+
+void webMusic(String file, double volume) {}

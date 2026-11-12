@@ -306,6 +306,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => settings.volume = v,
                 onChangeEnd: (_) => SoundFx.instance.play(Sfx.play),
               ),
+              SettingRow(
+                icon: settings.music == 0 ? Icons.music_off_rounded : Icons.music_note_rounded,
+                label: s.music,
+                trailing: Text('${(settings.music * 100).round()}%', style: PremiumText.label),
+              ),
+              Slider(
+                value: settings.music,
+                divisions: 20,
+                onChanged: (v) => settings.music = v,
+              ),
             ],
           ),
         ),

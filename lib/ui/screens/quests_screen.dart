@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../game/app_settings.dart';
 import '../../game/economy.dart';
 import '../../game/quests.dart';
+import '../../game/sound.dart';
 import '../../l10n/progress_strings.dart';
 import '../../l10n/strings.dart';
 import '../theme.dart';
@@ -71,13 +72,19 @@ class _QuestsScreenState extends State<QuestsScreen> {
     final settings = SettingsScope.read(context);
     final before = settings.playerLevel;
     final xp = settings.claimQuest(q.def.id);
-    if (xp != null) _afterClaim(xp, before);
+    if (xp != null) {
+      SoundFx.instance.play(Sfx.coins);
+      _afterClaim(xp, before);
+    }
   }
 
   void _claimChest() {
     final settings = SettingsScope.read(context);
     final before = settings.playerLevel;
-    if (settings.claimQuestBonus()) _afterClaim(Quests.allBonusXp, before);
+    if (settings.claimQuestBonus()) {
+      SoundFx.instance.play(Sfx.levelUp);
+      _afterClaim(Quests.allBonusXp, before);
+    }
   }
 
   @override

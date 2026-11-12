@@ -280,27 +280,77 @@
         window.addEventListener(name, wake, { capture: true, passive: true });
       });
       document.addEventListener('visibilitychange', function () {
-        if (!document.hidden && ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} }
+        if (!ctx) return;
+        // The music stops while the page is hidden (another tab, the phone locked).
+        if (document.hidden) { if (music.src) { try { ctx.suspend(); } catch (e) {} } return; }
+        if (ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} }
       });
       function load(file) {
         var c = context();
-        if (!c || buffers[file] || loading[file]) return;
+        if (!c) return Promise.reject();
+        if (buffers[file]) return Promise.resolve(buffers[file]);
+        if (loading[file]) return loading[file];
         loading[file] = fetch('assets/assets/' + file)
           .then(function (r) { return r.arrayBuffer(); })
           .then(function (data) {
             return new Promise(function (ok, fail) { c.decodeAudioData(data, ok, fail); });
           })
-          .then(function (buffer) { buffers[file] = buffer; })
-          .catch(function () { delete loading[file]; });
+          .then(function (buffer) { buffers[file] = buffer; return buffer; })
+          .catch(function (e) { delete loading[file]; throw e; });
+        return loading[file];
+      }
+      // The background music: one looping buffer behind its own gain.
+      var music = { file: null, volume: 0, src: null, gain: null };
+      function musicStop() {
+        var c = ctx, src = music.src, gain = music.gain;
+        music.src = null; music.gain = null;
+        if (!src) return;
+        try {
+          gain.gain.setTargetAtTime(0, c.currentTime, 0.15);
+          src.stop(c.currentTime + 0.8);
+        } catch (e) {}
+      }
+      function musicStart() {
+        var c = context();
+        if (!c || music.src || music.volume <= 0 || !music.file) return;
+        var file = music.file;
+        load(file).then(function (buffer) {
+          if (music.src || music.volume <= 0 || music.file !== file) return;
+          try {
+            var src = c.createBufferSource();
+            var gain = c.createGain();
+            src.buffer = buffer;
+            src.loop = true;
+            gain.gain.value = 0;
+            gain.gain.setTargetAtTime(music.volume, c.currentTime, 0.6);
+            src.connect(gain);
+            gain.connect(c.destination);
+            src.start(0);
+            music.src = src; music.gain = gain;
+          } catch (e) {}
+        }).catch(function () {});
       }
       return {
-        load: function (files) { files.split(',').forEach(load); },
+        load: function (files) {
+          files.split(',').forEach(function (f) { load(f).catch(function () {}); });
+        },
+        music: function (file, volume) {
+          if (file !== music.file) musicStop();
+          music.file = file;
+          music.volume = volume;
+          if (volume <= 0) { musicStop(); return; }
+          if (music.gain) {
+            try { music.gain.gain.setTargetAtTime(volume, ctx.currentTime, 0.1); } catch (e) {}
+          } else {
+            musicStart();
+          }
+        },
         play: function (file, volume) {
           var c = context();
           if (!c) return;
           if (c.state !== 'running') { try { c.resume(); } catch (e) {} }
           var buffer = buffers[file];
-          if (!buffer) { load(file); return; }
+          if (!buffer) { load(file).catch(function () {}); return; }
           try {
             var src = c.createBufferSource();
             var gain = c.createGain();

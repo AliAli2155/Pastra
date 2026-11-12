@@ -170,6 +170,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kStats = 'stats';
   static const String _kSound = 'sound';
   static const String _kVolume = 'volume';
+  static const String _kMusic = 'music';
   static const String _kTable = 'tableTheme';
   static const String _kBack = 'cardBack';
   static const String _kTutorial = 'tutorialDone';
@@ -224,6 +225,7 @@ class AppSettings extends ChangeNotifier {
   FxMode _fxMode = FxMode.auto;
   int _turnSeconds = defaultTurnSeconds;
   double _volume = 1.0;
+  double _music = 0;
   bool _tutorialDone = false;
   int _xp = 0;
   bool _showOnLeaderboard = true;
@@ -292,6 +294,8 @@ class AppSettings extends ChangeNotifier {
       }
     }
     SoundFx.instance.master = _volume;
+    _music = (_prefs.getDouble(_kMusic) ?? 0).clamp(0.0, 1.0).toDouble();
+    Music.instance.volume = _music;
     final statsJson = _prefs.getString(_kStats);
     if (statsJson != null) {
       try {
@@ -335,6 +339,9 @@ class AppSettings extends ChangeNotifier {
   double get volume => _volume;
 
   bool get sound => _volume > 0;
+
+  /// Background music volume (0 = off, the default).
+  double get music => _music;
   bool get tutorialDone => _tutorialDone;
   TableTheme get tableTheme => Look.table;
   CardBackStyle get cardBack => Look.back;
@@ -618,6 +625,13 @@ class AppSettings extends ChangeNotifier {
     _volume = value.clamp(0.0, 1.0).toDouble();
     SoundFx.instance.master = _volume;
     _prefs.setDouble(_kVolume, _volume);
+    notifyListeners();
+  }
+
+  set music(double value) {
+    _music = value.clamp(0.0, 1.0).toDouble();
+    Music.instance.volume = _music;
+    _prefs.setDouble(_kMusic, _music);
     notifyListeners();
   }
 
