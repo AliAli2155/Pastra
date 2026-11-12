@@ -8,6 +8,10 @@ abstract class OnlineLink {
   /// Host: is the player on [seat] still connected?
   bool isRemoteOnline(int seat);
 
+  /// Host: these seats are now played by a bot (their player is gone);
+  /// the guests show it.
+  void reportStandIns(Set<int> seats);
+
   /// Chips each player pays to play at this table (0 = free).
   int get stake;
 

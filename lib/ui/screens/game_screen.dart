@@ -331,8 +331,9 @@ class _GameScreenState extends State<GameScreen> {
             child: PlayerAvatar(name: name, pic: pic, size: size - 4),
           )
         : PlayerAvatar(name: name, pic: pic, frame: frame, size: size);
-    // Online a small robot marks the bots among the people.
-    if (info.isBot && c.isOnline) {
+    // Online a small robot marks the bots among the people, and the seats
+    // of people who are gone (a bot plays for them until they are back).
+    if ((info.isBot && c.isOnline) || c.standIns.contains(seat)) {
       avatar = Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -370,7 +371,9 @@ class _GameScreenState extends State<GameScreen> {
         title: Text(s.leaveTitle),
         content: Text(
           c.isOnline
-              ? OnlineStrings(c.settings.language).leaveOnline
+              ? (c.isGuest
+                  ? OnlineStrings(c.settings.language).leaveGuest(c.link!.code)
+                  : OnlineStrings(c.settings.language).leaveOnline)
               : (c.tournament ? s.leaveMatchBody : s.leaveBody),
         ),
         actions: <Widget>[
@@ -1213,7 +1216,9 @@ class _GameScreenState extends State<GameScreen> {
         sub = _dragCard == null ? s.tapAgain : (_overTable ? s.dropToPlay : s.dragHint);
       }
     } else if (c.botThinking) {
-      main = '${_seatName(s, state.current)} ${s.thinking}';
+      main = c.standIns.contains(state.current)
+          ? OnlineStrings(c.settings.language).standIn(_seatName(s, state.current))
+          : '${_seatName(s, state.current)} ${s.thinking}';
     }
     if (main == null) return const SizedBox.shrink();
     return Center(

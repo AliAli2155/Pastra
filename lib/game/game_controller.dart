@@ -292,11 +292,18 @@ class GameController extends ChangeNotifier {
 
   /// Online host: seat whose move we are waiting for.
   int? _awaitingRemote;
-  Timer? _offlineTimer;
-
   /// Host: seats whose player lost the connection (shown on the name plate).
   final Set<int> offlineSeats = <int>{};
-  int _offlineTicks = 0;
+
+  /// Online: seats of people who are gone (lost the connection or left the
+  /// game) and are played by a bot until they come back. The host decides;
+  /// guests learn it from the room ([setStandIns]).
+  final Set<int> standIns = <int>{};
+
+  /// Seconds offline before a bot takes over the seat.
+  static const int standInAfter = 4;
+  final Map<int, int> _offlineSecs = <int, int>{};
+  Timer? _presenceTimer;
   Timer? _autoNextTimer;
   final Map<int, int> _queuedMoves = <int, int>{};
 
@@ -329,7 +336,7 @@ class GameController extends ChangeNotifier {
       pending == null &&
       tableShown == null &&
       _state.phase == GamePhase.playing &&
-      seats[_state.current].isBot;
+      (seats[_state.current].isBot || standIns.contains(_state.current));
 
   MovePreview? get selectedPreview {
     final c = selected;
@@ -846,33 +853,61 @@ class GameController extends ChangeNotifier {
       submitRemoteMove(seat, queued);
       return;
     }
-    _offlineTicks = 0;
-    _offlineTimer?.cancel();
-    _offlineTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_disposed || _awaitingRemote != seat) return;
-      final online = link?.isRemoteOnline(seat) ?? true;
-      if (online == offlineSeats.contains(seat)) {
-        if (online) {
-          offlineSeats.remove(seat);
-        } else {
-          offlineSeats.add(seat);
-        }
-        _notify();
-      }
-      if (online) {
-        _offlineTicks = 0;
-        return;
-      }
-      // Disconnected: after a few seconds a bot plays for that player.
-      if (++_offlineTicks >= 4) _remoteFallback(seat);
-    });
+    _watchPresence();
+    // Gone: the bot standing in plays at once.
+    if (standIns.contains(seat)) {
+      _remoteFallback(seat);
+      return;
+    }
     _notify();
   }
 
   void _stopWaiting() {
     _awaitingRemote = null;
-    _offlineTimer?.cancel();
-    _offlineTimer = null;
+  }
+
+  /// Host: once a second, who of the people at the table is connected. A
+  /// player offline for [standInAfter] seconds gets a bot in their seat
+  /// until they are back; then the seat is theirs again.
+  void _watchPresence() {
+    if (!isHostOfLink || _presenceTimer != null || _disposed) return;
+    _presenceTimer = Timer.periodic(const Duration(seconds: 1), (_) => checkPresence());
+  }
+
+  /// One presence check (public for tests).
+  @visibleForTesting
+  void checkPresence() {
+    if (_disposed || !isHostOfLink) return;
+    var changed = false;
+    var standInsChanged = false;
+    for (var seat = 1; seat < seats.length; seat++) {
+      if (!seats[seat].isRemote) continue;
+      final online = link?.isRemoteOnline(seat) ?? true;
+      if (online) {
+        _offlineSecs.remove(seat);
+        if (offlineSeats.remove(seat)) changed = true;
+        if (standIns.remove(seat)) standInsChanged = true;
+      } else {
+        if (offlineSeats.add(seat)) changed = true;
+        final secs = (_offlineSecs[seat] ?? 0) + 1;
+        _offlineSecs[seat] = secs;
+        if (secs >= standInAfter && standIns.add(seat)) standInsChanged = true;
+      }
+    }
+    if (standInsChanged) link?.reportStandIns(standIns);
+    if (changed || standInsChanged) _notify();
+    final waiting = _awaitingRemote;
+    if (waiting != null && standIns.contains(waiting)) _remoteFallback(waiting);
+  }
+
+  /// Guest: the seats the host's bots are playing for (our numbering).
+  void setStandIns(Iterable<int> seatsNow) {
+    final next = seatsNow.toSet();
+    if (next.length == standIns.length && next.containsAll(standIns)) return;
+    standIns
+      ..clear()
+      ..addAll(next);
+    _notify();
   }
 
   /// Time ran out or the player is offline: a bot picks the card.
@@ -1128,6 +1163,8 @@ class GameController extends ChangeNotifier {
   /// does the same for itself). The view is rotated: our team is team 0.
   void _recordGuestGame() {
     if (!isGuest || xpGain != null) return;
+    // Over: nothing to come back to.
+    settings.rememberRoom(null);
     final won = _state.winner == 0;
     settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium, online: true, pastras: _gamePastras);
     settings.addMatch(_matchRecord(won));
@@ -1152,7 +1189,7 @@ class GameController extends ChangeNotifier {
     _disposed = true;
     _turnTimer?.cancel();
     _warnTimer?.cancel();
-    _offlineTimer?.cancel();
+    _presenceTimer?.cancel();
     _autoNextTimer?.cancel();
     _sentTimer?.cancel();
     link?.close();

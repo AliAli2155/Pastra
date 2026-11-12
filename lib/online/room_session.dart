@@ -67,6 +67,9 @@ class RoomInfo {
   final int turnSeconds;
   final List<RoomSeat> seats;
 
+  /// Seats (host numbering) whose player is gone and played by a bot.
+  final List<int> standIns;
+
   const RoomInfo({
     this.exists = false,
     this.hostUid = '',
@@ -76,6 +79,7 @@ class RoomInfo {
     this.level = AiLevel.medium,
     this.turnSeconds = 0,
     this.seats = const <RoomSeat>[],
+    this.standIns = const <int>[],
   });
 
   int get joined => seats.where((s) => s.uid != null).length;
@@ -134,6 +138,11 @@ class RoomWatcher extends ChangeNotifier {
         hostOnline: m['hostOnline'] != false,
         level: AiLevel.values.firstWhere((l) => l.name == levelName, orElse: () => AiLevel.medium),
         turnSeconds: (m['turn'] as num?)?.toInt() ?? 0,
+        standIns: <int>[
+          if (m['bots'] is List)
+            for (final x in m['bots'] as List)
+              if (x is num) x.toInt(),
+        ],
         seats: seats,
       );
     }
@@ -441,6 +450,12 @@ class HostRoom implements OnlineLink {
   void sendMove(int card) {}
 
   @override
+  void reportStandIns(Set<int> seats) {
+    final ref = OnlineService.ref('rooms/$code/meta/bots');
+    (seats.isEmpty ? ref.remove() : ref.set((seats.toList()..sort()))).catchError((Object _) {});
+  }
+
+  @override
   bool isRemoteOnline(int seat) {
     final seats = watcher.info.seats;
     return seat < seats.length ? seats[seat].online : false;
@@ -510,6 +525,22 @@ class GuestRoom implements OnlineLink {
   int get players => watcher.info.exists ? watcher.info.players : social.players;
 
   /// Joins the room; [seat] takes exactly that seat (tournament matches).
+  /// The room of the player's online game if it is still going on and their
+  /// seat is still theirs (a bot is playing it meanwhile); otherwise null.
+  static Future<String?> stillSeated(AppSettings settings) async {
+    final code = settings.lastRoom;
+    if (code == null) return null;
+    try {
+      final meta = _map((await OnlineService.ref('rooms/$code/meta').once().timeout(const Duration(seconds: 8))).snapshot.value);
+      final seats = _map((await OnlineService.ref('rooms/$code/seats').once().timeout(const Duration(seconds: 8))).snapshot.value);
+      final uid = OnlineService.uid;
+      final mine = seats != null && seats.values.any((s) => _map(s)?['uid'] == uid);
+      if (meta != null && meta['status'] == 'playing' && meta['hostOnline'] != false && mine) return code;
+      settings.rememberRoom(null);
+    } catch (_) {}
+    return null;
+  }
+
   static Future<GuestRoom> join(String code, AppSettings settings, String name, {int? seat}) async {
     final uid = OnlineService.uid;
     final DataSnapshot metaSnap;
@@ -564,6 +595,13 @@ class GuestRoom implements OnlineLink {
       _hostGoneTimer?.cancel();
       _hostGoneTimer = null;
     }
+    _showStandIns();
+  }
+
+  /// The seats the host's bots play for, in our numbering.
+  void _showStandIns() {
+    final info = watcher.info;
+    controller.value?.setStandIns(<int>[for (final real in info.standIns) rotateSeat(real, mySeat, info.players)]);
   }
 
   void _hostClosed() {
@@ -589,6 +627,7 @@ class GuestRoom implements OnlineLink {
     if (c == null) {
       c = _buildController(state);
       controller.value = c;
+      _showStandIns();
     }
     c.applyHostView(state, _translate(m['e']));
   }
@@ -607,6 +646,8 @@ class GuestRoom implements OnlineLink {
         seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame));
       }
     }
+    // Leaving now and coming back later takes the seat back from the bot.
+    settings.rememberRoom(code);
     return GameController(
       settings: settings,
       seats: seats,
@@ -652,6 +693,9 @@ class GuestRoom implements OnlineLink {
 
   @override
   bool isRemoteOnline(int seat) => true;
+
+  @override
+  void reportStandIns(Set<int> seats) {}
 
   /// Leaves the room (from the lobby the seat is given back).
   @override

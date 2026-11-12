@@ -52,6 +52,15 @@ class _OnlineScreenState extends State<OnlineScreen> {
   bool _public = true;
   String? _error;
 
+  /// The room of an online game this player left while it goes on (a bot
+  /// plays their seat): the big card offers to go back to it.
+  String? _rejoinCode;
+
+  Future<void> _refreshRejoin() async {
+    final code = await GuestRoom.stillSeated(SettingsScope.read(context));
+    if (mounted && code != _rejoinCode) setState(() => _rejoinCode = code);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,7 +76,11 @@ class _OnlineScreenState extends State<OnlineScreen> {
       _configured = problem == null;
     });
     // The player's code ("Player #1270") and online status for friends.
-    if (problem == null) SocialService.instance.start(SettingsScope.read(context));
+    if (problem == null) {
+      SocialService.instance.start(SettingsScope.read(context));
+      await _refreshRejoin();
+      if (!mounted) return;
+    }
     final code = widget.joinCode;
     if (problem == null && code != null) {
       _code.text = code;
@@ -187,6 +200,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => LobbyScreen(guest: room)),
       );
+      if (mounted) unawaited(_refreshRejoin());
     } on OnlineException catch (e) {
       if (mounted) setState(() => _error = _errText(settings, e.code));
     } catch (_) {
@@ -376,7 +390,39 @@ class _OnlineScreenState extends State<OnlineScreen> {
   /// the salon to play in, when chips are on).
   Widget _hero(OnlineStrings t, AppSettings settings, {required bool fill}) {
     final r = BorderRadius.circular(22);
-    final content = Padding(
+    final rejoin = _rejoinCode;
+    final content = rejoin != null
+        ? Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(t.online, style: PremiumText.eyebrow),
+                const SizedBox(height: 6),
+                // One line in every language (the card has a fixed height).
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(t.rejoinTitle, style: PremiumText.title.copyWith(fontSize: 30)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t.rejoinHint(rejoin),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                if (fill) const Spacer() else const SizedBox(height: 18),
+                GoldButton(
+                  label: t.rejoin,
+                  icon: Icons.login_rounded,
+                  onPressed: _busy ? null : () => _joinCode(rejoin),
+                ),
+              ],
+            ),
+          )
+        : Padding(
       padding: const EdgeInsets.all(22),
       child: Column(
         mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,

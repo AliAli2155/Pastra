@@ -208,6 +208,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kSeasonBadges = 'seasonBadges';
   static const String _kFriends = 'friends';
   static const String _kHistory = 'matchHistory';
+  static const String _kLastRoom = 'lastRoom';
   static const String _kTag = 'playerTag';
   static const String _kHandleKey = 'handleKey';
 
@@ -657,6 +658,28 @@ class AppSettings extends ChangeNotifier {
     _prefs.remove(_kAchievements);
     _prefs.remove(_kHistory);
     notifyListeners();
+  }
+
+  // ---- online: the room of a game still going on
+
+  /// The code of the online room whose game this player (a guest) was
+  /// playing, for "back to the table"; null after 3 hours or when it ended.
+  String? get lastRoom {
+    final raw = _prefs.getString(_kLastRoom);
+    if (raw == null) return null;
+    final parts = raw.split('|');
+    final t = parts.length == 2 ? int.tryParse(parts[1]) : null;
+    if (t == null || DateTime.now().millisecondsSinceEpoch - t > const Duration(hours: 3).inMilliseconds) return null;
+    return parts[0];
+  }
+
+  /// Remembers (or with null forgets) the room of the running online game.
+  void rememberRoom(String? code) {
+    if (code == null) {
+      _prefs.remove(_kLastRoom);
+    } else {
+      _prefs.setString(_kLastRoom, '$code|${DateTime.now().millisecondsSinceEpoch}');
+    }
   }
 
   // ---- match history
