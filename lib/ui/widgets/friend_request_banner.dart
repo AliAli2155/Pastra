@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../l10n/social_strings.dart';
 import '../../online/social_service.dart';
 import '../theme.dart';
@@ -56,7 +57,12 @@ class _FriendRequestBannerState extends State<FriendRequestBanner> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        PlayerAvatar(name: r.name, size: 42),
+                        PlayerAvatar(
+                          name: r.name,
+                          size: 42,
+                          pic: AvatarPic.byName(r.pic),
+                          frame: avatarFrameByName(r.frame),
+                        ),
                         const SizedBox(width: 10),
                         Flexible(
                           child: Column(

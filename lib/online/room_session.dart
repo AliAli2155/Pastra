@@ -34,10 +34,27 @@ class RoomSeat {
   /// Bot seats: index of the bot's name (the same on every screen), -1 = unknown.
   final int botIndex;
 
-  const RoomSeat({this.uid, this.name = '', this.bot = false, this.online = false, this.botIndex = -1});
+  /// The player's avatar picture and frame names (empty when unknown).
+  final String pic;
+  final String frame;
+
+  const RoomSeat({
+    this.uid,
+    this.name = '',
+    this.bot = false,
+    this.online = false,
+    this.botIndex = -1,
+    this.pic = '',
+    this.frame = '',
+  });
 
   bool get taken => uid != null || bot;
 }
+
+/// The player's avatar picture and frame, written into their seat so that
+/// the others see it at the table.
+Map<String, Object?> _avatar(AppSettings settings) =>
+    <String, Object?>{'pic': settings.avatarPic.name, 'frame': settings.avatarFrame.name};
 
 /// Room data everybody may read: settings and who sits where.
 class RoomInfo {
@@ -104,6 +121,8 @@ class RoomWatcher extends ChangeNotifier {
                   bot: s['bot'] == true,
                   online: s['online'] == true,
                   botIndex: (s['botIndex'] as num?)?.toInt() ?? -1,
+                  pic: s['pic'] is String ? s['pic'] as String : '',
+                  frame: s['frame'] is String ? s['frame'] as String : '',
                 ),
         );
       }
@@ -243,6 +262,7 @@ class HostRoom implements OnlineLink {
       'uid': uid,
       'name': name,
       'online': true,
+      ..._avatar(settings),
     });
     final presence = OnlineService.keepOnline(<String>[
       'rooms/$code/meta/hostOnline',
@@ -288,6 +308,7 @@ class HostRoom implements OnlineLink {
         'uid': uid,
         'name': name,
         'online': true,
+        ..._avatar(settings),
       });
       final presence = OnlineService.keepOnline(<String>[
         'rooms/$code/meta/hostOnline',
@@ -341,7 +362,7 @@ class HostRoom implements OnlineLink {
     for (var i = 1; i < players; i++) {
       final rs = i < info.seats.length ? info.seats[i] : const RoomSeat();
       if (rs.uid != null) {
-        seats.add(SeatInfo.remote(rs.name));
+        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame));
       } else {
         // At a table with an entry fee the bots play their best (nobody
         // collects the pot by beating easy bots).
@@ -520,7 +541,7 @@ class GuestRoom implements OnlineLink {
       for (var i = seat ?? 1; i < (seat == null ? players : seat + 1) && mine == null; i++) {
         final tx = await OnlineService.ref('rooms/$code/seats/s$i').runTransaction((value) {
           if (value != null) return Transaction.abort();
-          return Transaction.success(<String, Object?>{'uid': uid, 'name': name, 'online': true});
+          return Transaction.success(<String, Object?>{'uid': uid, 'name': name, 'online': true, ..._avatar(settings)});
         });
         if (tx.committed) mine = i;
       }
@@ -583,7 +604,7 @@ class GuestRoom implements OnlineLink {
         final botLevel = (real == 2 && !info.level.atLeast(AiLevel.medium)) ? AiLevel.medium : info.level;
         seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
       } else {
-        seats.add(SeatInfo.remote(rs.name));
+        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame));
       }
     }
     return GameController(

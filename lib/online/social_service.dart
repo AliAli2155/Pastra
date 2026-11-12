@@ -12,7 +12,15 @@ import 'online_service.dart';
 
 /// A player found by their code, or a friend's live status.
 class PlayerStatus {
-  const PlayerStatus({required this.uid, required this.name, required this.tag, this.online = false, this.seen = 0});
+  const PlayerStatus({
+    required this.uid,
+    required this.name,
+    required this.tag,
+    this.online = false,
+    this.seen = 0,
+    this.pic = '',
+    this.frame = '',
+  });
 
   final String uid;
   final String name;
@@ -21,10 +29,14 @@ class PlayerStatus {
 
   /// Server time (ms) the player was last connected.
   final int seen;
+
+  /// Avatar picture and frame names (empty when not published).
+  final String pic;
+  final String frame;
 }
 
 /// The player's own code ("Player #1270") and presence, and finding / watching
-/// other players. Data: `users/<uid>` (name, tag, online, seen) and
+/// other players. Data: `users/<uid>` (name, tag, online, seen, frame, pic) and
 /// `handles/<name~tag>` → uid (so that name + code finds the player).
 class SocialService {
   SocialService._();
@@ -46,6 +58,7 @@ class SocialService {
   Timer? _debounce;
   String _syncedName = '';
   String _syncedFrame = '';
+  String _syncedPic = '';
   final Random _rng = Random.secure();
 
   bool get started => _started;
@@ -198,10 +211,12 @@ class SocialService {
       'name': name,
       'tag': tag,
       'frame': s.avatarFrame.name,
+      'pic': s.avatarPic.name,
       'lvl': s.playerLevel,
     });
     _syncedName = name;
     _syncedFrame = s.avatarFrame.name;
+    _syncedPic = s.avatarPic.name;
     return true;
   }
 
@@ -209,7 +224,7 @@ class SocialService {
   void _onSettings() {
     final s = _settings;
     if (s == null) return;
-    if (_nameOf(s) == _syncedName && s.avatarFrame.name == _syncedFrame) return;
+    if (_nameOf(s) == _syncedName && s.avatarFrame.name == _syncedFrame && s.avatarPic.name == _syncedPic) return;
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 1500), () {
       _sync().catchError((Object _) => false);
@@ -241,6 +256,8 @@ class SocialService {
       tag: '${v['tag'] ?? ''}',
       online: v['online'] == true,
       seen: (v['seen'] as num?)?.toInt() ?? 0,
+      pic: v['pic'] is String ? v['pic'] as String : '',
+      frame: v['frame'] is String ? v['frame'] as String : '',
     );
   }
 }

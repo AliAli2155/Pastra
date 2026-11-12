@@ -16,19 +16,36 @@ class SeatInfo {
   /// Display name of an online player (null: use the usual naming).
   final String? name;
 
-  const SeatInfo({required this.kind, this.level = AiLevel.medium, this.botIndex = -1, this.name});
+  /// An online player's avatar picture and frame (`AvatarPic` /
+  /// `AvatarFrame` names, empty when unknown). Bots and the local player get
+  /// theirs on the screen.
+  final String pic;
+  final String frame;
+
+  const SeatInfo({
+    required this.kind,
+    this.level = AiLevel.medium,
+    this.botIndex = -1,
+    this.name,
+    this.pic = '',
+    this.frame = '',
+  });
 
   const SeatInfo.human()
       : kind = SeatKind.human,
         level = AiLevel.medium,
         botIndex = -1,
-        name = null;
+        name = null,
+        pic = '',
+        frame = '';
 
   const SeatInfo.bot(this.level, this.botIndex)
       : kind = SeatKind.bot,
-        name = null;
+        name = null,
+        pic = '',
+        frame = '';
 
-  const SeatInfo.remote(this.name)
+  const SeatInfo.remote(this.name, {this.pic = '', this.frame = ''})
       : kind = SeatKind.remote,
         level = AiLevel.medium,
         botIndex = -1;

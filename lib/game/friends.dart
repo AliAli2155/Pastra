@@ -8,6 +8,8 @@ class Friend {
     this.favorite = false,
     this.games = 1,
     this.tag = '',
+    this.pic = '',
+    this.frame = '',
   });
 
   final String uid;
@@ -21,20 +23,36 @@ class Friend {
   final bool favorite;
   final int games;
 
-  Friend copyWith({String? name, int? lastPlayed, bool? favorite, int? games, String? tag}) => Friend(
+  /// Their avatar picture and frame (`AvatarPic` / `AvatarFrame` names; empty
+  /// when unknown), so the list shows them also without a connection.
+  final String pic;
+  final String frame;
+
+  Friend copyWith({String? name, int? lastPlayed, bool? favorite, int? games, String? tag, String? pic, String? frame}) =>
+      Friend(
         uid: uid,
         name: name ?? this.name,
         lastPlayed: lastPlayed ?? this.lastPlayed,
         favorite: favorite ?? this.favorite,
         games: games ?? this.games,
         tag: tag ?? this.tag,
+        pic: pic ?? this.pic,
+        frame: frame ?? this.frame,
       );
 
   /// "Player #1270" (or just the name when the code is not known).
   String get handle => tag.isEmpty ? name : '$name #$tag';
 
-  Map<String, Object> toJson() =>
-      <String, Object>{'u': uid, 'n': name, 't': lastPlayed, 'f': favorite, 'g': games, 'c': tag};
+  Map<String, Object> toJson() => <String, Object>{
+        'u': uid,
+        'n': name,
+        't': lastPlayed,
+        'f': favorite,
+        'g': games,
+        'c': tag,
+        if (pic.isNotEmpty) 'p': pic,
+        if (frame.isNotEmpty) 'r': frame,
+      };
 
   static Friend? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -49,6 +67,8 @@ class Friend {
       favorite: j['f'] == true,
       games: (j['g'] as num?)?.toInt() ?? 1,
       tag: j['c'] is String ? j['c'] as String : '',
+      pic: j['p'] is String ? j['p'] as String : '',
+      frame: j['r'] is String ? j['r'] as String : '',
     );
   }
 

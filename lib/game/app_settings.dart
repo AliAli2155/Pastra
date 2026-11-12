@@ -879,11 +879,13 @@ class AppSettings extends ChangeNotifier {
   }
 
   /// A friend's current name and code (read from the database).
-  void updateFriendInfo(String uid, {required String name, required String tag}) {
+  void updateFriendInfo(String uid, {required String name, required String tag, String pic = '', String frame = ''}) {
     final list = friends;
     final i = list.indexWhere((f) => f.uid == uid);
-    if (i < 0 || (list[i].name == name && list[i].tag == tag) || name.isEmpty) return;
-    list[i] = list[i].copyWith(name: name, tag: tag);
+    if (i < 0 || name.isEmpty) return;
+    final f = list[i];
+    if (f.name == name && f.tag == tag && f.pic == pic && f.frame == frame) return;
+    list[i] = f.copyWith(name: name, tag: tag, pic: pic, frame: frame);
     _saveFriends(list);
   }
 

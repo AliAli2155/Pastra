@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../game/economy.dart';
 import '../../game/friends.dart';
 import '../../l10n/online_strings.dart';
@@ -63,7 +64,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
         (st) {
           if (st == null || !mounted) return;
           setState(() => _status[uid] = st);
-          settings.updateFriendInfo(uid, name: st.name, tag: st.tag);
+          settings.updateFriendInfo(uid, name: st.name, tag: st.tag, pic: st.pic, frame: st.frame);
         },
         onError: (Object _) {},
       );
@@ -467,7 +468,12 @@ class _FriendRow extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
-              PlayerAvatar(name: name, size: 42),
+              PlayerAvatar(
+                name: name,
+                size: 42,
+                pic: AvatarPic.byName(status?.pic ?? friend.pic),
+                frame: avatarFrameByName(status?.frame ?? friend.frame),
+              ),
               Positioned(
                 right: -1,
                 bottom: -1,
@@ -621,7 +627,12 @@ class _RequestRow extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          PlayerAvatar(name: request.name, size: 42),
+          PlayerAvatar(
+            name: request.name,
+            size: 42,
+            pic: AvatarPic.byName(request.pic),
+            frame: avatarFrameByName(request.frame),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text.rich(

@@ -10,7 +10,9 @@ import '../../engine/pastra_ai.dart';
 import '../../engine/pastra_engine.dart';
 import '../../game/achievements.dart';
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../game/game_controller.dart';
+import '../../game/progression.dart';
 import '../../game/quests.dart';
 import '../../l10n/online_strings.dart';
 import '../../l10n/progress_strings.dart';
@@ -26,6 +28,7 @@ import '../fx/fx.dart';
 import '../premium/premium.dart';
 import '../table_layout.dart';
 import '../theme.dart';
+import '../widgets/avatar.dart';
 import '../widgets/fullscreen_button.dart';
 import '../widgets/game_over.dart';
 import '../widgets/game_review.dart';
@@ -299,6 +302,56 @@ class _GameScreenState extends State<GameScreen> {
       return name.isEmpty ? s.you : name;
     }
     return s.botName(info.botIndex);
+  }
+
+  /// The avatar of a seat on its name plate: my own picture and frame, the
+  /// ones an online player chose, or a bot's (its frame shows its level).
+  /// Without a frame a ring shows the turn: gold on the turn, else [ring].
+  Widget _seatAvatar(Strings s, int seat, double size, {required bool active, Color ring = PastraColors.teal}) {
+    final info = c.seats[seat];
+    final AvatarPic pic;
+    final AvatarFrame frame;
+    if (info.isHuman) {
+      pic = c.settings.avatarPic;
+      frame = c.settings.avatarFrame;
+    } else if (info.isBot) {
+      pic = botPic(info.botIndex);
+      frame = botFrame(info.level);
+    } else {
+      pic = AvatarPic.byName(info.pic);
+      frame = avatarFrameByName(info.frame);
+    }
+    final name = _seatName(s, seat);
+    Widget avatar = frame == AvatarFrame.none
+        ? Container(
+            width: size,
+            height: size,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: active ? PastraColors.gold : ring),
+            child: PlayerAvatar(name: name, pic: pic, size: size - 4),
+          )
+        : PlayerAvatar(name: name, pic: pic, frame: frame, size: size);
+    // Online a small robot marks the bots among the people.
+    if (info.isBot && c.isOnline) {
+      avatar = Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          avatar,
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 13,
+              height: 13,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: PastraColors.raised),
+              child: const Icon(Icons.smart_toy_rounded, size: 9, color: PastraColors.text),
+            ),
+          ),
+        ],
+      );
+    }
+    return avatar;
   }
 
   List<String> _teamNames(Strings s) =>
@@ -1020,23 +1073,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _withTurnPing(
-            mine,
-            Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: PastraColors.raised,
-                border: Border.all(color: PastraColors.gold, width: 2),
-              ),
-              child: Text(
-                name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: PastraColors.gold),
-              ),
-            ),
-          ),
+          _withTurnPing(mine, _seatAvatar(s, 0, 30, active: mine, ring: PastraColors.gold)),
           const SizedBox(width: 8),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 110),
@@ -1063,31 +1100,10 @@ class _GameScreenState extends State<GameScreen> {
     final active = state.phase == GamePhase.playing && state.current == seat;
     final thinking = active && c.botThinking;
     final isPartner = c.isTeamGame && seat == 2;
-    final info = c.seats[seat];
     final name = _seatName(s, seat);
-    // Name plate: a small round "avatar" (robot for the computer, the
-    // initial for a person), the name, and a gold glow on the player's turn.
-    // The ring is gold on the player's turn, teal otherwise.
-    final avatar = Container(
-      width: 26,
-      height: 26,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: PastraColors.raised,
-        border: Border.all(color: active ? PastraColors.gold : PastraColors.teal, width: 2),
-      ),
-      child: info.isBot
-          ? Icon(Icons.smart_toy_rounded, size: 14, color: active ? PastraColors.gold : PastraColors.text)
-          : Text(
-              name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: active ? PastraColors.gold : PastraColors.text,
-              ),
-            ),
-    );
+    // Name plate: the player's avatar, the name, and a gold glow on the
+    // player's turn.
+    final avatar = _seatAvatar(s, seat, 26, active: active);
     final tag = AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.fromLTRB(3, 3, 11, 3),

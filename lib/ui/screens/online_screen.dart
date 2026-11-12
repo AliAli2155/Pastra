@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../game/economy.dart';
 import '../../l10n/online_strings.dart';
 import '../../l10n/shop_strings.dart';
@@ -1160,7 +1161,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Stack(
               clipBehavior: Clip.none,
               children: <Widget>[
-                PlayerAvatar(name: label, size: 40),
+                PlayerAvatar(
+                  name: label,
+                  size: 40,
+                  pic: AvatarPic.byName(seat.pic),
+                  frame: avatarFrameByName(seat.frame),
+                ),
                 Positioned(
                   right: -1,
                   bottom: -1,

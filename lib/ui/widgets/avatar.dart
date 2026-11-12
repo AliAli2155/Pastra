@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../engine/cards.dart';
+import '../../engine/pastra_ai.dart';
 import '../../game/avatar_pic.dart';
 import '../../game/progression.dart';
 import 'suit_icon.dart';
@@ -28,6 +29,23 @@ import 'suit_icon.dart';
       AvatarPic.crown => (icon: Icons.workspace_premium_rounded, suit: null, color: const Color(0xFFE6B54A)),
       AvatarPic.rocket => (icon: Icons.rocket_launch_rounded, suit: null, color: const Color(0xFFF07AA8)),
     };
+
+/// A bot's picture: one of the pictures (not the initial), always the same
+/// for the same bot name.
+AvatarPic botPic(int botIndex) => AvatarPic.values[1 + (botIndex.abs() * 7) % (AvatarPic.values.length - 1)];
+
+/// A bot's frame shows how strong it is: none up to medium, then bronze,
+/// silver and gold.
+AvatarFrame botFrame(AiLevel level) => switch (level) {
+      AiLevel.beginner || AiLevel.easy || AiLevel.medium => AvatarFrame.none,
+      AiLevel.hard => AvatarFrame.bronze,
+      AiLevel.expert => AvatarFrame.silver,
+      AiLevel.master => AvatarFrame.gold,
+    };
+
+/// The frame with this name ([AvatarFrame.none] when unknown).
+AvatarFrame avatarFrameByName(Object? name) =>
+    AvatarFrame.values.where((f) => f.name == name).firstOrNull ?? AvatarFrame.none;
 
 /// Colours of an avatar frame (a ring around the player's initial).
 List<Color> frameColors(AvatarFrame f) => switch (f) {
