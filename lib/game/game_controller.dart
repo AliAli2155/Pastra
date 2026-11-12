@@ -54,7 +54,10 @@ class PastraEvent {
   final int seat;
   final int points;
 
-  const PastraEvent(this.id, this.seat, this.points);
+  /// Made with a jack (a bigger celebration).
+  final bool jack;
+
+  const PastraEvent(this.id, this.seat, this.points, {this.jack = false});
 }
 
 /// Drives one game: human input, bot turns, deals, scoring and saving.
@@ -513,7 +516,7 @@ class GameController extends ChangeNotifier {
     landing = result.isCapture ? null : card;
     lastMove = LastMove(++_eventCounter, seat, card, result.isCapture);
     if (result.isPastra) {
-      final event = PastraEvent(++_eventCounter, seat, result.pastraPoints);
+      final event = PastraEvent(++_eventCounter, seat, result.pastraPoints, jack: Cards.isJack(card));
       pastraEvent = event;
       SoundFx.instance.play(Sfx.pastra);
       if (settings.haptics) Haptics.big();
@@ -1035,7 +1038,13 @@ class GameController extends ChangeNotifier {
     if (pa is Map) {
       final id = (pa['id'] as num).toInt();
       if (pastraEvent?.id != id) {
-        final event = PastraEvent(id, (pa['seat'] as num).toInt(), (pa['pts'] as num).toInt());
+        final moved = mv is Map ? mv['card'] : null;
+        final event = PastraEvent(
+          id,
+          (pa['seat'] as num).toInt(),
+          (pa['pts'] as num).toInt(),
+          jack: moved is num && Cards.isJack(moved.toInt()),
+        );
         pastraEvent = event;
         SoundFx.instance.play(Sfx.pastra);
         if (settings.haptics) Haptics.big();

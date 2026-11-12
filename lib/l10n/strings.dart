@@ -110,6 +110,7 @@ class Strings {
   String get jackTakesPile => _s('jackTakesPile');
   String get jackSweeps => _s('jackSweeps');
   String get pastraBanner => _s('pastraBanner');
+  String get jackPastraBanner => _s('jackPastraBanner');
   String plusPoints(int n) => '+$n';
   String deck(int n) => _s('deck', <String, Object>{'n': n});
   String round(int n) => _s('round', <String, Object>{'n': n});

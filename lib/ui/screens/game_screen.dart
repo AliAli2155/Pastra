@@ -207,6 +207,9 @@ class _GameScreenState extends State<GameScreen> {
   /// Hints: offline games except tournament matches.
   bool get _hintsAllowed => !c.isOnline && !c.tournament;
 
+  /// A seat of my team (me, and my partner in 2v2).
+  bool _ours(int seat) => seat == 0 || (c.isTeamGame && seat == 2);
+
   /// The card tracker helps against beginner bots (offline only).
   bool get _trackerShown =>
       !c.isOnline && !c.tournament && c.seats.any((seat) => seat.isBot && seat.level == AiLevel.beginner);
@@ -431,6 +434,7 @@ class _GameScreenState extends State<GameScreen> {
 
         return _Shake(
           trigger: event?.id ?? 0,
+          strong: event?.jack ?? false,
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
@@ -524,11 +528,17 @@ class _GameScreenState extends State<GameScreen> {
               if (event != null)
                 Positioned.fill(
                   child: IgnorePointer(
-                    child: _PastraBurst(key: ValueKey<int>(event.id), center: geo.project(layout.playCenter)),
+                    child: _PastraBurst(
+                      key: ValueKey<int>(event.id),
+                      center: geo.project(layout.playCenter),
+                      ours: _ours(event.seat),
+                      jack: event.jack,
+                      points: event.points,
+                    ),
                   ),
                 ),
               // Our pastra: confetti over the whole table.
-              if (event != null && (event.seat == 0 || (c.isTeamGame && event.seat == 2)))
+              if (event != null && _ours(event.seat))
                 Positioned.fill(
                   child: IgnorePointer(child: _Confetti(key: ValueKey<int>(event.id))),
                 ),
@@ -542,8 +552,9 @@ class _GameScreenState extends State<GameScreen> {
                     child: Center(
                       child: _PastraBanner(
                         key: ValueKey<int>(event.id),
-                        title: s.pastraBanner,
+                        title: event.jack ? s.jackPastraBanner : s.pastraBanner,
                         subtitle: '${_seatName(s, event.seat)}  ${s.plusPoints(event.points)}',
+                        ours: _ours(event.seat),
                       ),
                     ),
                   ),
@@ -1837,45 +1848,65 @@ class _QuadBanner extends StatelessWidget {
 }
 
 class _PastraBanner extends StatelessWidget {
-  const _PastraBanner({super.key, required this.title, required this.subtitle});
+  const _PastraBanner({super.key, required this.title, required this.subtitle, this.ours = true});
 
   final String title;
   final String subtitle;
 
+  /// My team's pastra: gold; the other team's: coral.
+  final bool ours;
+
   @override
   Widget build(BuildContext context) {
+    final base = ours ? PastraColors.gold : PastraColors.coral;
+    final light = ours ? PastraColors.goldLight : const Color(0xFFFFD2C4);
+    // Pops in (the first part), then a band of light sweeps over the title
+    // once and the banner stands still.
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.easeOutBack,
-      builder: (context, t, child) => Opacity(
-        opacity: t.clamp(0.0, 1.0).toDouble(),
-        child: Transform.scale(scale: 0.6 + 0.4 * t, child: child),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-        decoration: tabletDecoration(radius: 20, glow: true),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w800,
-                color: PastraColors.gold,
-                letterSpacing: 1.5,
-                height: 1.1,
+      duration: const Duration(milliseconds: 1100),
+      builder: (context, t, child) {
+        final pop = Curves.easeOutBack.transform(min(1.0, t / 0.45));
+        final sweep = ((t - 0.35) / 0.65).clamp(0.0, 1.0) * 1.6 - 0.3;
+        final titleStyle = TextStyle(
+          fontSize: 44,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
+          height: 1.1,
+          foreground: Paint()
+            ..shader = LinearGradient(
+              colors: <Color>[base, light, Colors.white, light, base],
+              stops: <double>[
+                (sweep - 0.25).clamp(0.0, 1.0),
+                (sweep - 0.08).clamp(0.0, 1.0),
+                sweep.clamp(0.0, 1.0),
+                (sweep + 0.08).clamp(0.0, 1.0),
+                (sweep + 0.25).clamp(0.0, 1.0),
+              ],
+            ).createShader(const Rect.fromLTWH(0, 0, 340, 50)),
+        );
+        return Opacity(
+          opacity: min(1.0, t / 0.2),
+          child: Transform.scale(
+            scale: 0.55 + 0.45 * pop,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+              decoration: tabletDecoration(radius: 20, glow: ours),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(title, style: titleStyle),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 16, color: PastraColors.text2, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 16, color: PastraColors.text2, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1883,10 +1914,13 @@ class _PastraBanner extends StatelessWidget {
 /// Shakes its child briefly whenever [trigger] changes (a pastra). The child
 /// keeps its state, so card animations are not disturbed.
 class _Shake extends StatefulWidget {
-  const _Shake({required this.trigger, required this.child});
+  const _Shake({required this.trigger, required this.child, this.strong = false});
 
   final int trigger;
   final Widget child;
+
+  /// A jack pastra: a stronger shake with a little bump.
+  final bool strong;
 
   @override
   State<_Shake> createState() => _ShakeState();
@@ -1915,26 +1949,37 @@ class _ShakeState extends State<_Shake> with SingleTickerProviderStateMixin {
       child: widget.child,
       builder: (context, child) {
         final t = _c.value;
-        final dx = _c.isAnimating ? sin(t * pi * 9) * (1 - t) * 7 : 0.0;
-        return Transform.translate(offset: Offset(dx, 0), child: child);
+        if (!_c.isAnimating) return Transform.translate(offset: Offset.zero, child: child);
+        final amp = widget.strong ? 11.0 : 7.0;
+        final dx = sin(t * pi * 9) * (1 - t) * amp;
+        final dy = widget.strong ? sin(t * pi * 6) * (1 - t) * amp * 0.5 : 0.0;
+        return Transform.translate(offset: Offset(dx, dy), child: child);
       },
     );
   }
 }
 
-/// Gold ring and sparks bursting from the pile on a pastra.
+/// A pastra: a flash of light at the pile, rays turning out of it, rings,
+/// sparks flying with short trails and the points rising. Gold for my
+/// team, coral for the other; bigger for a jack pastra. It plays once and
+/// stops.
 class _PastraBurst extends StatefulWidget {
-  const _PastraBurst({super.key, required this.center});
+  const _PastraBurst({super.key, required this.center, this.ours = true, this.jack = false, this.points = 0});
 
   final Offset center;
+  final bool ours;
+  final bool jack;
+  final int points;
 
   @override
   State<_PastraBurst> createState() => _PastraBurstState();
 }
 
 class _PastraBurstState extends State<_PastraBurst> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: widget.jack ? 1700 : 1400),
+  )..forward();
 
   @override
   void dispose() {
@@ -1946,7 +1991,14 @@ class _PastraBurstState extends State<_PastraBurst> with SingleTickerProviderSta
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        painter: _BurstPainter(_c, widget.center, widget.key.hashCode),
+        painter: _BurstPainter(
+          _c,
+          widget.center,
+          widget.key.hashCode,
+          ours: widget.ours,
+          jack: widget.jack,
+          points: widget.points,
+        ),
         size: Size.infinite,
       ),
     );
@@ -1954,13 +2006,13 @@ class _PastraBurstState extends State<_PastraBurst> with SingleTickerProviderSta
 }
 
 class _BurstPainter extends CustomPainter {
-  _BurstPainter(this.anim, this.center, int seed)
-      : _particles = List<_Spark>.generate(34, (i) {
+  _BurstPainter(this.anim, this.center, int seed, {required this.ours, required this.jack, required this.points})
+      : _particles = List<_Spark>.generate(jack ? 64 : 44, (i) {
           final r = Random(seed + i * 7919);
           return _Spark(
             angle: r.nextDouble() * 2 * pi,
-            speed: 90 + r.nextDouble() * 220,
-            size: 2.5 + r.nextDouble() * 4.5,
+            speed: 110 + r.nextDouble() * (jack ? 300 : 230),
+            size: 2 + r.nextDouble() * 4,
             hue: r.nextInt(3),
           );
         }),
@@ -1968,36 +2020,116 @@ class _BurstPainter extends CustomPainter {
 
   final Animation<double> anim;
   final Offset center;
+  final bool ours;
+  final bool jack;
+  final int points;
   final List<_Spark> _particles;
 
-  static const List<Color> _colors = <Color>[
-    PastraColors.gold,
-    PastraColors.goldLight,
-    PastraColors.teal,
-  ];
+  Color get _main => ours ? PastraColors.gold : PastraColors.coral;
+
+  List<Color> get _colors => ours
+      ? const <Color>[PastraColors.gold, PastraColors.goldLight, Colors.white]
+      : const <Color>[PastraColors.coral, Color(0xFFFFD2C4), PastraColors.goldLight];
+
+  Offset _spark(_Spark p, double t) {
+    final d = p.speed * Curves.easeOutQuad.transform(t.clamp(0.0, 1.0));
+    return center + Offset(cos(p.angle) * d, sin(p.angle) * d + 150 * t * t);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final t = anim.value;
     if (t <= 0 || t >= 1) return;
-    // Expanding ring.
-    final ringT = Curves.easeOutCubic.transform(min(1.0, t * 1.6));
-    canvas.drawCircle(
-      center,
-      20 + ringT * 120,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6 * (1 - ringT) + 1
-        ..color = PastraColors.gold.withValues(alpha: (1 - ringT) * 0.9),
-    );
-    // Sparks with a little gravity.
+
+    // A flash of light at the pile.
+    if (t < 0.4) {
+      final k = t / 0.4;
+      final r = 40 + 190 * Curves.easeOutCubic.transform(k);
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: <Color>[
+              _main.withValues(alpha: 0.55 * (1 - k)),
+              _main.withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromCircle(center: center, radius: r)),
+      );
+    }
+
+    // Rays turning slowly out of the pile.
+    final rayK = t < 0.2 ? t / 0.2 : (1 - (t - 0.2) / 0.55).clamp(0.0, 1.0);
+    if (rayK > 0) {
+      final n = jack ? 18 : 12;
+      final len = 70 + 150 * Curves.easeOutCubic.transform(min(1.0, t * 2));
+      final turn = t * 0.5;
+      final ray = Paint()..color = _main.withValues(alpha: 0.22 * rayK);
+      for (var i = 0; i < n; i++) {
+        final a = turn + i * 2 * pi / n;
+        const w = 0.06;
+        canvas.drawPath(
+          Path()
+            ..moveTo(center.dx, center.dy)
+            ..lineTo(center.dx + cos(a - w) * len, center.dy + sin(a - w) * len)
+            ..lineTo(center.dx + cos(a + w) * len, center.dy + sin(a + w) * len)
+            ..close(),
+          ray,
+        );
+      }
+    }
+
+    // Rings, one after the other.
+    for (var i = 0; i < (jack ? 3 : 2); i++) {
+      final rt = ((t - i * 0.12) * 1.6).clamp(0.0, 1.0);
+      if (rt <= 0 || rt >= 1) continue;
+      final k = Curves.easeOutCubic.transform(rt);
+      canvas.drawCircle(
+        center,
+        20 + k * (130 + i * 30),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = (i == 0 ? 6 : 3) * (1 - k) + 1
+          ..color = _main.withValues(alpha: (1 - k) * 0.9),
+      );
+    }
+
+    // Sparks with a short trail and a little gravity.
     final fade = t < 0.6 ? 1.0 : (1 - (t - 0.6) / 0.4);
-    final paint = Paint();
+    final trail = Paint()..strokeCap = StrokeCap.round;
+    final dot = Paint();
     for (final p in _particles) {
-      final d = p.speed * Curves.easeOutQuad.transform(t);
-      final pos = center + Offset(cos(p.angle) * d, sin(p.angle) * d + 140 * t * t);
-      paint.color = _colors[p.hue].withValues(alpha: fade);
-      canvas.drawCircle(pos, p.size * (1 - t * 0.5), paint);
+      final now = _spark(p, t);
+      final before = _spark(p, max(0.0, t - 0.05));
+      final c = _colors[p.hue].withValues(alpha: fade);
+      trail
+        ..color = c.withValues(alpha: fade * 0.5)
+        ..strokeWidth = p.size * (1 - t * 0.5);
+      canvas.drawLine(before, now, trail);
+      dot.color = c;
+      canvas.drawCircle(now, p.size * (1 - t * 0.5) * 0.6, dot);
+    }
+
+    // The points rise from the pile.
+    if (points > 0 && t > 0.1) {
+      final k = ((t - 0.1) / 0.9).clamp(0.0, 1.0);
+      final alpha = k < 0.7 ? 1.0 : 1 - (k - 0.7) / 0.3;
+      final pop = Curves.easeOutBack.transform(min(1.0, k * 3));
+      final text = TextPainter(
+        text: TextSpan(
+          text: '+$points',
+          style: TextStyle(
+            fontFamily: appFont,
+            fontSize: (jack ? 30 : 26) * (0.6 + 0.4 * pop),
+            fontWeight: FontWeight.w800,
+            color: (ours ? PastraColors.goldLight : const Color(0xFFFFD2C4)).withValues(alpha: alpha),
+            shadows: <Shadow>[Shadow(color: Colors.black.withValues(alpha: 0.6 * alpha), offset: const Offset(0, 2))],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      text.paint(canvas, center + Offset(-text.width / 2, -40 - 70 * Curves.easeOutCubic.transform(k)));
+      text.dispose();
     }
   }
 
