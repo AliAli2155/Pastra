@@ -12,6 +12,7 @@ import 'achievements.dart';
 import 'avatar_pic.dart';
 import 'economy.dart';
 import 'friends.dart';
+import 'match_history.dart';
 import 'progression.dart';
 import 'quests.dart';
 import 'seasons.dart';
@@ -206,6 +207,7 @@ class AppSettings extends ChangeNotifier {
   static const String _kSeasonPending = 'seasonPending';
   static const String _kSeasonBadges = 'seasonBadges';
   static const String _kFriends = 'friends';
+  static const String _kHistory = 'matchHistory';
   static const String _kTag = 'playerTag';
   static const String _kHandleKey = 'handleKey';
 
@@ -653,6 +655,28 @@ class AppSettings extends ChangeNotifier {
     _saveStats();
     _achievements = <String, int>{};
     _prefs.remove(_kAchievements);
+    _prefs.remove(_kHistory);
+    notifyListeners();
+  }
+
+  // ---- match history
+
+  /// The last games, newest first (at most 20).
+  List<MatchRecord> get history {
+    try {
+      final raw = jsonDecode(_prefs.getString(_kHistory) ?? '[]') as List<dynamic>;
+      return <MatchRecord>[
+        for (final j in raw)
+          if (MatchRecord.fromJson(j) case final r?) r,
+      ];
+    } catch (_) {
+      return <MatchRecord>[];
+    }
+  }
+
+  void addMatch(MatchRecord record) {
+    final list = MatchRecord.add(history, record);
+    _prefs.setString(_kHistory, jsonEncode(<Object>[for (final r in list) r.toJson()]));
     notifyListeners();
   }
 

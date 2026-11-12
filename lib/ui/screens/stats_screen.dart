@@ -9,6 +9,7 @@ import '../../l10n/social_strings.dart';
 import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
+import 'match_history_view.dart';
 import 'progress_views.dart';
 
 /// Lifetime statistics and achievements of the local player.
@@ -123,7 +124,7 @@ class StatsScreen extends StatelessWidget {
         actions: <Widget>[
           IconButton(
             tooltip: s.resetStats,
-            onPressed: empty && unlocked.isEmpty ? null : () => _confirmReset(context),
+            onPressed: empty && unlocked.isEmpty && settings.history.isEmpty ? null : () => _confirmReset(context),
             icon: const Icon(Icons.delete_outline),
           ),
         ],
@@ -138,6 +139,7 @@ class StatsScreen extends StatelessWidget {
               PageTab(icon: Icons.insights_rounded, label: s.statistics, builder: statsBody),
               PageTab(icon: Icons.military_tech_rounded, label: s.achievements, builder: achievementsBody),
               PageTab(icon: Icons.calendar_month_rounded, label: p.season, builder: (_) => const SeasonView()),
+              PageTab(icon: Icons.history_rounded, label: s.history, builder: (_) => const MatchHistoryView()),
             ],
           ),
         ),

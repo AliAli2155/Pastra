@@ -187,6 +187,9 @@ class Strings {
   String get haptics => _s('haptics');
   String get sound => _s('sound');
   String get music => _s('music');
+  String get history => _s('history');
+  String get rematch => _s('rematch');
+  String get noHistory => _s('noHistory');
   String get turnTime => _s('turnTime');
   String get turnTimeHint => _s('turnTimeHint');
   String get noLimit => _s('noLimit');

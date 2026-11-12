@@ -14,6 +14,7 @@ import 'achievements.dart';
 import 'app_settings.dart';
 import 'economy.dart';
 import 'haptics.dart';
+import 'match_history.dart';
 import 'online_link.dart';
 import 'progression.dart';
 import 'quests.dart';
@@ -179,6 +180,13 @@ class GameController extends ChangeNotifier {
 
   /// A match of an online cup played on this device (only bots besides the
   /// local player, who sits on seat 0).
+  /// The same table again: the bots of a game in the match history.
+  factory GameController.rematch(AppSettings settings, MatchRecord record) {
+    final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
+    final state = PastraEngine.newGame(rules: settings.rules, numPlayers: record.players, seed: seed);
+    return GameController(settings: settings, seats: record.rematchSeats(), state: state);
+  }
+
   factory GameController.cupLocal(AppSettings settings, {required List<SeatInfo> seats, required PastraRules rules}) {
     final seed = DateTime.now().microsecondsSinceEpoch & 0x7fffffff;
     final state = PastraEngine.newGame(rules: rules, numPlayers: seats.length, seed: seed);
@@ -603,6 +611,7 @@ class GameController extends ChangeNotifier {
           online: link != null,
           pastras: _gamePastras,
         );
+        settings.addMatch(_matchRecord(won));
         final endXp = Progression.gameXp(won: won, level: seats[1].level);
         _gameXp += endXp;
         final lv = settings.addXp(endXp);
@@ -1099,12 +1108,29 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  /// This finished game for the match history (seen from our side).
+  MatchRecord _matchRecord(bool won) {
+    final ourTeam = GameState.teamOf(humanSeat);
+    return MatchRecord(
+      time: DateTime.now().millisecondsSinceEpoch,
+      won: won,
+      ours: _state.scores[ourTeam],
+      theirs: _state.scores[1 - ourTeam],
+      mode: tournament ? MatchMode.tournament : (isOnline ? MatchMode.online : MatchMode.offline),
+      level: seats[1].level,
+      others: <MatchPlayer>[for (var i = 1; i < seats.length; i++) MatchPlayer.of(seats[i])],
+      pastras: _gamePastras,
+      rounds: _state.round,
+    );
+  }
+
   /// An online guest's game counts for the statistics and XP too (the host
   /// does the same for itself). The view is rotated: our team is team 0.
   void _recordGuestGame() {
     if (!isGuest || xpGain != null) return;
     final won = _state.winner == 0;
     settings.recordGame(won: won, players: _state.numPlayers, level: AiLevel.medium, online: true, pastras: _gamePastras);
+    settings.addMatch(_matchRecord(won));
     final amount = Progression.gameXp(won: won, level: AiLevel.medium);
     final lv = settings.addXp(amount);
     _gameXp += amount;
