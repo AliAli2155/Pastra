@@ -423,6 +423,7 @@ class _GameScreenState extends State<GameScreen> {
           _overTable = false;
         }
         _updateStagger(state);
+        final trails = _trails(layout, geo, Duration(milliseconds: settings.fastAnimations ? 200 : 320));
         int zOf(MapEntry<int, CardPlacement> e) => e.key == _dragCard ? 10000 : e.value.z;
         final entries = layout.cards.entries.toList()..sort((a, b) => zOf(a).compareTo(zOf(b)));
         final duration = Duration(milliseconds: settings.fastAnimations ? 200 : 320);
@@ -488,7 +489,14 @@ class _GameScreenState extends State<GameScreen> {
               // The cards lie on it. They are not drawn through the
               // perspective (slow, above all in a browser): each one is
               // placed, sized and slanted like the part of the table under it.
-              for (final e in entries) _card(e.key, e.value, duration, geo),
+              // The trail of a card another player puts down lies just under
+              // that card (over the cards it passes).
+              for (final e in entries) ...<Widget>[
+                if (trails.played[e.key] case final trail?) trail,
+                _card(e.key, e.value, duration, geo),
+              ],
+              // Where captured cards go: a soft sweep over the table.
+              if (trails.sweep case final sweep?) sweep,
               // On a computer: a card of my hand rises under the mouse.
               for (final e in entries)
                 if (e.value.interactive && e.key != _dragCard) _hoverZone(e.key, e.value, geo),
@@ -908,6 +916,73 @@ class _GameScreenState extends State<GameScreen> {
       top: onTop ? anchor.center.dy - 10 : anchor.bottom - 9,
       child: IgnorePointer(child: Center(child: chip)),
     );
+  }
+
+  /// Where a seat's hand is on the flat table (where its cards come from).
+  Offset _handOrigin(TableLayout layout, StageGeometry geo, int seat) {
+    if (seat == GameController.humanSeat) return Offset(geo.size.width / 2, layout.handTop + layout.handCardWidth * 0.7);
+    return layout.seatRects[seat]?.center ?? Offset(geo.size.width / 2, 0);
+  }
+
+  /// The trails of the last move (not in low graphics quality): a comet
+  /// from another player's hand to the table while their card flies there
+  /// (by the card it belongs to), and a broad sweep from the table to the
+  /// pile when cards are taken.
+  ({Map<int, Widget> played, Widget? sweep}) _trails(TableLayout layout, StageGeometry geo, Duration flight) {
+    final played = <int, Widget>{};
+    if (Fx.low.value) return (played: played, sweep: null);
+    Widget trail(Key key, Offset from, Offset to, int seat, Duration time, {bool sweep = false}) => Positioned.fill(
+          child: IgnorePointer(
+            child: _MoveTrail(
+              key: key,
+              geometry: geo,
+              from: from,
+              to: to,
+              color: _ours(seat) ? PastraColors.gold : PastraColors.coral,
+              flight: time,
+              sweep: sweep,
+            ),
+          ),
+        );
+    final pending = c.pending;
+    if (pending != null && pending.seat != GameController.humanSeat) {
+      // A card that takes: it flies to the pile first.
+      final to = layout.cards[pending.card]?.rect.center ?? layout.playCenter;
+      played[pending.card] = trail(
+        ValueKey<String>('trail-pending-${pending.seat}-${pending.card}'),
+        _handOrigin(layout, geo, pending.seat),
+        to,
+        pending.seat,
+        flight,
+      );
+    }
+    Widget? sweep;
+    final move = c.lastMove;
+    if (move != null) {
+      if (move.captured) {
+        final team = _ours(move.seat) ? 0 : 1;
+        final count = c.state.piles[team].where(_gathered.containsKey).length;
+        sweep = trail(
+          ValueKey<String>('trail-take-${move.id}'),
+          layout.playCenter,
+          layout.pileRects[team].center,
+          move.seat,
+          flight + Duration(milliseconds: min(count, 12) * 10),
+          sweep: true,
+        );
+      } else if (move.seat != GameController.humanSeat) {
+        if (layout.cards[move.card] case final placement?) {
+          played[move.card] = trail(
+            ValueKey<String>('trail-play-${move.id}'),
+            _handOrigin(layout, geo, move.seat),
+            placement.rect.center,
+            move.seat,
+            flight,
+          );
+        }
+      }
+    }
+    return (played: played, sweep: sweep);
   }
 
   /// Where the card just put down lies on the flat table, while it is a
@@ -1699,6 +1774,118 @@ class _PingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PingPainter oldDelegate) => false;
+}
+
+/// A trail of light on the cloth under a moving card: a comet whose head
+/// follows the card from [from] to [to] (places on the flat table) during
+/// [flight], its tail catching up after it lands; with [sweep], a broad soft
+/// stroke (captured cards going to a pile). Drawn where the table is seen;
+/// plays once.
+class _MoveTrail extends StatefulWidget {
+  const _MoveTrail({
+    super.key,
+    required this.geometry,
+    required this.from,
+    required this.to,
+    required this.color,
+    required this.flight,
+    this.sweep = false,
+  });
+
+  final StageGeometry geometry;
+  final Offset from;
+  final Offset to;
+  final Color color;
+  final Duration flight;
+  final bool sweep;
+
+  @override
+  State<_MoveTrail> createState() => _MoveTrailState();
+}
+
+class _MoveTrailState extends State<_MoveTrail> with SingleTickerProviderStateMixin {
+  static const int _fadeMs = 260;
+
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: widget.flight + const Duration(milliseconds: _fadeMs),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flight = widget.flight.inMilliseconds;
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _TrailPainter(_c, widget, flight / (flight + _fadeMs)),
+        size: Size.infinite,
+      ),
+    );
+  }
+}
+
+class _TrailPainter extends CustomPainter {
+  _TrailPainter(this.anim, this.trail, this.arrive) : super(repaint: anim);
+
+  final Animation<double> anim;
+  final _MoveTrail trail;
+
+  /// The part of the animation in which the card is on its way.
+  final double arrive;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = anim.value;
+    if (t <= 0 || t >= 1) return;
+    final g = trail.geometry;
+    Offset at(double k) => g.project(Offset.lerp(trail.from, trail.to, k)!);
+    // The head moves like the card (ease out); the tail follows a little
+    // behind and catches up once the card has landed.
+    final fly = (t / arrive).clamp(0.0, 1.0);
+    final head = Curves.easeOutCubic.transform(fly);
+    final lag = trail.sweep ? 0.55 : 0.35;
+    final after = t <= arrive ? 0.0 : (t - arrive) / (1 - arrive);
+    final behind = Curves.easeOutCubic.transform((fly - lag).clamp(0.0, 1.0));
+    final tail = behind * (1 - after) + head * after;
+    if (head - tail < 0.002) return;
+    final fade = t <= arrive ? 1.0 : 1 - after;
+    final width = trail.sweep ? 24.0 : 14.0;
+    final alpha = trail.sweep ? 0.2 : 0.75;
+    const n = 12;
+    final paint = Paint()
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    // A wide soft glow under the trail.
+    canvas.drawLine(
+      at(tail + (head - tail) * 0.3),
+      at(head),
+      paint
+        ..strokeWidth = width * 2.4
+        ..color = trail.color.withValues(alpha: 0.16 * fade),
+    );
+    var prev = at(tail);
+    for (var i = 1; i <= n; i++) {
+      final k = i / n;
+      final p = at(tail + (head - tail) * k);
+      paint
+        ..strokeWidth = width * (0.15 + 0.85 * k)
+        ..color = trail.color.withValues(alpha: alpha * k * fade);
+      canvas.drawLine(prev, p, paint);
+      prev = p;
+    }
+    if (!trail.sweep) {
+      // A bright core at the head.
+      canvas.drawCircle(prev, width * 0.55, Paint()..color = Colors.white.withValues(alpha: 0.35 * fade));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TrailPainter oldDelegate) => false;
 }
 
 /// A soft light ring on the cloth around a card that was put down: it
