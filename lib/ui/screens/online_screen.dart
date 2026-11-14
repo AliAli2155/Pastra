@@ -909,6 +909,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     widget.guest?.controller.addListener(_guestGameReady);
     widget.guest?.closed.addListener(_guestClosed);
     if (widget.host?.autoStart == true) widget.host!.watcher.addListener(_autoStart);
+    if (_searching) {
+      // (A slow timer: one rebuild a second for the clock.)
+      _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted && !_starting) setState(() => _waited++);
+      });
+    }
     // A tournament match starts at the latest at this time, with bots for
     // whoever did not come.
     final by = widget.host?.startBy;
@@ -921,6 +927,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Timer? _startTimer;
+
+  /// Quick match: seconds spent searching; after [offerBotAfter] with nobody
+  /// the computer is offered as the opponent.
+  int _waited = 0;
+  Timer? _clock;
+  static const int offerBotAfter = 25;
+
+  bool get _searching =>
+      widget.host?.autoStart == true && widget.cupOpponent == null && !widget.rematch;
 
   /// Quick match: the game starts by itself once every seat is taken.
   void _autoStart() {
@@ -980,6 +995,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     widget.guest?.closed.removeListener(_guestClosed);
     widget.host?.watcher.removeListener(_autoStart);
     _startTimer?.cancel();
+    _clock?.cancel();
     if (!_handedOver) {
       widget.host?.close();
       widget.guest?.close();
@@ -993,6 +1009,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isHost = widget.host != null;
     final quick = widget.host?.autoStart == true;
     final cup = widget.cupOpponent != null;
+    // Nobody came for a while: the computer is offered more clearly.
+    final offerBot = _searching && _waited >= offerBotAfter && (widget.host?.watcher.info.joined ?? 0) < 2;
     return Scaffold(
       appBar: GameAppBar(
         icon: Icons.public,
@@ -1073,33 +1091,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   const SizedBox(height: 12),
                 ],
                 if (isHost && quick) ...<Widget>[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: PastraColors.gold),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          cup
-                              ? t.cupOpponentWait(widget.cupOpponent!)
-                              : (widget.rematch ? SocialStrings(SettingsScope.of(context).language).rematchWait : t.searching),
-                          style: const TextStyle(color: PastraColors.text, fontSize: 17, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
+                  SearchStatus(
+                    label: cup
+                        ? t.cupOpponentWait(widget.cupOpponent!)
+                        : (widget.rematch
+                            ? SocialStrings(SettingsScope.of(context).language).rematchWait
+                            : (offerBot ? t.nobodyYet : t.searching)),
+                    seconds: _searching ? _waited : null,
+                    offerBot: offerBot,
+                    hint: t.nobodyYetHint,
+                    botLabel: cup ? null : t.playVsBot,
+                    onBot: _starting ? null : _start,
                   ),
-                  if (!cup) ...<Widget>[
-                    const SizedBox(height: 12),
-                    BigOutlineButton(
-                      icon: Icons.smart_toy_outlined,
-                      label: t.playVsBot,
-                      onPressed: _starting ? null : _start,
-                    ),
-                  ],
                 ] else if (isHost) ...<Widget>[
                   Text(
                     t.botFills,
@@ -1481,6 +1484,84 @@ class _StakeBadge extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Quick match waiting: what is happening (with the time spent searching)
+/// and the way to play the computer instead – after a while without anybody
+/// a gold button with a hint, before that a quiet outline button.
+class SearchStatus extends StatelessWidget {
+  const SearchStatus({
+    super.key,
+    required this.label,
+    required this.hint,
+    this.seconds,
+    this.offerBot = false,
+    this.botLabel,
+    this.onBot,
+  });
+
+  final String label;
+  final String hint;
+  final int? seconds;
+  final bool offerBot;
+
+  /// Null: no computer to play against (a tournament match).
+  final String? botLabel;
+  final VoidCallback? onBot;
+
+  @override
+  Widget build(BuildContext context) {
+    final secs = seconds;
+    final bot = botLabel;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            // The spinner stops once the computer is offered.
+            if (offerBot)
+              const Icon(Icons.hourglass_bottom_rounded, color: PastraColors.gold, size: 22)
+            else
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: PastraColors.gold),
+              ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(color: PastraColors.text, fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+            ),
+            if (secs != null) ...<Widget>[
+              const SizedBox(width: 10),
+              Text(
+                '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}',
+                style: const TextStyle(
+                  color: PastraColors.text2,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (bot != null && offerBot) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(hint, textAlign: TextAlign.center, style: const TextStyle(color: PastraColors.text2, fontSize: 13)),
+          const SizedBox(height: 12),
+          GoldButton(icon: Icons.smart_toy_rounded, label: bot, onPressed: onBot),
+        ] else if (bot != null) ...<Widget>[
+          const SizedBox(height: 12),
+          BigOutlineButton(icon: Icons.smart_toy_outlined, label: bot, onPressed: onBot),
+        ],
+      ],
     );
   }
 }
