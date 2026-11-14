@@ -256,8 +256,7 @@ class _GameScreenState extends State<GameScreen> {
         return union(c.state.table.map((card) => layout.cards[card]?.rect).whereType<Rect>())?.inflate(10);
       case 'deck':
       case 'deckSums':
-        final d = layout.deckRect;
-        return Rect.fromLTRB(d.left, d.top, d.right + d.width * 1.4, d.bottom).inflate(6);
+        return layout.deckArea.inflate(6);
       case 'timer':
         return layout.infoRect.inflate(4);
       default:
@@ -872,19 +871,32 @@ class _GameScreenState extends State<GameScreen> {
   CardBackStyle? _backOf(int seat) {
     if (seat == 0) return null;
     final info = c.seats[seat];
-    if (info.isBot) {
-      // A colour clearly unlike mine (and unlike the plain first back), so
-      // their cards always look theirs.
-      final mine = c.settings.cardBack;
-      final backs = <CardBackStyle>[
-        for (final b in CardBackStyle.values)
-          if (_backsDiffer(b, mine) && _backsDiffer(b, CardBackStyle.aegean)) b,
-      ];
-      if (backs.isEmpty) return null;
-      return backs[(info.botIndex.abs() * 5 + 3) % backs.length];
-    }
+    if (info.isBot) return _botBacks[seat];
     return CardBackStyle.values.where((b) => b.name == info.back).firstOrNull;
   }
+
+  /// The bots' card backs: a colour clearly unlike mine (and unlike the
+  /// plain first back), always the same for the same bot name, and no two
+  /// bots at the table with the same one.
+  late final Map<int, CardBackStyle> _botBacks = () {
+    final mine = c.settings.cardBack;
+    final backs = <CardBackStyle>[
+      for (final b in CardBackStyle.values)
+        if (_backsDiffer(b, mine) && _backsDiffer(b, CardBackStyle.aegean)) b,
+    ];
+    final out = <int, CardBackStyle>{};
+    if (backs.isEmpty) return out;
+    for (var seat = 1; seat < c.seats.length; seat++) {
+      final info = c.seats[seat];
+      if (!info.isBot) continue;
+      var i = (info.botIndex.abs() * 5 + 3) % backs.length;
+      for (var k = 0; k < backs.length && out.values.contains(backs[i]); k++) {
+        i = (i + 1) % backs.length;
+      }
+      out[seat] = backs[i];
+    }
+    return out;
+  }();
 
   /// Two backs that do not look alike at a glance (their main colour, the
   /// light one, is far enough apart).

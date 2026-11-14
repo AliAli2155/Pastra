@@ -75,6 +75,8 @@ void main() {
       expect(backs.length, greaterThanOrEqualTo(n));
     }
     final backs = faceDown(tester).map((v) => v.backStyle).whereType<CardBackStyle>().toSet();
+    // Three bots, three different backs.
+    expect(backs.length, 3);
     expect(backs, isNot(contains(c.settings.cardBack)));
     expect(backs, isNot(contains(CardBackStyle.aegean)));
     await close(tester, c);

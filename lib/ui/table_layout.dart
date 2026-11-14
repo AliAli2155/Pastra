@@ -58,6 +58,7 @@ class TableLayout {
   TableLayout._({
     required this.cards,
     required this.deckRect,
+    required this.deckArea,
     required this.pileRects,
     required this.seatRects,
     required this.seatSides,
@@ -71,7 +72,13 @@ class TableLayout {
   });
 
   final Map<int, CardPlacement> cards;
+
+  /// The deck. It lies on the left of the player who deals this round (as
+  /// that player sees it), so who deals and who starts is clear at a glance.
   final Rect deckRect;
+
+  /// The deck with the face-up cards under it (for highlighting it).
+  final Rect deckArea;
 
   /// Captured-cards pile per team (0 = our team).
   final List<Rect> pileRects;
@@ -172,23 +179,34 @@ class TableLayout {
       w - margin - sideW,
       max(topRowBottom + 2 + sh, infoTop - 4),
     );
-    // Deck in the top-left corner, the face-up bottom card (kapak altı)
-    // sticking out under it.
-    // The whole block (deck + kapak altı) is turned by [deckTilt], so the kapak
-    // altı cards stick out towards the bottom-right corner. The deck keeps
-    // clear of the screen edges after the turn.
-    const deckTilt = pi / 4;
+    // ---- the deck: on the dealer's left, as the dealer sits. The face-up
+    // bottom card (kapak altı) sticks out under it towards the middle.
+    //  me (bottom)   → left of my hand, the kapak altı to the left
+    //  top           → top-right corner (the top player's left)
+    //  left (2v2)    → top-left corner, above that player's hand
+    //  right (2v2)   → bottom-right, under that player's hand
+    // In the top corners the block is turned by 45° so the kapak altı sticks
+    // out towards the middle; down at the bottom it lies flat.
+    final fullHandW = hw * handSpan;
     final deckReach = (sw + sh) / 2 * 0.72;
     // Away from the rounded corner of the cloth, so the whole deck lies on it.
     final corner = min(w, h) * cornerFactor;
-    final deckRect = Rect.fromCenter(
-      center: Offset(margin + deckReach + corner * 0.45, topY + max(deckReach, sh / 2)),
-      width: sw,
-      height: sh,
-    );
+    final cornerX = margin + deckReach + corner * 0.45;
+    final cornerY = topY + max(deckReach, sh / 2);
+    // Down at the bottom: between the hint line and my name plate.
+    final lowY = handTop + hh * 0.35;
+    final (Offset deckCenter, double deckTilt, Offset kapakDir) = switch (sideOf(state.dealer, state.numPlayers)) {
+      SeatSide.bottom => (Offset((w - fullHandW) / 2 - sw * 0.9, lowY), pi, const Offset(-1, 0)),
+      SeatSide.top => (Offset(w - cornerX, cornerY), 3 * pi / 4, Offset(cos(3 * pi / 4), sin(3 * pi / 4))),
+      SeatSide.left => (Offset(cornerX, cornerY), pi / 4, Offset(cos(pi / 4), sin(pi / 4))),
+      SeatSide.right => (Offset(w - margin - sh * 0.75, lowY + hh * 0.07), pi, const Offset(-1, 0)),
+    };
+    // Further face-up cards (jacks of the opening) follow side by side,
+    // towards the middle of the table.
+    final spreadDir = deckCenter.dx < w / 2 ? 1.0 : -1.0;
+    final deckRect = Rect.fromCenter(center: deckCenter, width: sw, height: sh);
 
     // Captured cards: in front of the player who captured first for the team.
-    final fullHandW = hw * handSpan;
     final topHandW = sw + (slots - 1) * sw * 0.55;
     Rect pileRectFor(int seat) => switch (sideOf(seat, state.numPlayers)) {
           SeatSide.bottom =>
@@ -215,23 +233,27 @@ class TableLayout {
     // every jack that was put there at the opening) lie side by side, all
     // visible, the one nearest to the deck on top.
     var faceUpUnder = 0;
+    var deckArea = deckRect;
     while (faceUpUnder < state.deck.length && state.exposed.contains(state.deck[faceUpUnder])) {
       faceUpUnder++;
     }
     for (var i = 0; i < state.deck.length; i++) {
       final c = state.deck[i];
       if (i < faceUpUnder) {
+        final rect = Rect.fromCenter(
+          // The first one sticks out under the deck, further ones follow
+          // towards the middle.
+          center: deckRect.center + kapakDir * (sw * 0.62) + Offset(spreadDir * i * sw * 0.85, 0),
+          width: sw,
+          height: sh,
+        );
+        // Lying across the deck (its own box turned by a quarter).
+        deckArea = deckArea.expandToInclude(Rect.fromCenter(center: rect.center, width: sh, height: sh));
         placements[c] = CardPlacement(
-          rect: Rect.fromCenter(
-            // The first one sticks out under the tilted deck, further ones
-            // follow to the right.
-            center: deckRect.center + Offset(cos(deckTilt), sin(deckTilt)) * (sw * 0.62) + Offset(i * sw * 0.85, 0),
-            width: sw,
-            height: sh,
-          ),
+          rect: rect,
           faceUp: true,
           z: -1 - i,
-          // Turned with the deck: the card's top points to the bottom-right.
+          // Turned with the deck, across it.
           angle: pi / 2 + deckTilt,
         );
         continue;
@@ -438,6 +460,7 @@ class TableLayout {
     return TableLayout._(
       cards: placements,
       deckRect: deckRect,
+      deckArea: deckArea,
       pileRects: pileRects,
       seatRects: seatRects,
       seatSides: seatSides,
