@@ -443,7 +443,6 @@ const Map<String, String> _englishLanguageNames = <String, String>{
 final List<String> _languagesAlphabetical = AppSettings.languages.toList()
   ..sort((a, b) => (_englishLanguageNames[a] ?? a).compareTo(_englishLanguageNames[b] ?? b));
 
-/// A tappable preview with a gold ring when selected.
 /// A small table with the chosen cloth, my card back on the deck and in my
 /// hand, two cards face up and my avatar: the settings below change it live.
 class _LookPreview extends StatelessWidget {
@@ -544,6 +543,7 @@ class _LookPreview extends StatelessWidget {
   }
 }
 
+/// A tappable preview with a gold ring when selected.
 class _Swatch extends StatelessWidget {
   const _Swatch({required this.selected, required this.onTap, required this.child, this.lockedLevel});
 

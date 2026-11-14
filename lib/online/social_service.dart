@@ -63,6 +63,7 @@ class SocialService {
   String _syncedName = '';
   String _syncedFrame = '';
   String _syncedPic = '';
+  int _syncedLevel = 0;
   final Random _rng = Random.secure();
 
   bool get started => _started;
@@ -221,14 +222,20 @@ class SocialService {
     _syncedName = name;
     _syncedFrame = s.avatarFrame.name;
     _syncedPic = s.avatarPic.name;
+    _syncedLevel = s.playerLevel;
     return true;
   }
 
-  /// A new name (or frame) is published a moment after the last change.
+  /// A new name, avatar or level is published a moment after the last change.
   void _onSettings() {
     final s = _settings;
     if (s == null) return;
-    if (_nameOf(s) == _syncedName && s.avatarFrame.name == _syncedFrame && s.avatarPic.name == _syncedPic) return;
+    if (_nameOf(s) == _syncedName &&
+        s.avatarFrame.name == _syncedFrame &&
+        s.avatarPic.name == _syncedPic &&
+        s.playerLevel == _syncedLevel) {
+      return;
+    }
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 1500), () {
       _sync().catchError((Object _) => false);

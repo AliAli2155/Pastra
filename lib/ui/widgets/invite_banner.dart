@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../game/app_settings.dart';
+import '../../game/avatar_pic.dart';
 import '../../l10n/social_strings.dart';
 import '../../online/invites.dart';
 import '../screens/online_screen.dart';
@@ -93,7 +94,17 @@ class _InviteBannerState extends State<InviteBanner> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    PlayerAvatar(name: invite.name, size: 38),
+                    // A friend's picture and frame as the friends list knows them.
+                    Builder(builder: (context) {
+                      final friend =
+                          SettingsScope.of(context).friends.where((f) => f.uid == invite.fromUid).firstOrNull;
+                      return PlayerAvatar(
+                        name: invite.name,
+                        size: 38,
+                        pic: AvatarPic.byName(friend?.pic),
+                        frame: avatarFrameByName(friend?.frame),
+                      );
+                    }),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(

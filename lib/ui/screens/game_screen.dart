@@ -873,14 +873,26 @@ class _GameScreenState extends State<GameScreen> {
     if (seat == 0) return null;
     final info = c.seats[seat];
     if (info.isBot) {
-      // Never my own back (nor the plain first one): their cards look theirs.
+      // A colour clearly unlike mine (and unlike the plain first back), so
+      // their cards always look theirs.
+      final mine = c.settings.cardBack;
       final backs = <CardBackStyle>[
         for (final b in CardBackStyle.values)
-          if (b != CardBackStyle.aegean && b != c.settings.cardBack) b,
+          if (_backsDiffer(b, mine) && _backsDiffer(b, CardBackStyle.aegean)) b,
       ];
+      if (backs.isEmpty) return null;
       return backs[(info.botIndex.abs() * 5 + 3) % backs.length];
     }
     return CardBackStyle.values.where((b) => b.name == info.back).firstOrNull;
+  }
+
+  /// Two backs that do not look alike at a glance (their main colour, the
+  /// light one, is far enough apart).
+  static bool _backsDiffer(CardBackStyle a, CardBackStyle b) {
+    double d(double x, double y) => (x - y) * (x - y);
+    final l = d(a.light.r, b.light.r) + d(a.light.g, b.light.g) + d(a.light.b, b.light.b);
+    final k = d(a.dark.r, b.dark.r) + d(a.dark.g, b.dark.g) + d(a.dark.b, b.dark.b);
+    return l + k > 0.06;
   }
 
   /// Whose card this is for its back: the seat holding it, the player who
@@ -1008,9 +1020,11 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
     if (bumpKey != null) chip = _Bump(key: ValueKey<int>(bumpKey), fresh: fresh, child: chip);
+    // Centred under the place, with room for a long count (a small pile
+    // in a 2v2 corner is narrower than its counter).
     return Positioned(
-      left: anchor.left - 14,
-      width: anchor.width + 28,
+      left: anchor.center.dx - 60,
+      width: 120,
       top: onTop ? anchor.center.dy - 10 : anchor.bottom - 9,
       child: IgnorePointer(child: Center(child: chip)),
     );
@@ -1548,13 +1562,12 @@ class _TrackerCard extends StatelessWidget {
   }
 }
 
-/// Ring that empties while a player thinks; shows the seconds left.
+/// The time left for a move as a ring on the player's avatar: gold, coral
+/// in the last third, with the seconds in a small coral badge for the last
+/// five.
 ///
 /// It moves five times a second, not with every frame: anything that moves
-/// makes the whole table be drawn again, and a turn is long.
-/// The time left for a move as a ring around the player's avatar: gold,
-/// coral in the last third, with the seconds in a small coral badge for the
-/// last five. Steps five times a second (a slow timer) and stops at zero.
+/// makes the whole table be drawn again, and a turn is long. It stops at zero.
 class _TimerRing extends StatefulWidget {
   const _TimerRing({super.key, required this.duration, required this.child});
 

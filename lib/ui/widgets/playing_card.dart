@@ -276,12 +276,17 @@ class CourtImages {
     await Future.wait(<Future<void>>[
       for (final e in _assets.entries)
         () async {
-          try {
-            final data = await rootBundle.load(e.value);
-            final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-            _images[e.key] = (await codec.getNextFrame()).image;
-          } catch (_) {
-            // Keeps the drawn design.
+          // A dropped download (a phone's network) is tried again twice.
+          for (var attempt = 0; attempt < 3; attempt++) {
+            try {
+              final data = await rootBundle.load(e.value);
+              final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+              _images[e.key] = (await codec.getNextFrame()).image;
+              return;
+            } catch (_) {
+              // Keeps the drawn design if it never comes.
+              if (attempt < 2) await Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+            }
           }
         }(),
     ]);

@@ -245,7 +245,22 @@ class _TournamentScreenState extends State<TournamentScreen> {
       Widget player(int slot, {required bool me}) => Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              PlayerAvatar(name: _name(s, slot), size: 58),
+              // The same avatars as at the table: mine, or the bot's picture
+              // with the frame of this round's level.
+              if (me)
+                PlayerAvatar(
+                  name: _name(s, slot),
+                  size: 58,
+                  pic: SettingsScope.of(context).avatarPic,
+                  frame: SettingsScope.of(context).avatarFrame,
+                )
+              else
+                PlayerAvatar(
+                  name: _name(s, slot),
+                  size: 58,
+                  pic: botPic(t.bots[slot]),
+                  frame: botFrame(t.opponentLevel),
+                ),
               const SizedBox(height: 8),
               Text(
                 _name(s, slot),
