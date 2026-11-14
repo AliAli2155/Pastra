@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../../engine/cards.dart';
 import '../../game/app_settings.dart';
 import '../../game/avatar_pic.dart';
 import '../../game/economy.dart';
@@ -21,7 +22,12 @@ import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.initialTab = 0});
+
+  /// The section to open with (1: appearance).
+  final int initialTab;
+
+  static const int appearanceTab = 1;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -77,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           bottom: false,
           // Sections on the left (pills at the top on a narrow screen).
           child: SideTabs(
+            initial: widget.initialTab,
             tabs: <PageTab>[
               PageTab(icon: Icons.person_rounded, label: s.yourName, builder: _profile),
               PageTab(icon: Icons.palette_rounded, label: s.appearance, builder: _appearance),
@@ -170,6 +177,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final p = ProgressStrings(settings.language);
     return TabBody(
       children: <Widget>[
+        // What the choices below look like together, at once.
+        _LookPreview(
+          table: settings.tableTheme,
+          back: settings.cardBack,
+          name: settings.playerName.isEmpty ? s.you : settings.playerName,
+          pic: settings.avatarPic,
+          frame: settings.avatarFrame,
+        ),
         SectionPanel(
           title: s.tableColor,
           icon: Icons.table_restaurant_rounded,
@@ -429,6 +444,106 @@ final List<String> _languagesAlphabetical = AppSettings.languages.toList()
   ..sort((a, b) => (_englishLanguageNames[a] ?? a).compareTo(_englishLanguageNames[b] ?? b));
 
 /// A tappable preview with a gold ring when selected.
+/// A small table with the chosen cloth, my card back on the deck and in my
+/// hand, two cards face up and my avatar: the settings below change it live.
+class _LookPreview extends StatelessWidget {
+  const _LookPreview({required this.table, required this.back, required this.name, required this.pic, required this.frame});
+
+  final TableTheme table;
+  final CardBackStyle back;
+  final String name;
+  final AvatarPic pic;
+  final AvatarFrame frame;
+
+  @override
+  Widget build(BuildContext context) {
+    const cardW = 44.0;
+    const cardH = cardW * 1.4;
+    Widget card(int c, {bool up = true, double turn = 0}) => Transform.rotate(
+          angle: turn,
+          child: SizedBox(
+            width: cardW,
+            height: cardH,
+            child: PlayingCardView(card: c, faceUp: up, backStyle: back),
+          ),
+        );
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      height: 150,
+      decoration: table.decoration.copyWith(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: PastraColors.wood, width: 6),
+        boxShadow: <BoxShadow>[
+          const BoxShadow(color: PastraColors.gold, spreadRadius: 1.2),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 18, offset: const Offset(0, 8)),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      child: Row(
+        children: <Widget>[
+          // The deck: a few backs on top of each other.
+          SizedBox(
+            width: cardW + 6,
+            height: cardH + 6,
+            child: Stack(
+              children: <Widget>[
+                for (var i = 0; i < 3; i++) Positioned(left: i * 2.0, top: 6 - i * 2.0, child: card(0, up: false)),
+              ],
+            ),
+          ),
+          const Spacer(),
+          // Two cards on the table.
+          card(Cards.make(Cards.spades, 1), turn: -0.08),
+          const SizedBox(width: 6),
+          card(Cards.make(Cards.diamonds, 10), turn: 0.06),
+          const Spacer(),
+          // Me: avatar and name over my hand (backs, as the others see it).
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              SizedBox(
+                width: 70,
+                height: 52,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: <Widget>[
+                    for (var i = 0; i < 3; i++)
+                      Positioned(left: 4 + i * 13.0, top: 0, child: Transform.scale(scale: 0.7, child: card(0, up: false, turn: (i - 1) * 0.12))),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(3, 3, 10, 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    PlayerAvatar(name: name, pic: pic, frame: frame, size: 26),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 90),
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: PastraColors.text, fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Swatch extends StatelessWidget {
   const _Swatch({required this.selected, required this.onTap, required this.child, this.lockedLevel});
 

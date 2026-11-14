@@ -38,6 +38,9 @@ class RoomSeat {
   final String pic;
   final String frame;
 
+  /// Their card back (`CardBackStyle` name).
+  final String back;
+
   const RoomSeat({
     this.uid,
     this.name = '',
@@ -46,15 +49,16 @@ class RoomSeat {
     this.botIndex = -1,
     this.pic = '',
     this.frame = '',
+    this.back = '',
   });
 
   bool get taken => uid != null || bot;
 }
 
-/// The player's avatar picture and frame, written into their seat so that
-/// the others see it at the table.
+/// The player's avatar picture, frame and card back, written into their
+/// seat so that the others see them at the table.
 Map<String, Object?> _avatar(AppSettings settings) =>
-    <String, Object?>{'pic': settings.avatarPic.name, 'frame': settings.avatarFrame.name};
+    <String, Object?>{'pic': settings.avatarPic.name, 'frame': settings.avatarFrame.name, 'back': settings.cardBack.name};
 
 /// Room data everybody may read: settings and who sits where.
 class RoomInfo {
@@ -127,6 +131,7 @@ class RoomWatcher extends ChangeNotifier {
                   botIndex: (s['botIndex'] as num?)?.toInt() ?? -1,
                   pic: s['pic'] is String ? s['pic'] as String : '',
                   frame: s['frame'] is String ? s['frame'] as String : '',
+                  back: s['back'] is String ? s['back'] as String : '',
                 ),
         );
       }
@@ -371,7 +376,7 @@ class HostRoom implements OnlineLink {
     for (var i = 1; i < players; i++) {
       final rs = i < info.seats.length ? info.seats[i] : const RoomSeat();
       if (rs.uid != null) {
-        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame));
+        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame, back: rs.back));
       } else {
         // At a table with an entry fee the bots play their best (nobody
         // collects the pot by beating easy bots).
@@ -643,7 +648,7 @@ class GuestRoom implements OnlineLink {
         final botLevel = (real == 2 && !info.level.atLeast(AiLevel.medium)) ? AiLevel.medium : info.level;
         seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
       } else {
-        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame));
+        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame, back: rs.back));
       }
     }
     // Leaving now and coming back later takes the seat back from the bot.

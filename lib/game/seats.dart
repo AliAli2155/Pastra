@@ -22,6 +22,10 @@ class SeatInfo {
   final String pic;
   final String frame;
 
+  /// An online player's card back (`CardBackStyle` name, empty when unknown):
+  /// their cards show it on every screen.
+  final String back;
+
   const SeatInfo({
     required this.kind,
     this.level = AiLevel.medium,
@@ -29,6 +33,7 @@ class SeatInfo {
     this.name,
     this.pic = '',
     this.frame = '',
+    this.back = '',
   });
 
   const SeatInfo.human()
@@ -37,15 +42,17 @@ class SeatInfo {
         botIndex = -1,
         name = null,
         pic = '',
-        frame = '';
+        frame = '',
+        back = '';
 
   const SeatInfo.bot(this.level, this.botIndex)
       : kind = SeatKind.bot,
         name = null,
         pic = '',
-        frame = '';
+        frame = '',
+        back = '';
 
-  const SeatInfo.remote(this.name, {this.pic = '', this.frame = ''})
+  const SeatInfo.remote(this.name, {this.pic = '', this.frame = '', this.back = ''})
       : kind = SeatKind.remote,
         level = AiLevel.medium,
         botIndex = -1;

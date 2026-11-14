@@ -19,6 +19,7 @@ import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/fullscreen_button.dart';
+import '../widgets/profile_card.dart';
 import '../widgets/rules_editor.dart';
 import '../widgets/suit_icon.dart';
 import '../widgets/wallet_bar.dart';
@@ -213,7 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: _TopBar(
         compact: compact,
         stacked: w < 560,
-        onProfile: () => _open(const LevelPathScreen()),
+        onProfile: () => showMyProfile(
+          context,
+          onLevelPath: () => _open(const LevelPathScreen()),
+          onAppearance: () => _open(const SettingsScreen(initialTab: SettingsScreen.appearanceTab)),
+        ),
         onStore: _openStore,
       ),
     );

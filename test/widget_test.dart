@@ -153,6 +153,11 @@ void main() {
       await tester.ensureVisible(find.text(settings.playerLevel >= 5 ? 'Card player' : 'Novice'));
       await tester.tap(find.text(settings.playerLevel >= 5 ? 'Card player' : 'Novice'));
       await tester.pumpAndSettle();
+      // The profile card first, with its statistics and the way on.
+      expect(find.text('Win rate'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Level path'));
+      await tester.pumpAndSettle();
       // The gold title is drawn twice (outline and fill).
       expect(find.text('Level path'), findsWidgets);
       expect(find.text('You are here'), findsOneWidget);

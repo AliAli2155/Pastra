@@ -866,6 +866,44 @@ class _GameScreenState extends State<GameScreen> {
     _prevTable = state.table.toSet();
   }
 
+  /// The card back of a seat: everybody plays with the back they chose (a
+  /// bot with one of its own), and everybody sees it on that player's cards.
+  /// Null: mine (the one in the settings).
+  CardBackStyle? _backOf(int seat) {
+    if (seat == 0) return null;
+    final info = c.seats[seat];
+    if (info.isBot) {
+      // Never my own back (nor the plain first one): their cards look theirs.
+      final backs = <CardBackStyle>[
+        for (final b in CardBackStyle.values)
+          if (b != CardBackStyle.aegean && b != c.settings.cardBack) b,
+      ];
+      return backs[(info.botIndex.abs() * 5 + 3) % backs.length];
+    }
+    return CardBackStyle.values.where((b) => b.name == info.back).firstOrNull;
+  }
+
+  /// Whose card this is for its back: the seat holding it, the player who
+  /// played it, or the one in front of whom the pile lies. Null: the deck
+  /// (my own back).
+  final Map<int, int> _owners = <int, int>{};
+
+  int? _ownerOf(int card) {
+    final state = c.state;
+    for (var seat = 0; seat < state.hands.length; seat++) {
+      if (state.hands[seat].contains(card)) return _owners[card] = seat;
+    }
+    for (var t = 0; t < state.piles.length; t++) {
+      if (state.piles[t].contains(card)) return state.pileSeat[t] >= 0 ? state.pileSeat[t] : t;
+    }
+    if (state.deck.contains(card)) {
+      _owners.remove(card);
+      return null;
+    }
+    // On the table (or on its way there): who played it.
+    return _owners[card];
+  }
+
   Widget _card(int card, CardPlacement p, Duration duration, StageGeometry geo) {
     final dragging = card == _dragCard;
     // On a computer a playable card rises a little under the mouse.
@@ -906,6 +944,10 @@ class _GameScreenState extends State<GameScreen> {
           child: PlayingCardView(
             card: card,
             faceUp: p.faceUp,
+            backStyle: switch (_ownerOf(card)) {
+              final int seat => _backOf(seat),
+              null => null,
+            },
             // A dealt card turns over on its way, not on the deck.
             flipDelay: Duration(milliseconds: inHand ? delay + duration.inMilliseconds ~/ 5 : 0),
             covered: p.covered,
@@ -1064,6 +1106,14 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// The avatar of the player whose turn it is, with the time left for the
+  /// move as a ring around it (with a time limit; bots have none).
+  Widget _timed(int seat, bool active, Widget avatar) {
+    final limit = c.turnLimit;
+    if (!active || limit == null || c.seats[seat].isBot || c.state.phase != GamePhase.playing) return avatar;
+    return _TimerRing(key: ValueKey<int>(c.turnId), duration: limit, child: avatar);
+  }
+
   /// My name plate: the initial in a gold ring and my name; it lights up
   /// on my turn.
   Widget _myPlate(Strings s) {
@@ -1076,7 +1126,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _withTurnPing(mine, _seatAvatar(s, 0, 30, active: mine, ring: PastraColors.gold)),
+          _withTurnPing(mine, _timed(0, mine, _seatAvatar(s, 0, 30, active: mine, ring: PastraColors.gold))),
           const SizedBox(width: 8),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 110),
@@ -1114,7 +1164,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _withTurnPing(active, avatar),
+          _withTurnPing(active, _timed(seat, active, avatar)),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -1138,10 +1188,7 @@ class _GameScreenState extends State<GameScreen> {
           ],
           if (thinking) ...<Widget>[
             const SizedBox(width: 6),
-            if (c.turnLimit != null)
-              _Countdown(key: ValueKey<int>(c.turnId), duration: c.turnLimit!, size: 18)
-            else
-              const _ThinkingDots(),
+            const _ThinkingDots(),
           ],
         ],
       ),
@@ -1234,10 +1281,6 @@ class _GameScreenState extends State<GameScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (c.isHumanTurn && c.turnLimit != null) ...<Widget>[
-                _Countdown(key: ValueKey<int>(c.turnId), duration: c.turnLimit!),
-                const SizedBox(width: 8),
-              ],
               Text(
                 main,
                 maxLines: 1,
@@ -1509,17 +1552,20 @@ class _TrackerCard extends StatelessWidget {
 ///
 /// It moves five times a second, not with every frame: anything that moves
 /// makes the whole table be drawn again, and a turn is long.
-class _Countdown extends StatefulWidget {
-  const _Countdown({super.key, required this.duration, this.size = 20});
+/// The time left for a move as a ring around the player's avatar: gold,
+/// coral in the last third, with the seconds in a small coral badge for the
+/// last five. Steps five times a second (a slow timer) and stops at zero.
+class _TimerRing extends StatefulWidget {
+  const _TimerRing({super.key, required this.duration, required this.child});
 
   final Duration duration;
-  final double size;
+  final Widget child;
 
   @override
-  State<_Countdown> createState() => _CountdownState();
+  State<_TimerRing> createState() => _TimerRingState();
 }
 
-class _CountdownState extends State<_Countdown> {
+class _TimerRingState extends State<_TimerRing> {
   static const Duration _step = Duration(milliseconds: 200);
 
   final Stopwatch _watch = Stopwatch()..start();
@@ -1551,35 +1597,68 @@ class _CountdownState extends State<_Countdown> {
 
   @override
   Widget build(BuildContext context) {
-    final size = widget.size;
     final total = widget.duration.inMilliseconds;
     final v = total <= 0 ? 0.0 : (1 - _gone / total).clamp(0.0, 1.0).toDouble();
     final left = (v * widget.duration.inSeconds).ceil();
-    final color = v > 0.3 ? PastraColors.gold : PastraColors.coral;
-    return RepaintBoundary(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: <Widget>[
-            SizedBox.expand(
-              child: CircularProgressIndicator(
-                value: v,
-                strokeWidth: 2.4,
-                color: color,
-                backgroundColor: Colors.white12,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        widget.child,
+        // On the avatar's own ring (or frame): one ring, not two.
+        Positioned.fill(
+          child: IgnorePointer(child: RepaintBoundary(child: CustomPaint(painter: _RingPainter(v)))),
+        ),
+        if (left <= 5 && left > 0)
+          Positioned(
+            right: -6,
+            bottom: -5,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 15),
+              height: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: PastraColors.coral,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: PastraColors.night, width: 1.5),
+              ),
+              child: Text(
+                '$left',
+                style: const TextStyle(color: Color(0xFF1A1305), fontSize: 9.5, fontWeight: FontWeight.w800, height: 1),
               ),
             ),
-            Text(
-              '$left',
-              style: TextStyle(fontSize: size * 0.48, color: color, fontWeight: FontWeight.w800, height: 1),
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter(this.value);
+
+  /// The share of the time still left (1 → 0).
+  final double value;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(1.5);
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFF1C1F25);
+    canvas.drawOval(rect, track);
+    if (value <= 0) return;
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = value > 0.3 ? PastraColors.gold : PastraColors.coral;
+    // From the top, clockwise; it shrinks as the time runs out.
+    canvas.drawArc(rect, -pi / 2, 2 * pi * value, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.value != value;
 }
 
 /// Three dots that light up one after the other while a player thinks

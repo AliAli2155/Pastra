@@ -18,6 +18,7 @@ import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/game_header.dart';
+import '../widgets/profile_card.dart';
 import 'online_screen.dart';
 
 /// People met online: favourites first, then the most recent. One tap opens
@@ -464,44 +465,55 @@ class _FriendRow extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          // Avatar with a green dot while online.
-          Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              PlayerAvatar(
-                name: name,
-                size: 42,
-                pic: AvatarPic.byName(status?.pic ?? friend.pic),
-                frame: avatarFrameByName(status?.frame ?? friend.frame),
-              ),
-              Positioned(
-                right: -1,
-                bottom: -1,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: online ? PastraColors.teal : const Color(0xFF6B7280),
-                    border: Border.all(color: const Color(0xFF181B20), width: 2.5),
+          // Avatar with a green dot while online; tapping it (or the name)
+          // opens the friend's profile.
+          GestureDetector(
+            onTap: () => showFriendProfile(context, friend, status),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                PlayerAvatar(
+                  name: name,
+                  size: 42,
+                  pic: AvatarPic.byName(status?.pic ?? friend.pic),
+                  frame: avatarFrameByName(status?.frame ?? friend.frame),
+                ),
+                Positioned(
+                  right: -1,
+                  bottom: -1,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: online ? PastraColors.teal : const Color(0xFF6B7280),
+                      border: Border.all(color: const Color(0xFF181B20), width: 2.5),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _HandleText(name: name, tag: friend.tag),
-                Text(
-                  line,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: online ? PastraColors.teal : PastraColors.muted, fontSize: 12, fontWeight: online ? FontWeight.w700 : FontWeight.w400),
-                ),
-              ],
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showFriendProfile(context, friend, status),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _HandleText(name: name, tag: friend.tag),
+                  Text(
+                    line,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: online ? PastraColors.teal : PastraColors.muted,
+                        fontSize: 12,
+                        fontWeight: online ? FontWeight.w700 : FontWeight.w400),
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(

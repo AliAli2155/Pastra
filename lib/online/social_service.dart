@@ -20,6 +20,7 @@ class PlayerStatus {
     this.seen = 0,
     this.pic = '',
     this.frame = '',
+    this.level = 0,
   });
 
   final String uid;
@@ -33,6 +34,9 @@ class PlayerStatus {
   /// Avatar picture and frame names (empty when not published).
   final String pic;
   final String frame;
+
+  /// Their level (0 when not published).
+  final int level;
 }
 
 /// The player's own code ("Player #1270") and presence, and finding / watching
@@ -258,6 +262,7 @@ class SocialService {
       seen: (v['seen'] as num?)?.toInt() ?? 0,
       pic: v['pic'] is String ? v['pic'] as String : '',
       frame: v['frame'] is String ? v['frame'] as String : '',
+      level: (v['lvl'] as num?)?.toInt() ?? 0,
     );
   }
 }
