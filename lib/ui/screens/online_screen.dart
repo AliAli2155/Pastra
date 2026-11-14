@@ -1068,18 +1068,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     if (!quick || widget.rematch) ...<Widget>[
                       const SizedBox(height: 12),
-                      InviteShareRow(code: _code),
-                      if (isHost && SettingsScope.of(context).friends.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: () => showInviteFriendsSheet(context, _code),
-                          icon: const Icon(Icons.people_alt_rounded, color: PastraColors.gold),
-                          label: Text(
-                            SocialStrings(SettingsScope.of(context).language).inviteFriends,
-                            style: const TextStyle(color: PastraColors.gold, fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ],
+                      InviteShareRow(
+                        code: _code,
+                        onInviteFriends: isHost && SettingsScope.of(context).friends.isNotEmpty
+                            ? () => showInviteFriendsSheet(context, _code)
+                            : null,
+                      ),
                     ],
                   ],
                 ),
@@ -1118,71 +1112,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                   ),
               ];
-              final seats = <Widget>[for (var i = 0; i < info.players; i++) _seatRow(t, info, i)];
-              return LayoutBuilder(
-                builder: (context, box) {
-                  if (box.maxWidth >= 640) {
-                    // The room code (or the cup match) on the left, the table
-                    // with its seats and the buttons on the right: two equal
-                    // columns of the same height.
-                    return Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 520),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              Expanded(child: Center(child: SingleChildScrollView(child: codeCard))),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: SectionPanel(
-                                  expand: true,
-                                  child: Center(
-                                    child: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: <Widget>[
-                                          _RoomTable(info: info),
-                                          const SizedBox(height: 14),
-                                          ...seats,
-                                          const SizedBox(height: 8),
-                                          ...actions,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 480),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            codeCard,
-                            const SizedBox(height: 16),
-                            _RoomTable(info: info),
-                            const SizedBox(height: 14),
-                            ...seats,
-                            const SizedBox(height: 8),
-                            ...actions,
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              final seats = <Widget>[
+                for (var i = 0; i < info.players; i++)
+                  RoomSeatRow(
+                    info: info,
+                    index: i,
+                    mine: widget.guest?.mySeat == i || (widget.host != null && i == 0),
+                    compact: info.players == 4,
+                  ),
+              ];
+              return LobbyLayout(
+                codeCard: codeCard,
+                table: RoomTable(info: info, small: info.players == 4),
+                seats: seats,
+                actions: actions,
               );
             },
           ),
@@ -1191,9 +1134,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _seatRow(OnlineStrings t, RoomInfo info, int i) {
+}
+
+/// A seat of the waiting room: the player (avatar, online dot, name, host /
+/// you, team) or an empty place. [compact] (four seats) is lower, so that the
+/// whole column fits.
+class RoomSeatRow extends StatelessWidget {
+  const RoomSeatRow({super.key, required this.info, required this.index, this.mine = false, this.compact = false});
+
+  final RoomInfo info;
+  final int index;
+  final bool mine;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = OnlineStrings(SettingsScope.of(context).language);
+    final i = index;
+    final avatar = compact ? 34.0 : 40.0;
     final seat = info.seats.length > i ? info.seats[i] : const RoomSeat();
-    final mine = widget.guest?.mySeat == i || (widget.host != null && i == 0);
     final label = seat.uid != null ? seat.name : t.waiting;
     final tags = <String>[
       if (i == 0) t.host,
@@ -1201,8 +1160,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     ];
     final taken = seat.uid != null;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(8, 8, 14, 8),
+      margin: EdgeInsets.only(bottom: compact ? 6 : 8),
+      padding: EdgeInsets.fromLTRB(8, compact ? 5 : 8, 14, compact ? 5 : 8),
       decoration: glassDecoration(radius: 14, selected: mine),
       child: Row(
         children: <Widget>[
@@ -1212,7 +1171,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               children: <Widget>[
                 PlayerAvatar(
                   name: label,
-                  size: 40,
+                  size: avatar,
                   pic: AvatarPic.byName(seat.pic),
                   frame: avatarFrameByName(seat.frame),
                 ),
@@ -1233,8 +1192,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             )
           else
             Container(
-              width: 40,
-              height: 40,
+              width: avatar,
+              height: avatar,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white24, width: 1.5),
@@ -1274,6 +1233,94 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 }
 
+/// The waiting room on the screen: on a wide one the room code (or the cup
+/// match) on the left and the table with its seats and the buttons on the
+/// right, two equal columns; the right one always fits (it is scaled down a
+/// little on a low window rather than scrolled), so the start button is
+/// always there. On a narrow screen everything in one scrolling column.
+class LobbyLayout extends StatelessWidget {
+  const LobbyLayout({super.key, required this.codeCard, required this.table, required this.seats, required this.actions});
+
+  final Widget codeCard;
+  final Widget table;
+  final List<Widget> seats;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final four = seats.length == 4;
+    return LayoutBuilder(
+      builder: (context, box) {
+        if (box.maxWidth >= 640) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 520),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(child: Center(child: SingleChildScrollView(child: codeCard))),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: SectionPanel(
+                        expand: true,
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        child: LayoutBuilder(
+                          builder: (context, inner) => Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: SizedBox(
+                                width: inner.maxWidth,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: <Widget>[
+                                    table,
+                                    SizedBox(height: four ? 8 : 14),
+                                    ...seats,
+                                    const SizedBox(height: 4),
+                                    ...actions,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  codeCard,
+                  const SizedBox(height: 16),
+                  table,
+                  const SizedBox(height: 14),
+                  ...seats,
+                  const SizedBox(height: 8),
+                  ...actions,
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// The waiting room's emerald card (the room code, or the cup match).
 class _WaitHero extends StatelessWidget {
   const _WaitHero({required this.child});
@@ -1300,13 +1347,23 @@ class _WaitHero extends StatelessWidget {
 }
 
 /// The room's table seen from above: a gold dot on every taken seat.
-class _RoomTable extends StatelessWidget {
-  const _RoomTable({required this.info});
+/// The little table of the waiting room with a dot for every seat.
+class RoomTable extends StatelessWidget {
+  const RoomTable({super.key, required this.info, this.small = false});
 
   final RoomInfo info;
 
+  /// A smaller drawing (four seats leave less room).
+  final bool small;
+
   @override
   Widget build(BuildContext context) {
+    final drawing = _drawing();
+    if (!small) return drawing;
+    return Center(child: SizedBox(height: 86, child: FittedBox(child: drawing)));
+  }
+
+  Widget _drawing() {
     const w = 170.0;
     const h = 84.0;
     final four = info.players == 4;

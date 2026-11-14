@@ -6,14 +6,16 @@ import '../../game/app_settings.dart';
 import '../../l10n/social_strings.dart';
 import '../../online/invite_link.dart';
 import '../share_stub.dart' if (dart.library.js_interop) '../share_web.dart';
-import '../theme.dart';
+import '../premium/premium.dart';
 
-/// Buttons to send the room's invite link: the phone's share sheet (or copy),
-/// WhatsApp and Telegram (web), copy.
+/// The two ways to bring people to the room: the invite link (the phone's
+/// share sheet; copied where there is none) and, with [onInviteFriends],
+/// a direct invite to friends. Two equal buttons side by side.
 class InviteShareRow extends StatelessWidget {
-  const InviteShareRow({super.key, required this.code});
+  const InviteShareRow({super.key, required this.code, this.onInviteFriends});
 
   final String code;
+  final VoidCallback? onInviteFriends;
 
   @override
   Widget build(BuildContext context) {
@@ -32,52 +34,31 @@ class InviteShareRow extends StatelessWidget {
       if (!shareSheet(t.inviteText(code, '').trim(), link)) copy();
     }
 
-    // A small labelled button in the app's colour (WhatsApp green, …).
-    Widget pill(String label, IconData icon, Color color, VoidCallback onTap) => Material(
-          color: color,
-          shape: const StadiumBorder(),
-          child: InkWell(
-            customBorder: const StadiumBorder(),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(icon, color: Colors.white, size: 18),
-                  const SizedBox(width: 6),
-                  Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-                ],
-              ),
+    final friends = onInviteFriends;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: GoldButton(
+            label: kIsWeb ? t.shareInvite : t.copyLink,
+            icon: kIsWeb ? Icons.ios_share_rounded : Icons.link_rounded,
+            height: 46,
+            fontSize: 15,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            onPressed: kIsWeb ? share : copy,
+          ),
+        ),
+        if (friends != null) ...<Widget>[
+          const SizedBox(width: 10),
+          Expanded(
+            child: GlassButton(
+              label: t.inviteFriends,
+              icon: Icons.people_alt_rounded,
+              height: 46,
+              fontSize: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              onPressed: friends,
             ),
           ),
-        );
-
-    return Wrap(
-      alignment: WrapAlignment.center,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 10,
-      runSpacing: 8,
-      children: <Widget>[
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: PastraColors.gold,
-            foregroundColor: Colors.black,
-            textStyle: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          onPressed: kIsWeb ? share : copy,
-          icon: Icon(kIsWeb ? Icons.ios_share_rounded : Icons.link_rounded, size: 18),
-          label: Text(kIsWeb ? t.shareInvite : t.copyLink),
-        ),
-        if (kIsWeb) ...<Widget>[
-          pill('WhatsApp', Icons.chat_rounded, const Color(0xFF25A35A), () => openLink(InviteLink.whatsapp(text))),
-          pill(
-            'Telegram',
-            Icons.send_rounded,
-            const Color(0xFF229ED9),
-            () => openLink(InviteLink.telegram(link, t.inviteText(code, '').trim())),
-          ),
-          pill(t.copyLink, Icons.link_rounded, Colors.white24, copy),
         ],
       ],
     );
