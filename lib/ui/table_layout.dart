@@ -179,31 +179,33 @@ class TableLayout {
       w - margin - sideW,
       max(topRowBottom + 2 + sh, infoTop - 4),
     );
-    // ---- the deck: on the dealer's left, as the dealer sits. The face-up
-    // bottom card (kapak altı) sticks out under it towards the middle.
-    //  me (bottom)   → left of my hand, the kapak altı to the left
+    // ---- the deck: on the dealer's left, as the dealer sits:
+    //  me (bottom)   → left of my hand
     //  top           → top-right corner (the top player's left)
     //  left (2v2)    → top-left corner, above that player's hand
     //  right (2v2)   → bottom-right, under that player's hand
-    // In the top corners the block is turned by 45° so the kapak altı sticks
-    // out towards the middle; down at the bottom it lies flat.
+    // Everywhere the same look: the block turned by 45°, the face-up bottom
+    // card (kapak altı) sticking out of it diagonally towards the middle of
+    // the table (down-right in the top-left corner, up-right next to my hand…).
     final fullHandW = hw * handSpan;
     final deckReach = (sw + sh) / 2 * 0.72;
     // Away from the rounded corner of the cloth, so the whole deck lies on it.
     final corner = min(w, h) * cornerFactor;
     final cornerX = margin + deckReach + corner * 0.45;
     final cornerY = topY + max(deckReach, sh / 2);
-    // Down at the bottom: between the hint line and my name plate.
-    final lowY = handTop + hh * 0.35;
-    final (Offset deckCenter, double deckTilt, Offset kapakDir) = switch (sideOf(state.dealer, state.numPlayers)) {
-      SeatSide.bottom => (Offset((w - fullHandW) / 2 - sw * 0.9, lowY), pi, const Offset(-1, 0)),
-      SeatSide.top => (Offset(w - cornerX, cornerY), 3 * pi / 4, Offset(cos(3 * pi / 4), sin(3 * pi / 4))),
-      SeatSide.left => (Offset(cornerX, cornerY), pi / 4, Offset(cos(pi / 4), sin(pi / 4))),
-      SeatSide.right => (Offset(w - margin - sh * 0.75, lowY + hh * 0.07), pi, const Offset(-1, 0)),
+    final (Offset deckCenter, double deckTilt) = switch (sideOf(state.dealer, state.numPlayers)) {
+      // Far enough left of my hand that the kapak altı stays clear of it.
+      SeatSide.bottom => (Offset((w - fullHandW) / 2 - sw * 1.6, handTop + hh * 0.27), -pi / 4),
+      SeatSide.top => (Offset(w - cornerX, cornerY), 3 * pi / 4),
+      SeatSide.left => (Offset(cornerX, cornerY), pi / 4),
+      // At the right edge, past our captured cards and under that player's
+      // name plate.
+      SeatSide.right => (Offset(w - margin - sh * 0.75, handTop + hh * 0.49), -3 * pi / 4),
     };
-    // Further face-up cards (jacks of the opening) follow side by side,
-    // towards the middle of the table.
-    final spreadDir = deckCenter.dx < w / 2 ? 1.0 : -1.0;
+    // The kapak altı sticks out along the turn; further face-up cards (jacks
+    // of the opening) follow side by side the same way.
+    final kapakDir = Offset(cos(deckTilt), sin(deckTilt));
+    final spreadDir = kapakDir.dx < 0 ? -1.0 : 1.0;
     final deckRect = Rect.fromCenter(center: deckCenter, width: sw, height: sh);
 
     // Captured cards: in front of the player who captured first for the team.
