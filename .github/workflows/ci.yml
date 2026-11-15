@@ -51,6 +51,8 @@ jobs:
           node-version: 22
 
       - name: Performance (headless Chrome)
+        env:
+          PERF_CPU: '1'
         run: |
           python3 -m http.server 8123 --directory build/web > /dev/null 2>&1 &
           sleep 2

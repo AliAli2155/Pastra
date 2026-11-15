@@ -19,6 +19,9 @@ const chromeBin =
   process.env.CHROME ??
   (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'google-chrome');
 const port = 9444;
+// How much slower the CPU runs (PERF_CPU; 4 = like a mid-range phone on a
+// laptop). A CI machine is slow already and draws without a graphics card.
+const cpu = Number(process.env.PERF_CPU ?? 4);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'pastra-perf-'));
@@ -117,7 +120,7 @@ try {
     `localStorage.setItem('flutter.tutorialDone','true');localStorage.setItem('flutter.sound','false');` +
       `localStorage.setItem('flutter.language','"en"');'ok'`,
   );
-  await send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await send('Emulation.setCPUThrottlingRate', { rate: cpu });
   await send('Page.reload');
   // Until the app is there (the splash is removed), then let the lobby's
   // entrance finish.
@@ -157,8 +160,11 @@ try {
   const idleOk = idleFrames <= 10;
   if (!idleOk) exitCode = 1;
   const md = [
-    '## Performance (headless Chrome, 844×390, CPU 4× slower)',
+    `## Performance (headless Chrome, 844×390${cpu > 1 ? `, CPU ${cpu}× slower` : ''})`,
     '',
+    process.env.CI
+      ? '_A CI machine draws without a graphics card: compare these numbers with earlier runs, not with a phone._\n'
+      : '',
     `| Check | Result |`,
     `|---|---|`,
     `| Lobby frames in 3 s while nothing happens | ${idleFrames} ${idleOk ? '✅' : '❌ (an endless animation?)'} |`,
