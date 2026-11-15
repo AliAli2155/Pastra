@@ -4,6 +4,7 @@ import 'package:pastra/engine/pastra_ai.dart';
 import 'package:pastra/engine/pastra_engine.dart';
 import 'package:pastra/game/app_settings.dart';
 import 'package:pastra/game/game_controller.dart';
+import 'package:pastra/game/progression.dart';
 import 'package:pastra/game/seats.dart';
 import 'package:pastra/ui/fx/fx.dart';
 import 'package:pastra/ui/screens/game_screen.dart';
@@ -75,8 +76,10 @@ void main() {
       expect(backs.length, greaterThanOrEqualTo(n));
     }
     final backs = faceDown(tester).map((v) => v.backStyle).whereType<CardBackStyle>().toSet();
-    // Three bots, three different backs.
+    // Three bots, three different backs, all from the level path (the ones
+    // the appearance settings show), never a store back.
     expect(backs.length, 3);
+    expect(Progression.backLevel.keys, containsAll(backs));
     expect(backs, isNot(contains(c.settings.cardBack)));
     expect(backs, isNot(contains(CardBackStyle.aegean)));
     await close(tester, c);

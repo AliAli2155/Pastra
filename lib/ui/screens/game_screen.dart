@@ -875,13 +875,14 @@ class _GameScreenState extends State<GameScreen> {
     return CardBackStyle.values.where((b) => b.name == info.back).firstOrNull;
   }
 
-  /// The bots' card backs: a colour clearly unlike mine (and unlike the
-  /// plain first back), always the same for the same bot name, and no two
-  /// bots at the table with the same one.
+  /// The bots' card backs: only the backs of the level path (the ones the
+  /// appearance settings show to everybody, never a store back), in a colour
+  /// clearly unlike mine (and unlike the plain first back), always the same
+  /// for the same bot name, and no two bots at the table with the same one.
   late final Map<int, CardBackStyle> _botBacks = () {
     final mine = c.settings.cardBack;
     final backs = <CardBackStyle>[
-      for (final b in CardBackStyle.values)
+      for (final b in Progression.backLevel.keys)
         if (_backsDiffer(b, mine) && _backsDiffer(b, CardBackStyle.aegean)) b,
     ];
     final out = <int, CardBackStyle>{};
