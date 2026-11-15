@@ -1,7 +1,10 @@
-# GitHub Actions: copy this file to .github/workflows/web-pages.yml
-# Builds the web version on every push to main and publishes it with GitHub
-# Pages at https://<user>.github.io/<repo>/  (Settings -> Pages -> Source:
-# "GitHub Actions" must be selected once).
+# Builds the site and publishes it with GitHub Pages:
+#   https://<user>.github.io/<repo>/          the live game, from main
+#   https://<user>.github.io/<repo>/preview/  the work in progress, from ui-v2
+#                                             (own saved data, a PREVIEW ribbon)
+#   https://<user>.github.io/<repo>/preview/shots/  every screen of the preview
+# Runs on every push to main, and when CI or Publish asks for it.
+# (Settings -> Pages -> Source: "GitHub Actions"; only main may deploy.)
 name: Web (GitHub Pages)
 
 on:
@@ -18,28 +21,65 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  FLUTTER_VERSION: 3.47.9
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: live
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ui-v2
+          path: preview
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      - run: flutter pub get
-      - run: flutter test
       # WebAssembly for Chrome, Edge and Chrome on Android phones: much less
       # work per frame. Safari (every iPhone browser), Firefox and older
       # browsers get the JavaScript build from the same folder (Flutter's
       # loader decides).
-      - run: flutter build web --release --wasm --base-href "/${{ github.event.repository.name }}/"
+      - name: Live site (main)
+        working-directory: live
+        run: |
+          flutter pub get
+          flutter build web --release --wasm --base-href "/${{ github.event.repository.name }}/"
+
+      - name: Preview site (ui-v2)
+        working-directory: preview
+        run: |
+          flutter pub get
+          flutter build web --release --wasm --base-href "/${{ github.event.repository.name }}/preview/" \
+            --dart-define=PASTRA_CHANNEL=preview --dart-define=PASTRA_COMMIT="$(git rev-parse --short HEAD)"
+
+      - name: Screenshots of every screen (preview)
+        working-directory: preview
+        continue-on-error: true
+        run: |
+          if [ -f test/gallery_test.dart ]; then
+            GITHUB_SHA="$(git rev-parse HEAD)" SHOTS_DIR=build/web/shots flutter test test/gallery_test.dart
+          fi
+
+      - name: Put the site together
+        run: |
+          mkdir site
+          cp -R live/build/web/. site/
+          mkdir site/preview
+          cp -R preview/build/web/. site/preview/
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: site
 
   deploy:
     needs: build

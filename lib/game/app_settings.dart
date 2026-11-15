@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../build_info.dart';
 import '../engine/pastra_ai.dart';
 import '../engine/rules.dart';
 import '../ui/fx/fx.dart';
@@ -236,11 +237,19 @@ class AppSettings extends ChangeNotifier {
   int _diamonds = Economy.startDiamonds;
   Set<String> _owned = <String>{};
 
+  static bool _prefixSet = false;
+
   /// Unlocked achievement id → when (milliseconds since epoch).
   Map<String, int> _achievements = <String, int>{};
   GameStats _stats = GameStats();
 
   static Future<AppSettings> load() async {
+    // The preview site lives on the same address as the live one: its own
+    // keys, so trying a preview never touches the player's real progress.
+    if (BuildInfo.preview && !_prefixSet) {
+      _prefixSet = true;
+      SharedPreferences.setPrefix('preview.');
+    }
     final prefs = await SharedPreferences.getInstance();
     final settings = AppSettings._(prefs);
     settings._read();

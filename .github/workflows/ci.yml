@@ -1,0 +1,79 @@
+# Checks every push to ui-v2 (and every pull request to main):
+#   analyzer (no infos or warnings at all), all tests (with the sweep of every
+#   screen in every language), the web build, and a performance check in
+#   headless Chrome. When everything passes on ui-v2, the preview site
+#   (https://<user>.github.io/<repo>/preview/) is built again.
+name: CI
+
+on:
+  push:
+    branches: [ui-v2]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.47.9
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Analyzer (no issues at all)
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Web build
+        run: flutter build web --release --wasm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Performance (headless Chrome)
+        run: |
+          python3 -m http.server 8123 --directory build/web > /dev/null 2>&1 &
+          sleep 2
+          node tool/ci/perf.mjs http://localhost:8123/
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf
+          path: perf.json
+          if-no-files-found: ignore
+
+  # The preview site follows ui-v2: the Pages workflow runs on main (only main
+  # may publish to Pages) and builds the live site from main and the preview
+  # from ui-v2.
+  preview:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/ui-v2'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Build the preview site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run web-pages.yml --repo "${{ github.repository }}" --ref main

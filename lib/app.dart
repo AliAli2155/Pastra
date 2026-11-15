@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'build_info.dart';
 import 'game/app_settings.dart';
 import 'l10n/strings.dart';
 import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
@@ -60,6 +61,8 @@ class PastraApp extends StatelessWidget {
                   // A friend request: accept or decline it on any screen.
                   const Positioned.fill(child: FriendRequestBanner()),
                   if (_isPortraitPhone(context)) const Positioned.fill(child: _RotateHint()),
+                  // The preview site of the work in progress says so.
+                  if (BuildInfo.preview) const Positioned.fill(child: _PreviewRibbon()),
                 ],
               ),
             ),
@@ -132,6 +135,25 @@ class _RotateHint extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A ribbon in the bottom-right corner of the preview site: "PREVIEW" and the
+/// commit it was built from. It lets every touch through.
+class _PreviewRibbon extends StatelessWidget {
+  const _PreviewRibbon();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Banner(
+        message: BuildInfo.commit.isEmpty ? 'PREVIEW' : 'PREVIEW ${BuildInfo.commit}',
+        location: BannerLocation.bottomEnd,
+        color: const Color(0xCCF0785A),
+        textStyle: const TextStyle(color: Color(0xFF1A1305), fontSize: 9, fontWeight: FontWeight.w800, height: 1),
+        child: const SizedBox.expand(),
       ),
     );
   }

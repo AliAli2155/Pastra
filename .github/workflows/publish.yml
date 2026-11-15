@@ -1,0 +1,53 @@
+# Publishing in one click: Actions -> Publish -> Run workflow (also from the
+# GitHub app on the phone), or `gh workflow run publish.yml`.
+# It checks that CI passed for the newest ui-v2 commit, moves main to it
+# (fast-forward only: nothing on main is ever lost) and builds the site.
+name: Publish
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: CI must have passed for ui-v2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse origin/ui-v2)
+          echo "ui-v2 is at $sha"
+          result=$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --commit "$sha" \
+            --json conclusion,event --jq 'map(select(.event == "push")) | .[0].conclusion // "none"')
+          echo "CI: $result"
+          if [ "$result" != "success" ]; then
+            echo "::error::CI has not passed for ui-v2 ($sha): $result. Nothing was published."
+            exit 1
+          fi
+
+      - name: Move main to ui-v2
+        run: |
+          {
+            echo "### Published $(git rev-parse --short origin/ui-v2)"
+            echo '```'
+            git log --oneline origin/main..origin/ui-v2
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          git push origin "origin/ui-v2:refs/heads/main"
+
+      # A push made by a workflow does not start other workflows by itself.
+      - name: Build and publish the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run web-pages.yml --repo "${{ github.repository }}" --ref main
