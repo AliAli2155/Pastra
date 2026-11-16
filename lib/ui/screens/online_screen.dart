@@ -1056,43 +1056,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ],
                       ),
                     )
-                  : _WaitHero(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(t.roomCode, style: PremiumText.eyebrow),
-                    GestureDetector(
-                      onTap: () => Clipboard.setData(ClipboardData(text: _code)),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _code,
-                          style: const TextStyle(
-                            fontSize: 64,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 12,
-                            color: PastraColors.goldLight,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Text(
-                      t.shareCode,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14),
-                    ),
-                    if (!quick || widget.rematch) ...<Widget>[
-                      const SizedBox(height: 12),
-                      InviteShareRow(
-                        code: _code,
-                        onInviteFriends: isHost && SettingsScope.of(context).friends.isNotEmpty
-                            ? () => showInviteFriendsSheet(context, _code)
-                            : null,
-                      ),
-                    ],
-                  ],
-                ),
-              );
+                  : RoomCodeCard(
+                      code: _code,
+                      showInvite: !quick || widget.rematch,
+                      onInviteFriends: isHost && SettingsScope.of(context).friends.isNotEmpty
+                          ? () => showInviteFriendsSheet(context, _code)
+                          : null,
+                    );
               final stake = widget.host?.stake ?? widget.guest!.stake;
               final actions = <Widget>[
                 if (stake > 0) ...<Widget>[
@@ -1113,28 +1083,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     onBot: _starting ? null : _start,
                   ),
                 ] else if (isHost) ...<Widget>[
-                  if (info.players == 4 && !cup && info.status == 'lobby') ...<Widget>[
-                    Text(
-                      t.moveHint,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: PastraColors.text2, fontSize: 12),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Transform.scale(
-                          scale: 0.8,
-                          child: Switch(value: info.seatChoice, onChanged: widget.host!.setSeatChoice),
-                        ),
-                        Flexible(
-                          child: Text(
-                            t.seatChoice,
-                            style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  if (info.players == 4 && !cup && info.status == 'lobby')
+                    SeatArrangeControls(seatChoice: info.seatChoice, onSeatChoice: widget.host!.setSeatChoice),
                   Text(
                     t.botFills,
                     textAlign: TextAlign.center,
@@ -1446,6 +1396,81 @@ class LobbyLayout extends StatelessWidget {
   }
 }
 
+/// The room code with the ways to bring people (the waiting room's card).
+class RoomCodeCard extends StatelessWidget {
+  const RoomCodeCard({super.key, required this.code, this.showInvite = true, this.onInviteFriends});
+
+  final String code;
+  final bool showInvite;
+  final VoidCallback? onInviteFriends;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = OnlineStrings(SettingsScope.of(context).language);
+    return _WaitHero(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(t.roomCode, style: PremiumText.eyebrow),
+          GestureDetector(
+            onTap: () => Clipboard.setData(ClipboardData(text: code)),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                code,
+                style: const TextStyle(
+                  fontSize: 64,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 12,
+                  color: PastraColors.goldLight,
+                ),
+              ),
+            ),
+          ),
+          Text(t.shareCode, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFBFE3D6), fontSize: 14)),
+          if (showInvite) ...<Widget>[
+            const SizedBox(height: 12),
+            InviteShareRow(code: code, onInviteFriends: onInviteFriends),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The host's seat controls of a 2v2 waiting room: how to move players and
+/// whether the guests may pick their own seat.
+class SeatArrangeControls extends StatelessWidget {
+  const SeatArrangeControls({super.key, required this.seatChoice, required this.onSeatChoice});
+
+  final bool seatChoice;
+  final ValueChanged<bool> onSeatChoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = OnlineStrings(SettingsScope.of(context).language);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(t.moveHint, textAlign: TextAlign.center, style: const TextStyle(color: PastraColors.text2, fontSize: 12)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Transform.scale(scale: 0.8, child: Switch(value: seatChoice, onChanged: onSeatChoice)),
+            Flexible(
+              child: Text(
+                t.seatChoice,
+                style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// The waiting room's emerald card (the room code, or the cup match).
 class _WaitHero extends StatelessWidget {
   const _WaitHero({required this.child});
@@ -1471,8 +1496,8 @@ class _WaitHero extends StatelessWidget {
   }
 }
 
-/// The room's table seen from above: a gold dot on every taken seat.
-/// The little table of the waiting room with a dot for every seat.
+/// The little table of the waiting room seen from above: a gold dot on
+/// every taken seat.
 class RoomTable extends StatelessWidget {
   const RoomTable({super.key, required this.info, this.small = false});
 
