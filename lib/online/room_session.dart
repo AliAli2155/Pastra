@@ -307,7 +307,7 @@ class HostRoom implements OnlineLink {
     final presence = OnlineService.keepOnline(<String>[
       'rooms/$code/meta/hostOnline',
       'rooms/$code/seats/s0/online',
-    ]).listen((_) {});
+    ]).listen((_) {}, onError: (Object _) {});
     return HostRoom._(code, players, botLevel, settings, RoomWatcher(code), presence, autoStart: true)
       ..rulesOverride = rules
       ..seatBots = seatBots
@@ -353,7 +353,7 @@ class HostRoom implements OnlineLink {
       final presence = OnlineService.keepOnline(<String>[
         'rooms/$code/meta/hostOnline',
         'rooms/$code/seats/s0/online',
-      ]).listen((_) {});
+      ]).listen((_) {}, onError: (Object _) {});
       final room = HostRoom._(
         code,
         players,
@@ -522,7 +522,7 @@ class HostRoom implements OnlineLink {
 class GuestRoom implements OnlineLink {
   GuestRoom._(this.code, this._mySeat, this.settings, this.watcher, this._presence, {this.stake = 0, int players = 2})
       : social = RoomSocial(code: code, mySeat: _mySeat, players: players) {
-    _viewSub = OnlineService.ref('rooms/$code/views/s$_mySeat').onValue.listen(_onView);
+    _viewSub = OnlineService.ref('rooms/$code/views/s$_mySeat').onValue.listen(_onView, onError: (Object _) {});
     watcher.addListener(_onRoom);
   }
 
@@ -613,7 +613,7 @@ class GuestRoom implements OnlineLink {
       }
       if (mine == null) throw const OnlineException('full');
     }
-    final presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$mine/online']).listen((_) {});
+    final presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$mine/online']).listen((_) {}, onError: (Object _) {});
     return GuestRoom._(code, mine, settings, RoomWatcher(code), presence, stake: stake, players: players);
   }
 
@@ -670,9 +670,9 @@ class GuestRoom implements OnlineLink {
     social.mySeat = seat;
     _presence.cancel();
     OnlineService.ref('rooms/$code/seats/s$old/online').onDisconnect().cancel().catchError((Object _) {});
-    _presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$seat/online']).listen((_) {});
+    _presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$seat/online']).listen((_) {}, onError: (Object _) {});
     _viewSub?.cancel();
-    _viewSub = OnlineService.ref('rooms/$code/views/s$seat').onValue.listen(_onView);
+    _viewSub = OnlineService.ref('rooms/$code/views/s$seat').onValue.listen(_onView, onError: (Object _) {});
   }
 
   /// The seats the host's bots play for, in our numbering.
