@@ -74,6 +74,10 @@ class RoomInfo {
   /// Seats (host numbering) whose player is gone and played by a bot.
   final List<int> standIns;
 
+  /// Guests may pick their own free seat in the waiting room (the host can
+  /// turn it off and seat everybody).
+  final bool seatChoice;
+
   const RoomInfo({
     this.exists = false,
     this.hostUid = '',
@@ -84,6 +88,7 @@ class RoomInfo {
     this.turnSeconds = 0,
     this.seats = const <RoomSeat>[],
     this.standIns = const <int>[],
+    this.seatChoice = true,
   });
 
   int get joined => seats.where((s) => s.uid != null).length;
@@ -104,6 +109,9 @@ class RoomWatcher extends ChangeNotifier {
 
   final String code;
   RoomInfo info = const RoomInfo();
+
+  /// What is stored for seat [i] (to move it to another seat as it is).
+  Map<String, dynamic>? seatData(int i) => _map(_seatsValue?['s$i']);
   StreamSubscription<DatabaseEvent>? _meta;
   StreamSubscription<DatabaseEvent>? _seats;
   Map<String, dynamic>? _metaValue;
@@ -149,6 +157,7 @@ class RoomWatcher extends ChangeNotifier {
               if (x is num) x.toInt(),
         ],
         seats: seats,
+        seatChoice: m['seatChoice'] != false,
       );
     }
     if (!_disposed) notifyListeners();
@@ -216,6 +225,23 @@ class HostRoom implements OnlineLink {
   /// there across reconnects.
   Map<String, Object?> _lobbyEntry = const <String, Object?>{};
   StreamSubscription<void>? _lobbySub;
+
+  /// Moves the player on seat [from] to seat [to] (a free seat), or swaps
+  /// the two players – only in the waiting room. The host's own seat (0)
+  /// stays where it is: everybody else is seated around it.
+  Future<void> moveSeat(int from, int to) async {
+    if (from == to || from <= 0 || to <= 0 || from >= players || to >= players) return;
+    if (watcher.info.status != 'lobby') return;
+    final update = seatMoveUpdate(watcher.seatData(from), watcher.seatData(to), from, to);
+    if (update.isEmpty) return;
+    await OnlineService.ref('rooms/$code/seats').update(update).catchError((Object _) {});
+  }
+
+  /// Lets the guests pick their own free seat, or seats them only by the
+  /// host's hand.
+  void setSeatChoice(bool allowed) {
+    OnlineService.ref('rooms/$code/meta/seatChoice').set(allowed).catchError((Object _) {});
+  }
 
   void _listInLobby(Map<String, Object?> entry) {
     _lobbyEntry = entry;
@@ -494,21 +520,25 @@ class HostRoom implements OnlineLink {
 // ======================================================================
 
 class GuestRoom implements OnlineLink {
-  GuestRoom._(this.code, this.mySeat, this.settings, this.watcher, this._presence, {this.stake = 0, int players = 2})
-      : social = RoomSocial(code: code, mySeat: mySeat, players: players) {
-    _viewSub = OnlineService.ref('rooms/$code/views/s$mySeat').onValue.listen(_onView);
+  GuestRoom._(this.code, this._mySeat, this.settings, this.watcher, this._presence, {this.stake = 0, int players = 2})
+      : social = RoomSocial(code: code, mySeat: _mySeat, players: players) {
+    _viewSub = OnlineService.ref('rooms/$code/views/s$_mySeat').onValue.listen(_onView);
     watcher.addListener(_onRoom);
   }
 
   @override
   final String code;
-  final int mySeat;
+
+  /// The player's seat. In the waiting room it can change: the player picks
+  /// a free seat ([sitAt]) or the host moves them ([HostRoom.moveSeat]).
+  int get mySeat => _mySeat;
+  int _mySeat;
 
   @override
   final RoomSocial social;
   final AppSettings settings;
   final RoomWatcher watcher;
-  final StreamSubscription<void> _presence;
+  StreamSubscription<void> _presence;
 
   /// Entry fee of the table (from the room), paid when the game starts.
   @override
@@ -529,7 +559,6 @@ class GuestRoom implements OnlineLink {
   @override
   int get players => watcher.info.exists ? watcher.info.players : social.players;
 
-  /// Joins the room; [seat] takes exactly that seat (tournament matches).
   /// The room of the player's online game if it is still going on and their
   /// seat is still theirs (a bot is playing it meanwhile); otherwise null.
   static Future<String?> stillSeated(AppSettings settings) async {
@@ -546,6 +575,7 @@ class GuestRoom implements OnlineLink {
     return null;
   }
 
+  /// Joins the room; [seat] takes exactly that seat (tournament matches).
   static Future<GuestRoom> join(String code, AppSettings settings, String name, {int? seat}) async {
     final uid = OnlineService.uid;
     final DataSnapshot metaSnap;
@@ -594,6 +624,12 @@ class GuestRoom implements OnlineLink {
       _hostClosed();
       return;
     }
+    // Moved to another seat (by the host): follow it. (While we move
+    // ourselves we sit on both seats for a moment: the current one wins.)
+    if (info.status == 'lobby') {
+      final now = followSeat(info.seats, OnlineService.uid, _mySeat);
+      if (now != _mySeat) _seatMoved(now);
+    }
     if (!info.hostOnline) {
       _hostGoneTimer ??= Timer(const Duration(seconds: 20), _hostClosed);
     } else {
@@ -601,6 +637,42 @@ class GuestRoom implements OnlineLink {
       _hostGoneTimer = null;
     }
     _showStandIns();
+  }
+
+  /// Takes the free seat [seat] in the waiting room (when the host allows
+  /// it): the new seat is claimed first, then the old one given back.
+  Future<bool> sitAt(int seat) async {
+    final info = watcher.info;
+    if (_left || info.status != 'lobby' || !info.seatChoice) return false;
+    if (seat <= 0 || seat >= info.players || seat == _mySeat) return false;
+    final uid = OnlineService.uid;
+    final mine = watcher.seatData(_mySeat) ?? <String, dynamic>{};
+    try {
+      final tx = await OnlineService.ref('rooms/$code/seats/s$seat').runTransaction((value) {
+        if (value != null) return Transaction.abort();
+        return Transaction.success(<String, Object?>{...mine, 'uid': uid, 'online': true});
+      });
+      if (!tx.committed) return false;
+      final old = _mySeat;
+      _seatMoved(seat);
+      await OnlineService.ref('rooms/$code/seats/s$old').remove();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Our seat is now [seat]: presence, the view of the game and the chat
+  /// go with it.
+  void _seatMoved(int seat) {
+    final old = _mySeat;
+    _mySeat = seat;
+    social.mySeat = seat;
+    _presence.cancel();
+    OnlineService.ref('rooms/$code/seats/s$old/online').onDisconnect().cancel().catchError((Object _) {});
+    _presence = OnlineService.keepOnline(<String>['rooms/$code/seats/s$seat/online']).listen((_) {});
+    _viewSub?.cancel();
+    _viewSub = OnlineService.ref('rooms/$code/views/s$seat').onValue.listen(_onView);
   }
 
   /// The seats the host's bots play for, in our numbering.
@@ -720,4 +792,24 @@ class GuestRoom implements OnlineLink {
     }
     watcher.dispose();
   }
+}
+
+/// Where the local player sits now: [current] while it is still theirs,
+/// otherwise the seat with their uid (the host moved them), or [current]
+/// when they are nowhere (on their way, or gone).
+int followSeat(List<RoomSeat> seats, String? uid, int current) {
+  if (uid == null) return current;
+  if (current < seats.length && seats[current].uid == uid) return current;
+  for (var i = 0; i < seats.length; i++) {
+    if (seats[i].uid == uid) return i;
+  }
+  return current;
+}
+
+/// The database update that moves what is on seat [from] to seat [to] and,
+/// when [to] is taken, what is there to [from] (a swap); empty when there is
+/// nothing to move.
+Map<String, Object?> seatMoveUpdate(Map<String, dynamic>? fromData, Map<String, dynamic>? toData, int from, int to) {
+  if (fromData == null && toData == null) return const <String, Object?>{};
+  return <String, Object?>{'s$to': fromData, 's$from': toData};
 }

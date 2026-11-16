@@ -38,7 +38,9 @@ class RoomSocial extends ChangeNotifier {
   final String code;
 
   /// Real seat of this player.
-  final int mySeat;
+  /// The local player's seat (it can change in the waiting room, when the
+  /// player or the host moves it).
+  int mySeat;
   final int players;
 
   /// The newest message of every seat (screen seats) that is still shown.

@@ -928,6 +928,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Timer? _startTimer;
 
+  /// The host arranging the seats: the seat of the player picked to move.
+  int? _picked;
+
+  void _arrange(int seat) {
+    final host = widget.host;
+    final from = _picked;
+    if (host == null) return;
+    if (from == null) {
+      setState(() => _picked = seat);
+    } else {
+      setState(() => _picked = null);
+      if (from != seat) host.moveSeat(from, seat);
+    }
+  }
+
   /// Quick match: seconds spent searching; after [offerBotAfter] with nobody
   /// the computer is offered as the opponent.
   int _waited = 0;
@@ -1098,6 +1113,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     onBot: _starting ? null : _start,
                   ),
                 ] else if (isHost) ...<Widget>[
+                  if (info.players == 4 && !cup && info.status == 'lobby') ...<Widget>[
+                    Text(
+                      t.moveHint,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: PastraColors.text2, fontSize: 12),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Transform.scale(
+                          scale: 0.8,
+                          child: Switch(value: info.seatChoice, onChanged: widget.host!.setSeatChoice),
+                        ),
+                        Flexible(
+                          child: Text(
+                            t.seatChoice,
+                            style: const TextStyle(color: PastraColors.text, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   Text(
                     t.botFills,
                     textAlign: TextAlign.center,
@@ -1105,20 +1142,42 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                   const SizedBox(height: 10),
                   BigButton(icon: Icons.play_arrow_rounded, label: t.start, onPressed: _starting ? null : _start),
-                ] else
+                ] else ...<Widget>[
+                  if (info.players == 4 && !info.seatChoice && info.status == 'lobby')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        t.hostSeats,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: PastraColors.text2, fontSize: 13),
+                      ),
+                    ),
                   Text(
                     t.waitForHost,
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                   ),
+                ],
               ];
+              // 2v2 in the waiting room: the host seats everybody (a tap on a
+              // player, then on the new seat), the guests may take a free
+              // seat themselves while the host allows it.
+              final inLobby = info.status == 'lobby' && !quick && !cup && info.players == 4;
+              final arrange = inLobby && widget.host != null;
+              final guest = widget.guest;
+              final choose = inLobby && guest != null && info.seatChoice;
               final seats = <Widget>[
                 for (var i = 0; i < info.players; i++)
                   RoomSeatRow(
                     info: info,
                     index: i,
-                    mine: widget.guest?.mySeat == i || (widget.host != null && i == 0),
+                    mine: guest?.mySeat == i || (widget.host != null && i == 0),
                     compact: info.players == 4,
+                    picked: arrange && _picked == i,
+                    onTap: arrange && i > 0 && (_picked != null || info.seats[i].uid != null) ? () => _arrange(i) : null,
+                    onSit: choose && i > 0 && i != guest.mySeat && info.seats[i].uid == null
+                        ? () => guest.sitAt(i)
+                        : null,
                   ),
               ];
               return LobbyLayout(
@@ -1140,12 +1199,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
 /// you, team) or an empty place. [compact] (four seats) is lower, so that the
 /// whole column fits.
 class RoomSeatRow extends StatelessWidget {
-  const RoomSeatRow({super.key, required this.info, required this.index, this.mine = false, this.compact = false});
+  const RoomSeatRow({
+    super.key,
+    required this.info,
+    required this.index,
+    this.mine = false,
+    this.compact = false,
+    this.onTap,
+    this.onSit,
+    this.picked = false,
+  });
 
   final RoomInfo info;
   final int index;
   final bool mine;
   final bool compact;
+
+  /// The host arranges the seats: a tap picks a player, a second tap their
+  /// new seat.
+  final VoidCallback? onTap;
+
+  /// A free seat the local player may take ("Sit here").
+  final VoidCallback? onSit;
+
+  /// The host picked this player to move.
+  final bool picked;
 
   @override
   Widget build(BuildContext context) {
@@ -1159,10 +1237,17 @@ class RoomSeatRow extends StatelessWidget {
       if (mine) t.you,
     ];
     final taken = seat.uid != null;
-    return Container(
+    final sit = onSit;
+    final row = Container(
       margin: EdgeInsets.only(bottom: compact ? 6 : 8),
       padding: EdgeInsets.fromLTRB(8, compact ? 5 : 8, 14, compact ? 5 : 8),
-      decoration: glassDecoration(radius: 14, selected: mine),
+      decoration: picked
+          ? BoxDecoration(
+              color: PastraColors.gold.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: PastraColors.gold, width: 2),
+            )
+          : glassDecoration(radius: 14, selected: mine),
       child: Row(
         children: <Widget>[
           if (taken)
@@ -1213,6 +1298,26 @@ class RoomSeatRow extends StatelessWidget {
               ),
             ),
           ),
+          if (picked) _SeatTag(text: t.movePicked, color: PastraColors.gold),
+          if (sit != null && !taken)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 6),
+              child: Material(
+                color: PastraColors.gold,
+                shape: const StadiumBorder(),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: sit,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    child: Text(
+                      t.sitHere,
+                      style: const TextStyle(color: Color(0xFF1A1305), fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           for (final tag in tags)
             Container(
               margin: const EdgeInsetsDirectional.only(start: 6),
@@ -1229,6 +1334,26 @@ class RoomSeatRow extends StatelessWidget {
           ],
         ],
       ),
+    );
+    final tap = onTap;
+    return tap == null ? row : GestureDetector(behavior: HitTestBehavior.opaque, onTap: tap, child: row);
+  }
+}
+
+/// A small outlined word on a seat row.
+class _SeatTag extends StatelessWidget {
+  const _SeatTag({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsetsDirectional.only(start: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: color)),
+      child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
     );
   }
 }
