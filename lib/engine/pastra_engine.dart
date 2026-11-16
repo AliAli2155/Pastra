@@ -50,8 +50,9 @@ class PastraEngine {
   /// Shuffles, opens the four table cards and deals the first hands.
   ///
   /// * Pile game: the bottom card of the deck is turned face up ("kapak
-  ///   altı") and stays visible under the deck; it is the very last card
-  ///   dealt, so it goes to the dealer. If it is a jack, another card is
+  ///   altı") and stays visible under the deck; with the last deal it goes
+  ///   to the dealer (every face-up card under the deck does, see
+  ///   [_dealOnce]). If it is a jack, another card is
   ///   turned up next to it (again, while that one is a jack too). Four cards are opened; the last one
   ///   is the top card. A jack may not be the top card: it goes face up
   ///   under the deck and another card is opened.
@@ -162,13 +163,51 @@ class PastraEngine {
     return false;
   }
 
+  /// One deal: [PastraRules.cardsPerDeal] cards to everybody, one at a time,
+  /// starting after the dealer.
+  ///
+  /// The face-up cards under the deck ([GameState.exposed], the kapak altı –
+  /// one card or several) all go to the dealer, however many there are: the
+  /// others get the next hidden cards in their place, and every hand still
+  /// ends up the same size.
   static bool _dealOnce(GameState s) {
-    for (var k = 0; k < s.rules.cardsPerDeal; k++) {
-      for (var i = 1; i <= s.numPlayers; i++) {
-        if (s.deck.isEmpty) return false;
-        s.hands[(s.dealer + i) % s.numPlayers].add(s.deck.removeLast());
+    final n = s.numPlayers;
+    final per = s.rules.cardsPerDeal;
+    if (s.deck.length < per * n) {
+      // Not a full deal left (never with a 52-card deck): as far as it goes.
+      for (var k = 0; k < per; k++) {
+        for (var i = 1; i <= n; i++) {
+          if (s.deck.isEmpty) return false;
+          s.hands[(s.dealer + i) % n].add(s.deck.removeLast());
+        }
+      }
+      return true;
+    }
+    // This deal's cards in the order they come off the deck.
+    final batch = <int>[for (var j = 0; j < per * n; j++) s.deck.removeLast()];
+    final faceUp = <int>[for (final c in batch) if (s.exposed.contains(c)) c];
+    final toDealer = faceUp.take(per).toList();
+    // Everything else in its order (face-up cards beyond a whole hand – which
+    // never happens – are dealt like the others).
+    final rest = <int>[
+      for (final c in batch)
+        if (!toDealer.contains(c)) c,
+    ];
+    final dealerHidden = per - toDealer.length;
+    var dealerGot = 0;
+    var next = 0;
+    for (var k = 0; k < per; k++) {
+      for (var i = 1; i <= n; i++) {
+        final seat = (s.dealer + i) % n;
+        if (seat == s.dealer) {
+          if (dealerGot >= dealerHidden) continue;
+          dealerGot++;
+        }
+        s.hands[seat].add(rest[next++]);
       }
     }
+    // The dealer takes the face-up cards from under the deck last.
+    s.hands[s.dealer].addAll(toDealer);
     return true;
   }
 

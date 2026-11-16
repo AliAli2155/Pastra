@@ -7,7 +7,7 @@ T = {}
 
 T['en'] = dict(
     deal6='Each player gets 6 cards (or 4, see settings).',
-    kapak='Bottom card: the card at the bottom of the deck is turned face up and stays under the deck for the whole round. It is the last card dealt, so the dealer gets it and everybody knows it.',
+    kapak='Bottom card: the card at the bottom of the deck is turned face up and stays under the deck for the whole round. With the last deal the dealer gets it, and every other face-up card under the deck too (one or more); everybody knows them.',
     jackalone='A jack never lies there alone: if the bottom card is a jack, the next card is turned face up next to it (and one more if that is a jack too).',
     opening='Four cards are opened side by side in the middle; the rightmost one is the top card. A jack may not open on top: it goes face up under the deck and another card is opened.',
     quad='Four of a kind in one hand (e.g. four aces): the deal is void, the cards are shown to everybody and the same dealer deals again.',
@@ -23,7 +23,7 @@ T['en'] = dict(
 
 T['el'] = dict(
     deal6='Κάθε παίκτης παίρνει 6 φύλλα (ή 4, από τις ρυθμίσεις).',
-    kapak='Κάτω φύλλο: το κάτω φύλλο της τράπουλας γυρίζει ανοιχτό και μένει κάτω από την τράπουλα όλο τον γύρο. Είναι το τελευταίο φύλλο που μοιράζεται, άρα το παίρνει αυτός που μοιράζει και όλοι το ξέρουν.',
+    kapak='Κάτω φύλλο: το κάτω φύλλο της τράπουλας γυρίζει ανοιχτό και μένει κάτω από την τράπουλα όλο τον γύρο. Στο τελευταίο μοίρασμα όλα τα ανοιχτά φύλλα κάτω από την τράπουλα (ένα ή περισσότερα) τα παίρνει αυτός που μοιράζει, και όλοι τα ξέρουν.',
     jackalone='Ο βαλές δεν μένει ποτέ μόνος εκεί: αν το κάτω φύλλο είναι βαλές, ανοίγει και το επόμενο φύλλο δίπλα του (κι άλλο ένα, αν βγει πάλι βαλές).',
     opening='Τέσσερα φύλλα ανοίγουν στη μέση δίπλα-δίπλα· το δεξί είναι το πάνω φύλλο. Πάνω δεν μπορεί να ανοίξει βαλές: μπαίνει ανοιχτός κάτω από την τράπουλα και ανοίγει άλλο φύλλο.',
     quad='Τέσσερα ίδια φύλλα σε ένα χέρι (π.χ. τέσσερις άσσοι): το μοίρασμα ακυρώνεται, τα φύλλα δείχνονται σε όλους και μοιράζει ξανά ο ίδιος.',
@@ -39,7 +39,7 @@ T['el'] = dict(
 
 T['tr'] = dict(
     deal6='Her oyuncuya 6 kart (ayarlardan 4) verilir.',
-    kapak='Kapak altı: destenin en alttaki kartı açılır ve tur boyunca destenin altında açık durur. Son dağıtılan kart olduğu için dağıtana gider ve herkes bilir.',
+    kapak='Kapak altı: destenin en alttaki kartı açılır ve tur boyunca destenin altında açık durur. Son dağıtımda kapak altındaki kartların hepsi (bir ya da daha fazla) dağıtana gider ve herkes bilir.',
     jackalone='Kapak altında vale yalnız kalmaz: kapak altı vale ise yanına bir kart daha açılır (o da vale çıkarsa bir tane daha).',
     opening='Ortaya 4 kart yan yana açılır; en sağdaki en üstteki karttır. Üste vale gelemez: vale açık olarak kapak altına gider ve yerine yeni kart açılır.',
     quad='Bir elde aynı karttan dört tane (ör. dört as) gelirse dağıtım bozulur: kartlar herkese gösterilir ve aynı oyuncu yeniden dağıtır.',
@@ -55,7 +55,7 @@ T['tr'] = dict(
 
 T['de'] = dict(
     deal6='Jeder bekommt 6 Karten (oder 4, siehe Einstellungen).',
-    kapak='Unterste Karte: Die unterste Karte des Stapels wird aufgedeckt und liegt die ganze Runde offen unter dem Talon. Sie wird als letzte ausgeteilt, also bekommt sie der Geber, und alle wissen es.',
+    kapak='Unterste Karte: Die unterste Karte des Stapels wird aufgedeckt und liegt die ganze Runde offen unter dem Talon. Beim letzten Austeilen bekommt der Geber alle offenen Karten unter dem Talon (eine oder mehrere), und alle wissen es.',
     jackalone='Ein Bube liegt dort nie allein: Ist die unterste Karte ein Bube, wird die nächste Karte daneben aufgedeckt (und noch eine, falls auch sie ein Bube ist).',
     opening='Vier Karten werden offen nebeneinander in die Mitte gelegt; die rechte ist die oberste. Oben darf kein Bube liegen: Er kommt offen unter den Talon und eine andere Karte wird aufgedeckt.',
     quad='Vier gleiche Karten in einer Hand (z. B. vier Asse): Das Geben ist ungültig, die Karten werden allen gezeigt und derselbe Geber gibt neu.',
@@ -71,7 +71,7 @@ T['de'] = dict(
 
 T['fr'] = dict(
     deal6='Chacun reçoit 6 cartes (ou 4, voir réglages).',
-    kapak="Carte du dessous : la carte du dessous du paquet est retournée et reste visible sous le paquet toute la manche. C'est la dernière carte distribuée : le donneur la reçoit et tout le monde le sait.",
+    kapak='Carte du dessous : la carte du dessous du paquet est retournée et reste visible sous le paquet toute la manche. À la dernière donne, le donneur reçoit toutes les cartes visibles sous le paquet (une ou plusieurs), et tout le monde le sait.',
     jackalone="Un valet n'y reste jamais seul : si la carte du dessous est un valet, la carte suivante est retournée à côté (et encore une si c'est aussi un valet).",
     opening='Quatre cartes sont posées face visible côte à côte au centre ; celle de droite est la carte du dessus. Un valet ne peut pas être dessus : il va face visible sous le paquet et une autre carte est retournée.',
     quad='Quatre cartes identiques dans une main (p. ex. quatre as) : la donne est annulée, les cartes sont montrées à tous et le même donneur redistribue.',
@@ -87,7 +87,7 @@ T['fr'] = dict(
 
 T['es'] = dict(
     deal6='Cada jugador recibe 6 cartas (o 4, ver ajustes).',
-    kapak='Carta de abajo: la carta de abajo del mazo se da la vuelta y queda visible bajo el mazo toda la ronda. Es la última que se reparte, así que se la lleva quien reparte y todos lo saben.',
+    kapak='Carta de abajo: la carta de abajo del mazo se da la vuelta y queda visible bajo el mazo toda la ronda. En el último reparto, quien reparte se lleva todas las cartas visibles bajo el mazo (una o más), y todos lo saben.',
     jackalone='Una jota nunca queda sola ahí: si la carta de abajo es una jota, se da la vuelta a la carta siguiente a su lado (y a otra más si también es jota).',
     opening='Se ponen cuatro cartas boca arriba una al lado de otra en el centro; la de la derecha es la de arriba. Arriba no puede quedar una jota: va boca arriba bajo el mazo y se saca otra carta.',
     quad='Cuatro cartas iguales en una mano (p. ej. cuatro ases): el reparto se anula, las cartas se enseñan a todos y reparte de nuevo el mismo jugador.',
@@ -103,7 +103,7 @@ T['es'] = dict(
 
 T['it'] = dict(
     deal6='Ogni giocatore riceve 6 carte (o 4, vedi impostazioni).',
-    kapak="Carta in fondo: l'ultima carta del mazzo viene girata e resta scoperta sotto il mazzo per tutta la mano. È l'ultima carta distribuita, quindi va al mazziere e tutti lo sanno.",
+    kapak="Carta in fondo: l'ultima carta del mazzo viene girata e resta scoperta sotto il mazzo per tutta la mano. All'ultima distribuzione il mazziere prende tutte le carte scoperte sotto il mazzo (una o più), e tutti lo sanno.",
     jackalone="Un fante non resta mai da solo lì: se la carta in fondo è un fante, si gira anche la carta successiva accanto (e un'altra ancora se è di nuovo un fante).",
     opening="Quattro carte vengono messe scoperte una accanto all'altra al centro; quella più a destra è la carta in cima. In cima non può esserci un fante: va scoperto sotto il mazzo e si gira un'altra carta.",
     quad='Quattro carte uguali in una mano (es. quattro assi): la distribuzione è nulla, le carte vengono mostrate a tutti e lo stesso mazziere ridistribuisce.',
@@ -119,7 +119,7 @@ T['it'] = dict(
 
 T['pt'] = dict(
     deal6='Cada jogador recebe 6 cartas (ou 4, ver definições).',
-    kapak='Carta de baixo: a carta de baixo do baralho é virada e fica visível debaixo do baralho a rodada toda. É a última carta distribuída, por isso fica com quem distribui e todos sabem.',
+    kapak='Carta de baixo: a carta de baixo do baralho é virada e fica visível debaixo do baralho a rodada toda. Na última distribuição, quem distribui fica com todas as cartas visíveis debaixo do baralho (uma ou mais), e todos sabem.',
     jackalone='Um valete nunca fica sozinho ali: se a carta de baixo for um valete, vira-se também a carta seguinte ao lado dele (e mais uma se também for valete).',
     opening='Quatro cartas são postas viradas para cima lado a lado no centro; a da direita é a carta de cima. Em cima não pode ficar um valete: vai virado para cima para debaixo do baralho e abre-se outra carta.',
     quad='Quatro cartas iguais numa mão (p. ex. quatro ases): a distribuição é anulada, as cartas são mostradas a todos e o mesmo jogador distribui de novo.',
@@ -135,7 +135,7 @@ T['pt'] = dict(
 
 T['ru'] = dict(
     deal6='Каждый получает 6 карт (или 4, см. настройки).',
-    kapak='Нижняя карта: нижнюю карту колоды открывают, и она весь раунд лежит открытой под колодой. Это последняя раздаваемая карта, поэтому она достаётся сдающему, и все об этом знают.',
+    kapak='Нижняя карта: нижнюю карту колоды открывают, и она весь раунд лежит открытой под колодой. При последней раздаче сдающий забирает все открытые карты под колодой (одну или несколько), и все об этом знают.',
     jackalone='Валет там никогда не лежит один: если нижняя карта — валет, рядом открывают следующую карту (и ещё одну, если это снова валет).',
     opening='Четыре карты кладут открыто рядом в центр; правая — верхняя. Верхней не может быть валет: он уходит открытым под колоду, и открывают другую карту.',
     quad='Четыре одинаковые карты в одной руке (например, четыре туза): раздача отменяется, карты показывают всем, и тот же игрок сдаёт заново.',
@@ -151,7 +151,7 @@ T['ru'] = dict(
 
 T['bg'] = dict(
     deal6='Всеки получава 6 карти (или 4, виж настройките).',
-    kapak='Долна карта: долната карта на тестето се обръща и стои открита под тестето целия рунд. Тя е последната раздадена карта, затова отива при раздаващия и всички знаят това.',
+    kapak='Долна карта: долната карта на тестето се обръща и стои открита под тестето целия рунд. При последното раздаване раздаващият взима всички открити карти под тестето (една или повече) и всички знаят това.',
     jackalone='Вале никога не стои само там: ако долната карта е вале, до него се открива и следващата карта (и още една, ако и тя е вале).',
     opening='Четири карти се нареждат открити една до друга в средата; най-дясната е горната. Отгоре не може да има вале: то отива открито под тестето и се открива друга карта.',
     quad='Четири еднакви карти в една ръка (напр. четири аса): раздаването се анулира, картите се показват на всички и същият играч раздава отново.',
@@ -167,7 +167,7 @@ T['bg'] = dict(
 
 T['ar'] = dict(
     deal6='يحصل كل لاعب على 6 أوراق (أو 4 من الإعدادات).',
-    kapak='الورقة السفلى: تُقلب الورقة السفلى من الرزمة وتبقى مكشوفة تحتها طوال الجولة. إنها آخر ورقة توزَّع، لذلك تذهب إلى الموزِّع ويعرف الجميع ذلك.',
+    kapak='الورقة السفلى: تُقلب الورقة السفلى من الرزمة وتبقى مكشوفة تحتها طوال الجولة. في آخر توزيع يأخذ الموزِّع كل الأوراق المكشوفة تحت الرزمة (واحدة أو أكثر)، ويعرف الجميع ذلك.',
     jackalone='لا يبقى الولد وحده هناك أبدًا: إذا كانت الورقة السفلى ولدًا، تُكشف الورقة التالية بجانبه (وأخرى إذا كانت ولدًا أيضًا).',
     opening='توضع أربع أوراق مكشوفة جنبًا إلى جنب في الوسط، والورقة اليمنى هي العليا. لا يجوز أن يكون الولد في الأعلى: يوضع مكشوفًا تحت الرزمة وتُكشف ورقة أخرى.',
     quad='أربع أوراق متشابهة في يد واحدة (مثل أربعة آسات): يُلغى التوزيع، وتُعرض الأوراق على الجميع ويوزّع اللاعب نفسه من جديد.',
@@ -183,7 +183,7 @@ T['ar'] = dict(
 
 T['zh'] = dict(
     deal6='每人发 6 张（设置中可改为 4 张）。',
-    kapak='底牌：牌库最底下的一张翻成明牌，整轮都露在牌库下面。它是最后发出的一张，所以归发牌者，大家都知道。',
+    kapak='底牌：牌库最底下的一张翻成明牌，整轮都露在牌库下面。最后一次发牌时，牌库下面所有的明牌（一张或几张）都归发牌者，大家都知道。',
     jackalone='J 不会单独留在那里：如果底牌是 J，就在旁边再翻开下一张（如果又是 J，再翻一张）。',
     opening='中间并排明放四张牌，最右边的是最上面的牌。最上面不能是 J：J 明着放到牌库底下，再翻一张新牌。',
     quad='一手牌中有四张相同的牌（例如四张 A）：本次发牌作废，向所有人亮牌，由同一人重新发牌。',

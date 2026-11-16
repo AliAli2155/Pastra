@@ -124,8 +124,8 @@ class GameState {
 
   /// Pile game: cards everybody has seen while they are still in the deck —
   /// the "kapak altı", the bottom card of the deck that lies face up under
-  /// it (and a jack that was put under the deck at the opening). The last
-  /// card of the deck goes to the dealer, so these end up in the dealer's
+  /// it (and a jack that was put under the deck at the opening). With the
+  /// last deal all of them go to the dealer, so they end up in the dealer's
   /// hand, still known to all.
   List<int> exposed;
 
