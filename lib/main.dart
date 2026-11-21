@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'game/app_settings.dart';
+import 'game/crash_reports.dart';
 import 'game/game_controller.dart';
 import 'game/sound.dart';
 import 'online/leaderboard.dart';
@@ -14,6 +15,8 @@ import 'ui/widgets/playing_card.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Android and iOS: crash reports (never holds up the start for long).
+  await startCrashReports().timeout(const Duration(seconds: 4), onTimeout: () {});
   if (!kIsWeb) {
     // Played sideways, like okey / uno apps, full screen.
     await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
