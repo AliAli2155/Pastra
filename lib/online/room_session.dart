@@ -119,47 +119,7 @@ class RoomWatcher extends ChangeNotifier {
   bool _disposed = false;
 
   void _rebuild() {
-    final m = _metaValue;
-    if (m == null) {
-      info = const RoomInfo();
-    } else {
-      final players = (m['players'] as num?)?.toInt() ?? 2;
-      final levelName = m['level'] as String? ?? AiLevel.medium.name;
-      final seats = <RoomSeat>[];
-      for (var i = 0; i < players; i++) {
-        final s = _map(_seatsValue?['s$i']);
-        seats.add(
-          s == null
-              ? const RoomSeat()
-              : RoomSeat(
-                  uid: s['uid'] as String?,
-                  name: s['name'] as String? ?? '',
-                  bot: s['bot'] == true,
-                  online: s['online'] == true,
-                  botIndex: (s['botIndex'] as num?)?.toInt() ?? -1,
-                  pic: s['pic'] is String ? s['pic'] as String : '',
-                  frame: s['frame'] is String ? s['frame'] as String : '',
-                  back: s['back'] is String ? s['back'] as String : '',
-                ),
-        );
-      }
-      info = RoomInfo(
-        exists: true,
-        hostUid: m['host'] as String? ?? '',
-        players: players,
-        status: m['status'] as String? ?? 'lobby',
-        hostOnline: m['hostOnline'] != false,
-        level: AiLevel.values.firstWhere((l) => l.name == levelName, orElse: () => AiLevel.medium),
-        turnSeconds: (m['turn'] as num?)?.toInt() ?? 0,
-        standIns: <int>[
-          if (m['bots'] is List)
-            for (final x in m['bots'] as List)
-              if (x is num) x.toInt(),
-        ],
-        seats: seats,
-        seatChoice: m['seatChoice'] != false,
-      );
-    }
+    info = roomInfoFrom(_metaValue, _seatsValue);
     if (!_disposed) notifyListeners();
   }
 
@@ -427,13 +387,10 @@ class HostRoom implements OnlineLink {
       final seat = i;
       _moveSubs.add(
         OnlineService.ref('rooms/$code/moves/s$seat').onValue.listen((e) {
-          final m = _map(e.snapshot.value);
-          if (m == null) return;
-          final n = (m['n'] as num?)?.toInt() ?? 0;
-          if (n <= (_lastMove[seat] ?? 0)) return;
-          _lastMove[seat] = n;
-          final card = (m['card'] as num?)?.toInt();
-          if (card != null) c.submitRemoteMove(seat, card);
+          final move = readMove(e.snapshot.value, _lastMove[seat] ?? 0);
+          if (move == null) return;
+          _lastMove[seat] = move.n;
+          c.submitRemoteMove(seat, move.card);
         }),
       );
     }
@@ -453,27 +410,9 @@ class HostRoom implements OnlineLink {
     final c = controller;
     if (c == null) return;
     _published = c.stateVersion;
-    final state = c.state;
-    final move = c.lastMove;
-    final pastra = c.pastraEvent;
-    final ev = jsonEncode(<String, Object?>{
-      if (move != null)
-        'move': <String, Object?>{'id': move.id, 'seat': move.seat, 'card': move.card, 'cap': move.captured},
-      if (pastra != null) 'pastra': <String, Object?>{'id': pastra.id, 'seat': pastra.seat, 'pts': pastra.points},
-      if (c.quadAlert != null)
-        'quad': <String, Object?>{'id': c.quadAlert!.id, 'seat': c.quadAlert!.seat, 'cards': c.quadAlert!.cards},
-      'leftover': c.leftoverSeat,
-    });
-    for (var i = 1; i < players; i++) {
-      if (!c.seats[i].isRemote) continue;
-      final view = rotateStateFor(state.redactedFor(i), i);
-      final payload = <String, Object?>{
-        'v': _published,
-        's': jsonEncode(view.toJson()),
-        'e': ev,
-      };
-      final seat = i;
-      _writes = _writes.then((_) => OnlineService.ref('rooms/$code/views/s$seat').set(payload)).catchError((Object _) {});
+    for (final view in hostViews(c, _published).entries) {
+      final seat = view.key;
+      _writes = _writes.then((_) => OnlineService.ref('rooms/$code/views/s$seat').set(view.value)).catchError((Object _) {});
     }
   }
 
@@ -689,74 +628,30 @@ class GuestRoom implements OnlineLink {
 
   void _onView(DatabaseEvent event) {
     if (_left) return;
-    final m = _map(event.snapshot.value);
-    if (m == null) return;
-    final v = (m['v'] as num?)?.toInt() ?? 0;
-    if (v <= _lastView) return;
-    _lastView = v;
-    final GameState state;
-    try {
-      state = GameState.fromJson(Map<String, dynamic>.from(jsonDecode(m['s'] as String) as Map));
-    } catch (_) {
-      return;
-    }
+    final view = readHostView(event.snapshot.value, _lastView);
+    if (view == null) return;
+    _lastView = view.version;
     var c = controller.value;
     if (c == null) {
-      c = _buildController(state);
+      c = _buildController(view.state);
       controller.value = c;
       _showStandIns();
     }
-    c.applyHostView(state, _translate(m['e']));
+    c.applyHostView(view.state, translateHostEvent(view.events, mySeat, watcher.info.players));
   }
 
   GameController _buildController(GameState state) {
     final info = watcher.info;
-    final n = state.numPlayers;
-    final seats = <SeatInfo>[const SeatInfo.human()];
-    for (var i = 1; i < n; i++) {
-      final real = (i + mySeat) % n;
-      final rs = real < info.seats.length ? info.seats[real] : const RoomSeat();
-      if (rs.bot || rs.uid == null) {
-        final botLevel = (real == 2 && !info.level.atLeast(AiLevel.medium)) ? AiLevel.medium : info.level;
-        seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
-      } else {
-        seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame, back: rs.back));
-      }
-    }
     // Leaving now and coming back later takes the seat back from the bot.
     settings.rememberRoom(code);
     return GameController(
       settings: settings,
-      seats: seats,
+      seats: guestSeats(info, mySeat, state.numPlayers),
       state: state,
       link: this,
       isGuest: true,
       hostTurnSeconds: info.turnSeconds,
     );
-  }
-
-  /// Seat numbers in the host's message are the real ones; the screen uses
-  /// numbers seen from our seat.
-  Map<String, dynamic>? _translate(Object? raw) {
-    if (raw is! String) return null;
-    final Map<String, dynamic> ev;
-    try {
-      ev = Map<String, dynamic>.from(jsonDecode(raw) as Map);
-    } catch (_) {
-      return null;
-    }
-    final n = watcher.info.players;
-    int tr(Object? seat) => rotateSeat((seat as num).toInt(), mySeat, n);
-    final out = <String, dynamic>{};
-    final mv = _map(ev['move']);
-    if (mv != null) out['move'] = <String, dynamic>{...mv, 'seat': tr(mv['seat'])};
-    final pa = _map(ev['pastra']);
-    if (pa != null) out['pastra'] = <String, dynamic>{...pa, 'seat': tr(pa['seat'])};
-    final qd = _map(ev['quad']);
-    if (qd != null) out['quad'] = <String, dynamic>{...qd, 'seat': tr(qd['seat'])};
-    final lo = ev['leftover'];
-    if (lo is num) out['leftover'] = tr(lo);
-    return out;
   }
 
   @override
@@ -812,4 +707,144 @@ int followSeat(List<RoomSeat> seats, String? uid, int current) {
 Map<String, Object?> seatMoveUpdate(Map<String, dynamic>? fromData, Map<String, dynamic>? toData, int from, int to) {
   if (fromData == null && toData == null) return const <String, Object?>{};
   return <String, Object?>{'s$to': fromData, 's$from': toData};
+}
+
+int _int(Object? v, int fallback) => v is num ? v.toInt() : fallback;
+String _str(Object? v, String fallback) => v is String ? v : fallback;
+
+/// The room as stored in the database (`meta` and `seats`), read the way
+/// every screen sees it. Wrong or missing values fall back to the defaults
+/// instead of breaking the room.
+RoomInfo roomInfoFrom(Object? meta, Object? seatsValue) {
+  final m = _map(meta);
+  if (m == null) return const RoomInfo();
+  final seatsMap = _map(seatsValue);
+  final players = _int(m['players'], 2) == 4 ? 4 : 2;
+  final levelName = _str(m['level'], AiLevel.medium.name);
+  final seats = <RoomSeat>[];
+  for (var i = 0; i < players; i++) {
+    final s = _map(seatsMap?['s$i']);
+    seats.add(
+      s == null
+          ? const RoomSeat()
+          : RoomSeat(
+              uid: s['uid'] is String ? s['uid'] as String : null,
+              name: _str(s['name'], ''),
+              bot: s['bot'] == true,
+              online: s['online'] == true,
+              botIndex: _int(s['botIndex'], -1),
+              pic: _str(s['pic'], ''),
+              frame: _str(s['frame'], ''),
+              back: _str(s['back'], ''),
+            ),
+    );
+  }
+  return RoomInfo(
+    exists: true,
+    hostUid: _str(m['host'], ''),
+    players: players,
+    status: _str(m['status'], 'lobby'),
+    hostOnline: m['hostOnline'] != false,
+    level: AiLevel.values.firstWhere((l) => l.name == levelName, orElse: () => AiLevel.medium),
+    turnSeconds: _int(m['turn'], 0),
+    standIns: <int>[
+      if (m['bots'] is List)
+        for (final x in m['bots'] as List)
+          if (x is num && x >= 0 && x < players) x.toInt(),
+    ],
+    seats: seats,
+    seatChoice: m['seatChoice'] != false,
+  );
+}
+
+/// What the host writes for every guest after each change (`views/s<seat>`),
+/// by seat: the state as that seat may see it (the other hands and the deck
+/// hidden, turned so that the guest sits at seat 0), and what just happened
+/// (with the real seat numbers, see [translateHostEvent]).
+Map<int, Map<String, Object?>> hostViews(GameController c, int version) {
+  final state = c.state;
+  final move = c.lastMove;
+  final pastra = c.pastraEvent;
+  final quad = c.quadAlert;
+  final ev = jsonEncode(<String, Object?>{
+    if (move != null) 'move': <String, Object?>{'id': move.id, 'seat': move.seat, 'card': move.card, 'cap': move.captured},
+    if (pastra != null) 'pastra': <String, Object?>{'id': pastra.id, 'seat': pastra.seat, 'pts': pastra.points},
+    if (quad != null) 'quad': <String, Object?>{'id': quad.id, 'seat': quad.seat, 'cards': quad.cards},
+    'leftover': c.leftoverSeat,
+  });
+  return <int, Map<String, Object?>>{
+    for (var i = 1; i < c.seats.length; i++)
+      if (c.seats[i].isRemote)
+        i: <String, Object?>{
+          'v': version,
+          's': jsonEncode(rotateStateFor(state.redactedFor(i), i).toJson()),
+          'e': ev,
+        },
+  };
+}
+
+/// A guest reads the host's view [raw]: null when it is not newer than
+/// [after] (the last one shown) or cannot be read.
+({int version, GameState state, Object? events})? readHostView(Object? raw, int after) {
+  final m = _map(raw);
+  if (m == null) return null;
+  final v = _int(m['v'], 0);
+  if (v <= after) return null;
+  try {
+    final state = GameState.fromJson(Map<String, dynamic>.from(jsonDecode(m['s'] as String) as Map));
+    return (version: v, state: state, events: m['e']);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Seat numbers in the host's message [raw] are the real ones; a guest on
+/// [mySeat] uses numbers seen from their seat. Entries with a seat that
+/// cannot be read are left out.
+Map<String, dynamic>? translateHostEvent(Object? raw, int mySeat, int players) {
+  if (raw is! String) return null;
+  final Map<String, dynamic> ev;
+  try {
+    ev = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  } catch (_) {
+    return null;
+  }
+  int? tr(Object? seat) => seat is num ? rotateSeat(seat.toInt(), mySeat, players) : null;
+  final out = <String, dynamic>{};
+  for (final key in <String>['move', 'pastra', 'quad']) {
+    final m = _map(ev[key]);
+    final seat = tr(m?['seat']);
+    if (m != null && seat != null) out[key] = <String, dynamic>{...m, 'seat': seat};
+  }
+  final lo = tr(ev['leftover']);
+  if (lo != null) out['leftover'] = lo;
+  return out;
+}
+
+/// The players of the table as a guest on [mySeat] sees them (they are on
+/// seat 0): people and the host's bots, with the level the host gives them.
+List<SeatInfo> guestSeats(RoomInfo info, int mySeat, int n) {
+  final seats = <SeatInfo>[const SeatInfo.human()];
+  for (var i = 1; i < n; i++) {
+    final real = (i + mySeat) % n;
+    final rs = real < info.seats.length ? info.seats[real] : const RoomSeat();
+    if (rs.bot || rs.uid == null) {
+      final botLevel = (real == 2 && !info.level.atLeast(AiLevel.medium)) ? AiLevel.medium : info.level;
+      seats.add(SeatInfo.bot(botLevel, rs.botIndex >= 0 ? rs.botIndex : real));
+    } else {
+      seats.add(SeatInfo.remote(rs.name, pic: rs.pic, frame: rs.frame, back: rs.back));
+    }
+  }
+  return seats;
+}
+
+/// The host reads a guest's move [raw] (`moves/s<seat>`): null when it is
+/// not newer than [after] (the last one taken) or has no card.
+({int n, int card})? readMove(Object? raw, int after) {
+  final m = _map(raw);
+  if (m == null) return null;
+  final n = _int(m['n'], 0);
+  final card = m['card'];
+  if (n <= after || card is! num) return null;
+  return (n: n, card: card.toInt());
 }
