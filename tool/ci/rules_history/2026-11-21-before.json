@@ -1,0 +1,143 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || data.child('host').val() === auth.uid)"
+        },
+        "seats": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && (root.child('rooms').child($room).child('meta').child('host').val() === auth.uid || data.child('uid').val() === auth.uid || (!data.exists() && newData.child('uid').val() === auth.uid))"
+          }
+        },
+        "views": {
+          "$seat": {
+            ".read": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".write": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid"
+          }
+        },
+        "chat": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".validate": "newData.hasChildren(['n', 'm']) && newData.child('n').isNumber() && newData.child('m').isString() && newData.child('m').val().length <= 12 && (newData.child('m').val().beginsWith('m:') || newData.child('m').val().beginsWith('e:'))"
+          }
+        },
+        "rematch": {
+          ".read": "auth != null",
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "moves": {
+          "$seat": {
+            ".read": "auth != null && root.child('rooms').child($room).child('meta').child('host').val() === auth.uid",
+            ".write": "auth != null && root.child('rooms').child($room).child('seats').child($seat).child('uid').val() === auth.uid"
+          }
+        }
+      }
+    },
+    "lobby": {
+      ".read": "auth != null",
+      "$room": {
+        ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || data.child('host').val() === auth.uid)",
+        ".validate": "!newData.exists() || newData.hasChildren(['host', 'players', 'joined', 'created'])"
+      }
+    },
+    "leaderboard": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "xp"
+      ],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
+      }
+    },
+    "seasons": {
+      "$season": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "xp"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && $season.matches(/^[0-9]{6}$/)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'tag'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "tag": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+        },
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        "seen": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "handles": {
+      "$key": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid))",
+        ".validate": "!newData.exists() || newData.val() === auth.uid"
+      }
+    },
+    "invites": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'code', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('code').isString() && newData.child('code').val().matches(/^[0-9]{4}$/) && newData.child('t').val() === now)"
+        }
+      }
+    },
+    "friendAdds": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['t']) && newData.child('t').val() === now)"
+        }
+      }
+    },
+    "cups": {
+      "$slot": {
+        ".read": "auth != null",
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['name', 't']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('t').val() === now"
+          }
+        },
+        "online": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "results": {
+          "$match": {
+            ".write": "auth != null && !data.exists() && root.child('cups').child($slot).child('players').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['w', 't']) && newData.child('w').isNumber() && newData.child('w').val() >= 0 && newData.child('w').val() < 256 && newData.child('w').val() % 1 === 0 && newData.child('t').val() === now"
+          }
+        },
+        "meta": {
+          ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid) || (data.child('host').val() === auth.uid && !data.child('start').exists()))"
+        }
+      }
+    }
+  }
+}
+
