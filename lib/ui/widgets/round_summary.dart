@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../../engine/cards.dart';
 import '../../engine/game_state.dart';
 import '../../engine/rules.dart';
 import '../../game/progression.dart';
+import '../../game/sound.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
 import '../ege/widgets.dart';
@@ -157,6 +159,7 @@ class RoundSummaryPanel extends StatelessWidget {
       label: s.gameScore,
       names: teamNames,
       scores: state.scores,
+      before: <int>[for (var i = 0; i < 2; i++) max(0, state.scores[i] - result.teams[i].total)],
       target: rules.targetScore,
       targetText: s.target(rules.targetScore),
       winner: over ? state.winner : -1,
@@ -258,7 +261,7 @@ class RoundSummaryPanel extends StatelessWidget {
     );
 
     // The sheet fades and grows in when the round ends.
-    return TweenAnimationBuilder<double>(
+    final panel = TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: const Duration(milliseconds: 420),
       curve: Curves.easeOutBack,
@@ -321,6 +324,143 @@ class RoundSummaryPanel extends StatelessWidget {
         ),
       ),
     );
+    // Then the points are counted row by row.
+    return _ScoreCount(
+      rows: rows,
+      countKey: '${state.round}:${a.total}:${b.total}:${state.scores.join(',')}',
+      child: panel,
+    );
+  }
+}
+
+/// When each part of the count happens, in milliseconds from its start:
+/// the rows come in one after the other, each row's points go into the round
+/// total as it lands, then the game score bars move on (about 2.4 s).
+class _CountTiming {
+  const _CountTiming(this.rows);
+
+  final int rows;
+
+  static const int lead = 250;
+  static const int step = 220;
+  static const int rowIn = 220;
+  static const int add = 300;
+  static const int bars = 550;
+
+  double inStart(int i) => (lead + step * i).toDouble();
+  double addStart(int i) => inStart(i) + rowIn;
+  double get barStart => addStart(rows - 1) + add;
+  int get totalMs => (barStart + bars).round();
+
+  static double _part(double ms, double from, int length) => ((ms - from) / length).clamp(0.0, 1.0).toDouble();
+
+  /// How far row [i] has come in (0 → 1).
+  double entered(double ms, int i) => Curves.easeOutCubic.transform(_part(ms, inStart(i), rowIn));
+
+  /// How much of row [i]'s points are in the total (0 → 1).
+  double added(double ms, int i) => Curves.easeOutCubic.transform(_part(ms, addStart(i), add));
+
+  /// How far the game score bars have moved on (0 → 1).
+  double moved(double ms) => Curves.easeOutCubic.transform(_part(ms, barStart, bars));
+}
+
+/// The running count, for the score sheet and the game score under it.
+class _CountScope extends InheritedWidget {
+  const _CountScope({required this.count, required this.timing, required super.child});
+
+  /// 0 → 1 over [_CountTiming.totalMs].
+  final Animation<double> count;
+  final _CountTiming timing;
+
+  static _CountScope? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_CountScope>();
+
+  @override
+  bool updateShouldNotify(_CountScope old) => old.count != count || old.timing.rows != timing.rows;
+}
+
+/// Runs the count once, with a soft card sound for every row that brought
+/// points. A tap skips to the end; with low graphics (or animations switched
+/// off) everything is there at once. One animation that stops by itself.
+class _ScoreCount extends StatefulWidget {
+  const _ScoreCount({required this.rows, required this.countKey, required this.child});
+
+  final List<_ScoreRow> rows;
+
+  /// Same key, same count: an online guest gets the same result again with
+  /// every view the host sends, and it is not counted again.
+  final String countKey;
+
+  final Widget child;
+
+  @override
+  State<_ScoreCount> createState() => _ScoreCountState();
+}
+
+class _ScoreCountState extends State<_ScoreCount> with SingleTickerProviderStateMixin {
+  late _CountTiming _timing = _CountTiming(widget.rows.length);
+  late final AnimationController _count = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: _timing.totalMs),
+  )..addListener(_onTick);
+
+  /// Rows whose points went into the total (and made their sound).
+  int _counted = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(_ScoreCount old) {
+    super.didUpdateWidget(old);
+    if (old.countKey != widget.countKey) {
+      _timing = _CountTiming(widget.rows.length);
+      _count.duration = Duration(milliseconds: _timing.totalMs);
+      _start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _count.dispose();
+    super.dispose();
+  }
+
+  void _start() {
+    final still = Fx.low.value || WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (still || widget.rows.isEmpty) {
+      _skip();
+    } else {
+      _counted = 0;
+      unawaited(_count.forward(from: 0));
+    }
+  }
+
+  /// Straight to the end, without the sounds still to come.
+  void _skip() {
+    _counted = widget.rows.length;
+    _count.value = 1;
+  }
+
+  void _onTick() {
+    final ms = _count.value * _timing.totalMs;
+    var points = false;
+    while (_counted < widget.rows.length && ms >= _timing.addStart(_counted)) {
+      final r = widget.rows[_counted++];
+      if (r.ours + r.theirs > 0) points = true;
+    }
+    // One sound per frame, even if a slow frame landed two rows.
+    if (points) SoundFx.instance.play(Sfx.deal, volume: 0.45);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _skip,
+      child: _CountScope(count: _count, timing: _timing, child: widget.child),
+    );
   }
 }
 
@@ -381,20 +521,22 @@ class _ScoreSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget value(int v, int other, String? note) {
+    // [pop]: 0 → 1 → 0 while the value goes into the total.
+    Widget value(int v, int other, String? note, double pop) {
       final best = v > other;
+      final text = Text(
+        v == 0 ? '–' : '+$v',
+        style: TextStyle(
+          color: best ? PastraColors.gold : (v == 0 ? PastraColors.muted : PastraColors.text),
+          fontSize: 16,
+          fontWeight: best ? FontWeight.w800 : FontWeight.w700,
+        ),
+      );
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(
-            v == 0 ? '–' : '+$v',
-            style: TextStyle(
-              color: best ? PastraColors.gold : (v == 0 ? PastraColors.muted : PastraColors.text),
-              fontSize: 16,
-              fontWeight: best ? FontWeight.w800 : FontWeight.w700,
-            ),
-          ),
+          if (v > 0 && pop > 0) Transform.scale(scale: 1 + 0.25 * pop, child: text) else text,
           if (note != null) ...<Widget>[
             const SizedBox(width: 4),
             Text(note, style: const TextStyle(color: PastraColors.muted, fontSize: 11)),
@@ -415,8 +557,13 @@ class _ScoreSheet extends StatelessWidget {
           ),
         );
 
-    Widget line(_ScoreRow r) => Padding(
+    // The row lights up softly while its points are counted.
+    Widget line(_ScoreRow r, double pop) => Container(
           padding: const EdgeInsets.symmetric(vertical: 1.5),
+          decoration: BoxDecoration(
+            color: r.ours + r.theirs > 0 && pop > 0 ? PastraColors.gold.withValues(alpha: 0.12 * pop) : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -436,62 +583,96 @@ class _ScoreSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              Expanded(flex: 3, child: value(r.ours, r.theirs, r.oursNote)),
-              Expanded(flex: 3, child: value(r.theirs, r.ours, r.theirsNote)),
+              Expanded(flex: 3, child: value(r.ours, r.theirs, r.oursNote, pop)),
+              Expanded(flex: 3, child: value(r.theirs, r.ours, r.theirsNote, pop)),
             ],
           ),
         );
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Expanded(flex: 5, child: SizedBox()),
-              Expanded(flex: 3, child: name(names[0], true)),
-              Expanded(flex: 3, child: name(names[1], false)),
-            ],
-          ),
-          const SizedBox(height: 2),
-          // The rows come in one after the other, like dealt cards.
-          for (var i = 0; i < rows.length; i++) Fx.low.value ? line(rows[i]) : DealIn(order: i, child: line(rows[i])),
-          const Divider(color: Color(0x4DF2C14E), height: 10),
-          Row(
-            children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: Text(totalLabel, style: const TextStyle(color: PastraColors.text, fontSize: 15, fontWeight: FontWeight.w800)),
-              ),
-              for (var i = 0; i < 2; i++)
+    final header = Row(
+      children: <Widget>[
+        const Expanded(flex: 5, child: SizedBox()),
+        Expanded(flex: 3, child: name(names[0], true)),
+        Expanded(flex: 3, child: name(names[1], false)),
+      ],
+    );
+
+    // [ms]: how far the count is (see [_CountTiming]).
+    Widget sheet(_CountTiming timing, double ms) {
+      // Row [i] comes in, then lights up while its points are counted.
+      Widget rowAt(int i) {
+        final a = timing.added(ms, i);
+        final row = line(rows[i], a <= 0 || a >= 1 ? 0 : sin(pi * a));
+        final e = timing.entered(ms, i);
+        if (e >= 1) return row;
+        return Opacity(
+          opacity: e,
+          child: Transform.translate(offset: Offset(0, 14 * (1 - e)), child: row),
+        );
+      }
+
+      // The round total grows as each row lands; at the end it is the real one.
+      final shown = <int>[...totals];
+      if (ms < timing.barStart) {
+        for (var side = 0; side < 2; side++) {
+          var sum = 0.0;
+          for (var i = 0; i < rows.length; i++) {
+            sum += (side == 0 ? rows[i].ours : rows[i].theirs) * timing.added(ms, i);
+          }
+          shown[side] = sum.round();
+        }
+      }
+      return Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            header,
+            const SizedBox(height: 2),
+            // The rows come in one after the other, like dealt cards (a flat
+            // slide: nothing under a perspective).
+            for (var i = 0; i < rows.length; i++) rowAt(i),
+            const Divider(color: Color(0x4DF2C14E), height: 10),
+            Row(
+              children: <Widget>[
                 Expanded(
-                  flex: 3,
-                  // The total counts up.
-                  child: TweenAnimationBuilder<int>(
-                    tween: IntTween(begin: 0, end: totals[i]),
-                    duration: const Duration(milliseconds: 800),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, v, _) => Text(
-                      '$v',
+                  flex: 5,
+                  child: Text(totalLabel, style: const TextStyle(color: PastraColors.text, fontSize: 15, fontWeight: FontWeight.w800)),
+                ),
+                for (var i = 0; i < 2; i++)
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      '${shown[i]}',
+                      key: ValueKey<String>('roundTotal$i'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: totals[i] >= totals[1 - i] ? PastraColors.gold : PastraColors.text,
+                        color: shown[i] >= shown[1 - i] ? PastraColors.gold : PastraColors.text,
                         fontSize: 19,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final scope = _CountScope.maybeOf(context);
+    if (scope == null) {
+      final timing = _CountTiming(rows.length);
+      return sheet(timing, timing.totalMs.toDouble());
+    }
+    return AnimatedBuilder(
+      animation: scope.count,
+      builder: (context, _) => sheet(scope.timing, scope.count.value * scope.timing.totalMs),
     );
   }
 }
@@ -502,6 +683,7 @@ class _GameScore extends StatelessWidget {
     required this.label,
     required this.names,
     required this.scores,
+    required this.before,
     required this.target,
     required this.targetText,
     required this.winner,
@@ -510,6 +692,9 @@ class _GameScore extends StatelessWidget {
   final String label;
   final List<String> names;
   final List<int> scores;
+
+  /// The game score before this round: the bars move on from there.
+  final List<int> before;
   final int target;
   final String targetText;
 
@@ -520,9 +705,12 @@ class _GameScore extends StatelessWidget {
   Widget build(BuildContext context) {
     // Fixed widths grow with the text size (big screens zoom the panel).
     final f = MediaQuery.textScalerOf(context).scale(1);
-    Widget side(int i) {
+    final scope = _CountScope.maybeOf(context);
+    // [moved]: 0 (the score before the round) → 1 (the score now).
+    Widget side(int i, double moved) {
       final ours = i == 0;
       final color = ours ? PastraColors.gold : PastraColors.teal;
+      final shown = before[i] + (scores[i] - before[i]) * moved;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(
@@ -540,16 +728,11 @@ class _GameScore extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: (scores[i] / max(1, target)).clamp(0.0, 1.0)),
-                  duration: const Duration(milliseconds: 900),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, v, _) => LinearProgressIndicator(
-                    value: v,
-                    minHeight: 10,
-                    color: color,
-                    backgroundColor: Colors.white12,
-                  ),
+                child: LinearProgressIndicator(
+                  value: (shown / max(1, target)).clamp(0.0, 1.0),
+                  minHeight: 10,
+                  color: color,
+                  backgroundColor: Colors.white12,
                 ),
               ),
             ),
@@ -561,16 +744,13 @@ class _GameScore extends StatelessWidget {
                 children: <Widget>[
                   if (winner == i) const Icon(Icons.emoji_events_rounded, color: PastraColors.gold, size: 14),
                   Flexible(
-                    child: TweenAnimationBuilder<int>(
-                      tween: IntTween(begin: 0, end: scores[i]),
-                      duration: const Duration(milliseconds: 900),
-                      builder: (context, v, _) => Text(
-                        '$v',
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(color: ours ? PastraColors.gold : PastraColors.text, fontSize: 18, fontWeight: FontWeight.w800),
-                      ),
+                    child: Text(
+                      '${shown.round()}',
+                      key: ValueKey<String>('gameScore$i'),
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: ours ? PastraColors.gold : PastraColors.text, fontSize: 18, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ],
@@ -601,8 +781,14 @@ class _GameScore extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          side(0),
-          side(1),
+          if (scope == null) ...<Widget>[side(0, 1), side(1, 1)] else
+            AnimatedBuilder(
+              animation: scope.count,
+              builder: (context, _) {
+                final moved = scope.timing.moved(scope.count.value * scope.timing.totalMs);
+                return Column(mainAxisSize: MainAxisSize.min, children: <Widget>[side(0, moved), side(1, moved)]);
+              },
+            ),
         ],
       ),
     );

@@ -76,41 +76,6 @@ class MeanderBand extends StatelessWidget {
   }
 }
 
-/// Comes in once like a card dealt onto the table: it turns up from the
-/// table, slides a little and fades in, [order] steps after the first one.
-class DealIn extends StatelessWidget {
-  const DealIn({super.key, required this.order, required this.child});
-
-  final int order;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final delay = (0.11 * order).clamp(0.0, 0.7).toDouble();
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 650 + 90 * order),
-      builder: (context, t, child) {
-        final p = Curves.easeOutCubic.transform(((t - delay) / (1 - delay)).clamp(0.0, 1.0).toDouble());
-        return Opacity(
-          opacity: p,
-          child: Transform.translate(
-            offset: Offset(0, 26 * (1 - p)),
-            child: Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.0012)
-                ..rotateX((1 - p) * 0.9),
-              child: child,
-            ),
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-}
-
 /// A button of the premium look: gold with dark text for the main action,
 /// glass for the others. (The name is from the older raised design.)
 class BevelButton extends StatelessWidget {
