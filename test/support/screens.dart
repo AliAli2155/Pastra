@@ -1,17 +1,24 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pastra/app.dart';
 import 'package:pastra/engine/pastra_ai.dart';
+import 'package:pastra/engine/game_state.dart';
 import 'package:pastra/engine/pastra_engine.dart';
+import 'package:pastra/engine/rules.dart';
 import 'package:pastra/game/app_settings.dart';
 import 'package:pastra/game/game_controller.dart';
+import 'package:pastra/game/progression.dart';
 import 'package:pastra/game/seats.dart';
 import 'package:pastra/online/social_service.dart';
 import 'package:pastra/ui/fx/fx.dart';
+import 'package:pastra/ui/premium/premium.dart';
 import 'package:pastra/ui/screens/game_screen.dart';
+import 'package:pastra/ui/screens/home_screen.dart';
 import 'package:pastra/ui/screens/level_path_screen.dart';
 import 'package:pastra/ui/screens/quests_screen.dart';
 import 'package:pastra/ui/screens/rules_screen.dart';
@@ -20,8 +27,10 @@ import 'package:pastra/ui/screens/stats_screen.dart';
 import 'package:pastra/ui/screens/store_screen.dart';
 import 'package:pastra/ui/screens/tournament_screen.dart';
 import 'package:pastra/ui/theme.dart';
+import 'package:pastra/ui/widgets/game_over.dart';
 import 'package:pastra/ui/widgets/invite_banner.dart';
 import 'package:pastra/ui/widgets/profile_card.dart';
+import 'package:pastra/ui/widgets/round_summary.dart';
 import 'package:pastra/ui/widgets/wallet_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,7 +61,10 @@ final List<SweepScreen> sweepScreens = <SweepScreen>[
   SweepScreen('rules', (_) => const RulesScreen()),
   for (var i = 0; i < 4; i++) SweepScreen('stats_$i', (_) => StatsScreen(initialTab: i)),
   for (var i = 0; i < 5; i++) SweepScreen('settings_$i', (_) => SettingsScreen(initialTab: i)),
-  for (final i in <int>[0, 1, 3]) SweepScreen('store_$i', (_) => StoreScreen(initialTab: i)),
+  for (var i = 0; i < 8; i++) SweepScreen('store_$i', (_) => StoreScreen(initialTab: i)),
+  SweepScreen('quick_game', (_) => const _Lobby(), setUp: _openQuickGame),
+  SweepScreen('game_over', (_) => _gameOver(sheet: false)),
+  SweepScreen('score_sheet', (_) => _gameOver(sheet: true)),
   SweepScreen('table_1v1', (c) => GameScreen(controller: c!), game: 2),
   SweepScreen('table_2v2', (c) => GameScreen(controller: c!), game: 4),
 ];
@@ -65,9 +77,56 @@ class _Lobby extends StatelessWidget {
   Widget build(BuildContext context) => PastraApp(settings: SettingsScope.of(context));
 }
 
+Future<void> _openQuickGame(WidgetTester tester) async {
+  final context = tester.element(find.byType(Scaffold).first);
+  final settings = SettingsScope.read(context);
+  unawaited(showDialog<void>(
+    context: context,
+    builder: (_) => PremiumDialog(
+      child: NewGameSheet(initialPlayers: settings.players, initialLevel: settings.level),
+    ),
+  ));
+  await tester.pumpAndSettle();
+}
+
+/// The end of a game: the big moment, or the score sheet of the last round.
+Widget _gameOver({required bool sheet}) {
+  final state = PastraEngine.newGame(rules: PastraRules.pileDefaults, numPlayers: 2, seed: 7);
+  // A real last round (with its score sheet) up to the game over.
+  final rng = Random(3);
+  while (state.phase != GamePhase.gameOver) {
+    if (state.phase == GamePhase.roundOver) {
+      PastraEngine.startNextRound(state);
+    } else if (PastraEngine.needsDeal(state) || PastraEngine.roundCardsExhausted(state)) {
+      PastraEngine.advanceAuto(state);
+    } else {
+      PastraEngine.applyMove(state, PastraAI.chooseCard(state.copy(), AiLevel.medium, rng));
+    }
+  }
+  return Scaffold(
+    body: sheet
+        ? RoundSummaryPanel(
+            state: state,
+            teamNames: const <String>['Ali', 'Konstantina'],
+            onNextRound: () {},
+            onMainMenu: () {},
+            onPlayAgain: () {},
+            xpGain: const GameXp(amount: 120, levelBefore: 11, levelAfter: 12, chips: 400),
+          )
+        : GameOverView(
+            state: state,
+            teamNames: const <String>['Ali', 'Konstantina'],
+            onNextRound: () {},
+            onMainMenu: () {},
+            onPlayAgain: () {},
+            xpGain: const GameXp(amount: 120, levelBefore: 11, levelAfter: 12, chips: 400),
+          ),
+  );
+}
+
 Future<void> _openProfile(WidgetTester tester) async {
   final context = tester.element(find.byType(Scaffold).first);
-  showMyProfile(context, onLevelPath: () {}, onAppearance: () {});
+  unawaited(showMyProfile(context, onLevelPath: () {}, onAppearance: () {}));
   await tester.pumpAndSettle();
 }
 

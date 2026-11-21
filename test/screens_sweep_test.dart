@@ -12,8 +12,18 @@ void main() {
   quietApp();
 
   const sizes = <Size>[Size(844, 390), Size(960, 540), Size(1280, 720)];
-  for (final size in sizes) {
-    for (final language in AppSettings.languages) {
+  // More devices, in the languages with the longest words: a small phone
+  // held sideways (iPhone SE), a big one, a tablet both ways, a full HD screen.
+  const more = <Size>[Size(667, 375), Size(932, 430), Size(1024, 768), Size(768, 1024), Size(1920, 1080)];
+  const longWords = <String>['de', 'el', 'ru', 'tr'];
+  final runs = <(Size, String)>[
+    for (final size in sizes)
+      for (final language in AppSettings.languages) (size, language),
+    for (final size in more)
+      for (final language in longWords) (size, language),
+  ];
+  for (final (size, language) in runs) {
+    {
       testWidgets('every screen in $language at ${size.width.toInt()}x${size.height.toInt()}', (tester) async {
         await loadRealFonts();
         final problems = <String>[];
