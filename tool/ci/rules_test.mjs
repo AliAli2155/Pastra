@@ -5,18 +5,19 @@
 //
 // Never touches the live database: it talks to the emulator only.
 const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST ?? '127.0.0.1:9000';
-const ns = 'pastra-95bc5';
+// The namespace the rules are loaded into (the app's database, see firebase_options.dart).
+const ns = 'pastra-95bc5-default-rtdb';
 if (!/^(127\.0\.0\.1|localhost):/.test(host)) throw new Error(`not an emulator: ${host}`);
 
-// The emulator accepts unsigned tokens: {"alg":"none"} + the user's claims.
-const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
-const token = (uid) => `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ sub: uid, user_id: uid, uid })}.`;
-
+// Requests as the admin ("owner"), acting as a user through
+// auth_variable_override, as the Admin SDK does: the rules see auth.uid.
 async function req(method, uid, path, body) {
-  const url = `http://${host}/${path}.json?ns=${ns}`;
-  const headers = { 'Content-Type': 'application/json' };
-  if (uid === 'admin') headers.Authorization = 'Bearer owner';
-  else if (uid) headers.Authorization = `Bearer ${token(uid)}`;
+  let url = `http://${host}/${path}.json?ns=${ns}`;
+  if (uid !== 'admin') {
+    const auth = uid ? { uid, provider: 'anonymous', token: { sub: uid } } : null;
+    url += `&auth_variable_override=${encodeURIComponent(JSON.stringify(auth))}`;
+  }
+  const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer owner' };
   const r = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   return r.status;
 }

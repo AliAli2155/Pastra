@@ -65,11 +65,28 @@ jobs:
           path: perf.json
           if-no-files-found: ignore
 
+  # The database rules against the Realtime Database emulator, with the
+  # writes the app makes (never the live database).
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rules test (emulator)
+        run: npx --yes firebase-tools@15.34.2 emulators:exec --only database --project pastra-95bc5 "node tool/ci/rules_test.mjs"
+
   # The preview site follows ui-v2: the Pages workflow runs on main (only main
   # may publish to Pages) and builds the live site from main and the preview
   # from ui-v2.
   preview:
-    needs: check
+    needs: [check, rules]
     if: github.event_name == 'push' && github.ref == 'refs/heads/ui-v2'
     runs-on: ubuntu-latest
     permissions:
