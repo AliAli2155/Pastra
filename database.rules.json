@@ -9,7 +9,19 @@
         "seats": {
           ".read": "auth != null",
           "$seat": {
-            ".write": "auth != null && (root.child('rooms').child($room).child('meta').child('host').val() === auth.uid || data.child('uid').val() === auth.uid || (!data.exists() && newData.child('uid').val() === auth.uid))"
+            ".write": "auth != null && (root.child('rooms').child($room).child('meta').child('host').val() === auth.uid || (data.child('uid').val() === auth.uid && (!newData.exists() || newData.child('uid').val() === auth.uid)) || (!data.exists() && newData.child('uid').val() === auth.uid))",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "pic": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            },
+            "frame": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            },
+            "back": {
+              ".validate": "newData.isString() && newData.val().length <= 24"
+            }
           }
         },
         "views": {
@@ -54,7 +66,19 @@
       ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
+        ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))",
+        "frame": {
+          ".validate": "newData.isString() && newData.val().length <= 24"
+        },
+        "pic": {
+          ".validate": "newData.isString() && newData.val().length <= 24"
+        },
+        "tag": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+        },
+        "lvl": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+        }
       }
     },
     "seasons": {
@@ -65,7 +89,19 @@
         ],
         "$uid": {
           ".write": "auth != null && auth.uid === $uid && $season.matches(/^[0-9]{6}$/)",
-          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))"
+          ".validate": "!newData.exists() || (newData.hasChildren(['name', 'xp', 'wins', 'games', 'updated']) && newData.child('name').isString() && newData.child('name').val().length <= 16 && newData.child('xp').isNumber() && newData.child('xp').val() >= 0 && newData.child('wins').isNumber() && newData.child('wins').val() >= 0 && newData.child('games').isNumber() && newData.child('games').val() >= 0 && newData.child('updated').val() === now && newData.child('wins').val() <= newData.child('games').val() && newData.child('xp').val() <= newData.child('games').val() * 300 + 3000 && (!data.exists() || (now - data.child('updated').val() >= 10000 && newData.child('xp').val() <= data.child('xp').val() + 1500 && newData.child('games').val() <= data.child('games').val() + 3)))",
+          "frame": {
+            ".validate": "newData.isString() && newData.val().length <= 24"
+          },
+          "pic": {
+            ".validate": "newData.isString() && newData.val().length <= 24"
+          },
+          "tag": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+          },
+          "lvl": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          }
         }
       }
     },
@@ -85,6 +121,15 @@
         },
         "seen": {
           ".validate": "newData.isNumber()"
+        },
+        "frame": {
+          ".validate": "newData.isString() && newData.val().length <= 24"
+        },
+        "pic": {
+          ".validate": "newData.isString() && newData.val().length <= 24"
+        },
+        "lvl": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
         }
       }
     },
