@@ -636,7 +636,7 @@ class GameController extends ChangeNotifier {
         );
         SoundFx.instance.play(won ? Sfx.win : Sfx.lose);
         if (settings.haptics && won) Haptics.big();
-        settings.clearSavedGame();
+        unawaited(settings.clearSavedGame());
       }
       final over = gameFacts != null;
       final questsDone = settings.questEvent(QuestEvent(
@@ -786,8 +786,10 @@ class GameController extends ChangeNotifier {
     _afterRoundStart();
   }
 
-  /// Shows newly unlocked achievements one after another.
-  Future<void> _announce(List<String> ids) async {
+  /// Shows newly unlocked achievements one after another (in the background).
+  void _announce(List<String> ids) => unawaited(_announceAll(ids));
+
+  Future<void> _announceAll(List<String> ids) async {
     _toastQueue.addAll(ids);
     if (_toastRunning) return;
     _toastRunning = true;

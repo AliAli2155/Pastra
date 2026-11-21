@@ -77,7 +77,7 @@ class _OnlineScreenState extends State<OnlineScreen> {
     });
     // The player's code ("Player #1270") and online status for friends.
     if (problem == null) {
-      SocialService.instance.start(SettingsScope.read(context));
+      unawaited(SocialService.instance.start(SettingsScope.read(context)));
       await _refreshRejoin();
       if (!mounted) return;
     }

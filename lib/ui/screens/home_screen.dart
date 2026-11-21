@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -62,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       // Players with friends: their code and "online" for their friends.
       if (settings.friends.isNotEmpty || settings.playerTag != null) {
-        SocialService.instance.start(settings);
+        unawaited(SocialService.instance.start(settings));
       }
       // Opened with an invite link: straight to that table.
       final invite = InviteLink.takePending();

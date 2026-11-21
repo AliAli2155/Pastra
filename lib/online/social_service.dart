@@ -113,11 +113,11 @@ class SocialService {
         final isNew = requests.value.every((r) => r.uid != from);
         requests.value = withRequest(requests.value, st);
         if (isNew) {
-          NotificationService.instance.friendRequest(
+          unawaited(NotificationService.instance.friendRequest(
             from: st.name,
             title: Strings(s.language).appTitle,
             body: '${st.name} #${st.tag}',
-          );
+          ));
         }
       } catch (_) {}
     });
@@ -208,7 +208,7 @@ class SocialService {
       if (!claimed) return false;
       final old = s.handleKey;
       if (old != null && old != key) {
-        OnlineService.ref('handles/$old').remove().catchError((Object _) {});
+        unawaited(OnlineService.ref('handles/$old').remove().catchError((Object _) {}));
       }
       s.setHandle(tag: tag, key: key);
     }

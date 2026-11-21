@@ -136,7 +136,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       } else {
         final already = settings.friends.any((f) => f.uid == found.uid && f.favorite);
         settings.addFriend(uid: found.uid, name: found.name, tag: found.tag);
-        if (!already) SocialService.tellAdded(found.uid);
+        if (!already) unawaited(SocialService.tellAdded(found.uid));
         final handle = PlayerHandle.format(found.name, found.tag);
         messenger.showSnackBar(SnackBar(content: Text(already ? t.alreadyFriend(handle) : t.requestSent(handle))));
       }

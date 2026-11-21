@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,7 +26,7 @@ Future<void> main() async {
   // The pictures of the court cards that have one (before the first card).
   await CourtImages.load();
   // Load the sounds in the background so the first ones are not late.
-  SoundFx.instance.preload();
+  unawaited(SoundFx.instance.preload());
   GameController.onGameFinished = (s) => Leaderboard.submit(s);
   // Automatic graphics quality: switches decoration off on slow devices.
   Fx.watch();

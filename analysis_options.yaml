@@ -1,6 +1,10 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
   exclude:
     - build/**
     - android/**
@@ -11,3 +15,10 @@ linter:
   rules:
     prefer_single_quotes: true
     use_build_context_synchronously: true
+    # A future started without waiting for it must say so (unawaited(...)).
+    unawaited_futures: true
+    avoid_dynamic_calls: true
+    avoid_catching_errors: true
+    collection_methods_unrelated_type: true
+    test_types_in_equals: true
+    unnecessary_statements: true

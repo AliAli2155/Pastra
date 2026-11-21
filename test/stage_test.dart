@@ -20,9 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// [TableStage] does it) puts a point of the flat table, on the area.
 Offset throughMatrix(StageGeometry g, Offset p) {
   final pivot = Offset(g.size.width / 2, g.size.height);
-  final m = Matrix4.translationValues(pivot.dx, pivot.dy, 0) *
-      g.matrix *
-      Matrix4.translationValues(-pivot.dx, -pivot.dy, 0);
+  final m = Matrix4.translationValues(pivot.dx, pivot.dy, 0)
+    ..multiply(g.matrix)
+    ..multiply(Matrix4.translationValues(-pivot.dx, -pivot.dy, 0));
   // The tilted table hangs from the bottom of the area.
   return MatrixUtils.transformPoint(m, p) + Offset(0, g.area.height - g.size.height);
 }
