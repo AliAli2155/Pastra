@@ -76,6 +76,9 @@ jobs:
           cp -R live/build/web/. site/
           mkdir site/preview
           cp -R preview/build/web/. site/preview/
+          # The preview is not for search engines: only the live game is.
+          sed -i 's|<head>|<head>\n  <meta name="robots" content="noindex, nofollow">|' site/preview/index.html
+          grep -q 'name="robots"' site/preview/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

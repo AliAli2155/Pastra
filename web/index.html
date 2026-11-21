@@ -7,7 +7,40 @@
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Pastra – the Greek card game. Play against the computer or online, 1v1 or 2v2.">
+  <meta name="description" content="Pastra (Πάστρα) – the Greek fishing card game. Play free in the browser against the computer or online with friends, 1v1 or 2v2, in 12 languages.">
+
+  <!-- Link previews (WhatsApp, Telegram, iMessage, X…): an invite link shows
+       the table. Absolute URLs: previews do not follow <base>. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pastra">
+  <meta property="og:title" content="Pastra – the Greek card game">
+  <meta property="og:description" content="Play Pastra (Πάστρα) free in the browser: against the computer or online with friends, 1v1 or 2v2.">
+  <meta property="og:url" content="https://aliali2155.github.io/Pastra/">
+  <meta property="og:image" content="https://aliali2155.github.io/Pastra/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A game of Pastra on a green card table">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://aliali2155.github.io/Pastra/">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Pastra",
+    "alternateName": "Πάστρα",
+    "description": "The Greek fishing card game: play against the computer or online with friends, 1v1 or 2v2.",
+    "url": "https://aliali2155.github.io/Pastra/",
+    "image": "https://aliali2155.github.io/Pastra/og-image.jpg",
+    "genre": ["Card game", "Board game"],
+    "gamePlatform": ["Web browser", "Android", "iOS", "Windows"],
+    "applicationCategory": "GameApplication",
+    "operatingSystem": "Any (web browser)",
+    "playMode": ["SinglePlayer", "MultiPlayer"],
+    "numberOfPlayers": {"@type": "QuantitativeValue", "minValue": 2, "maxValue": 4},
+    "inLanguage": ["el", "en", "tr", "de", "fr", "es", "it", "pt", "ru", "bg", "ar", "zh"],
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}
+  }
+  </script>
 
   <!-- iPhone: "Add to Home Screen" opens full screen, status bar over the felt. -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -19,7 +52,7 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
 
-  <title>Pastra</title>
+  <title>Pastra (Πάστρα) – the Greek card game, free online</title>
 
   <style>
     html, body {
@@ -142,6 +175,11 @@
 </head>
 <body>
   <div id="app"></div>
+  <noscript>
+    <h1>Pastra (Πάστρα)</h1>
+    <p>The Greek fishing card game. Play against the computer or online with friends, 1v1 or 2v2.
+      Pastra needs JavaScript to run in the browser.</p>
+  </noscript>
   <script>
     // Invite links: https://…/Pastra/#/oda/1234 (or #/room/1234). The code
     // is kept for the app and the address is cleaned, so Flutter starts on
