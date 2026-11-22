@@ -4,6 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 
 import '../engine/perspective.dart';
+import '../game/freeze_log.dart';
 import '../l10n/social_strings.dart';
 import 'online_service.dart';
 
@@ -115,6 +116,7 @@ class RoomSocial extends ChangeNotifier {
   }
 
   void _show(int screenSeat, String message) {
+    FreezeLog.note('chat ${message.startsWith('e:') ? 'emoji' : 'message'} shown');
     final b = ChatBubble(++_bubbleId, screenSeat, message);
     bubbles[screenSeat] = b;
     _changed();

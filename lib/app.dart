@@ -5,9 +5,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'build_info.dart';
 import 'game/app_settings.dart';
+import 'game/freeze_log.dart';
 import 'l10n/strings.dart';
 import 'ui/safe_area_stub.dart' if (dart.library.js_interop) 'ui/safe_area_web.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/widgets/font_warmup.dart';
 import 'ui/widgets/friend_request_banner.dart';
 import 'ui/widgets/invite_banner.dart';
 import 'ui/theme.dart';
@@ -22,6 +24,11 @@ class PastraApp extends StatelessWidget {
   /// For the keyboard: Esc goes back on computers.
   static final GlobalKey<NavigatorState> _navigator = GlobalKey<NavigatorState>();
 
+  /// Preview builds: screens opening and closing go into the freeze log.
+  static final List<NavigatorObserver> _observers = <NavigatorObserver>[
+    if (FreezeLog.enabled) FreezeRouteObserver(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return SettingsScope(
@@ -32,6 +39,7 @@ class PastraApp extends StatelessWidget {
           title: Strings(settings.language).appTitle,
           debugShowCheckedModeBanner: false,
           navigatorKey: _navigator,
+          navigatorObservers: _observers,
           theme: _theme,
           locale: Locale(settings.language),
           supportedLocales: <Locale>[for (final code in AppSettings.languages) Locale(code)],
@@ -49,12 +57,9 @@ class PastraApp extends StatelessWidget {
               child: Stack(
                 textDirection: TextDirection.ltr,
                 children: <Widget>[
-                  // Web: the browser fetches the fonts for Arabic and Chinese
-                  // only when such text is first laid out, and text drawn
-                  // before they arrive stays garbled (the language list in
-                  // the settings). Laying out a hidden sample at the start
-                  // loads them early.
-                  if (kIsWeb) const Offstage(child: Text('العربية 中文 Ελληνικά Български')),
+                  // Web: fonts for characters our fonts lack are fetched
+                  // ahead of time (see FontWarmup).
+                  if (kIsWeb) const FontWarmup(),
                   child ?? const SizedBox.shrink(),
                   // A friend's invitation, over every screen.
                   Positioned.fill(child: InviteBanner(navigator: _navigator)),

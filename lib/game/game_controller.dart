@@ -13,6 +13,7 @@ import '../engine/move_review.dart';
 import 'achievements.dart';
 import 'app_settings.dart';
 import 'economy.dart';
+import 'freeze_log.dart';
 import 'haptics.dart';
 import 'match_history.dart';
 import 'online_link.dart';
@@ -448,6 +449,7 @@ class GameController extends ChangeNotifier {
   /// like that (the rightmost is the top card) until the first card is
   /// played; then they are gathered into the pile.
   Future<void> _revealOpening() async {
+    FreezeLog.note('deal, round ${_state.round}');
     _busy = true;
     tableShown = 0;
     SoundFx.instance.play(Sfx.shuffle, volume: 0.8);
@@ -513,6 +515,7 @@ class GameController extends ChangeNotifier {
   /// Offline: suggests a card (the strong computer's choice) and selects it
   /// so that what it takes lights up.
   void showHint() {
+    FreezeLog.note('hint');
     if (!isHumanTurn || isOnline) return;
     final hand = _state.hands[humanSeat];
     if (hand.isEmpty) return;
@@ -550,6 +553,7 @@ class GameController extends ChangeNotifier {
     _warnTimer = null;
     final seat = _state.current;
     final pv = PastraEngine.preview(_state, card);
+    FreezeLog.note('seat $seat plays${pv.isPastra ? ' (pastra)' : pv.isCapture ? ' (takes ${pv.captured.length})' : ''}');
     if (seat == humanSeat) _review(card);
     selected = null;
     hintCard = null;
@@ -643,6 +647,7 @@ class GameController extends ChangeNotifier {
       final deficit = _state.scores[1 - ourTeam] - _state.scores[ourTeam];
       if (deficit > _maxDeficit) _maxDeficit = deficit;
       GameFacts? gameFacts;
+      FreezeLog.note(_state.phase == GamePhase.gameOver ? 'game over' : 'round over');
       if (_state.phase == GamePhase.gameOver) {
         final won = _state.winner == ourTeam;
         settings.recordGame(
@@ -789,6 +794,8 @@ class GameController extends ChangeNotifier {
     if (_disposed) return;
     final snapshot = _state.copy();
     final seed = _rng.nextInt(1 << 30);
+    final thinking = Stopwatch()..start();
+    FreezeLog.note('bot on seat $seat (${level.name}) thinks');
     int card;
     try {
       if (!level.searches) {
@@ -803,6 +810,7 @@ class GameController extends ChangeNotifier {
       card = PastraAI.chooseCard(snapshot, level, Random(seed));
     }
     if (_disposed) return;
+    FreezeLog.note('bot chose in ${thinking.elapsedMilliseconds} ms');
     if (!_state.hands[seat].contains(card)) card = _state.hands[seat].first;
     await _play(card);
   }
@@ -829,7 +837,10 @@ class GameController extends ChangeNotifier {
   }
 
   /// Shows newly unlocked achievements one after another (in the background).
-  void _announce(List<String> ids) => unawaited(_announceAll(ids));
+  void _announce(List<String> ids) {
+    if (ids.isNotEmpty) FreezeLog.note('toast ${ids.join(', ')}');
+    unawaited(_announceAll(ids));
+  }
 
   Future<void> _announceAll(List<String> ids) async {
     _toastQueue.addAll(ids);
@@ -1005,6 +1016,7 @@ class GameController extends ChangeNotifier {
 
   /// Guest: asks the host to play [card].
   void _guestPlay(int card) {
+    FreezeLog.note('I play (sent to the host)');
     _review(card);
     selected = null;
     hintCard = null;
@@ -1029,6 +1041,7 @@ class GameController extends ChangeNotifier {
   /// already translated to our numbering).
   void applyHostView(GameState next, Map<String, dynamic>? ev) {
     if (_disposed) return;
+    FreezeLog.note('view from the host');
     _viewQueue.add(_HostView(next, ev));
     if (!_viewBusy) _drainViews();
   }

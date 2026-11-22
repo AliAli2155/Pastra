@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../../game/freeze_log.dart';
+
 /// How much decoration and animation is drawn (graphics quality).
 enum FxMode { auto, high, low }
 
@@ -95,6 +97,7 @@ class Fx {
     _slow = 0;
     if (_badWindows >= _badWindowsNeeded) {
       _autoLow = true;
+      FreezeLog.note('graphics switched to low by itself');
       _apply();
     }
   }

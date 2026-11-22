@@ -7,6 +7,7 @@ import '../../engine/cards.dart';
 import '../../game/app_settings.dart';
 import '../../game/avatar_pic.dart';
 import '../../game/economy.dart';
+import '../../game/freeze_log.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
 import '../../online/leaderboard.dart';
@@ -18,6 +19,7 @@ import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/game_header.dart';
 import '../widgets/avatar.dart';
+import '../widgets/freeze_log_panel.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 
@@ -419,6 +421,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: PremiumText.secondary.copyWith(height: 1.6, fontSize: 14),
           ),
         ),
+        // Preview builds: the freezes recorded on this device.
+        if (FreezeLog.enabled) const FreezeLogPanel(),
       ],
     );
   }

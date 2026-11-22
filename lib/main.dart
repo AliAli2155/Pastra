@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app.dart';
+import 'build_info.dart';
 import 'game/app_settings.dart';
 import 'game/crash_reports.dart';
+import 'game/freeze_log.dart';
 import 'game/game_controller.dart';
 import 'game/sound.dart';
 import 'online/leaderboard.dart';
@@ -30,8 +32,13 @@ Future<void> main() async {
   await CourtImages.load();
   // Load the sounds in the background so the first ones are not late.
   unawaited(SoundFx.instance.preload());
-  GameController.onGameFinished = (s) => Leaderboard.submit(s);
+  GameController.onGameFinished = (s) {
+    FreezeLog.note('leaderboard update');
+    unawaited(Leaderboard.submit(s));
+  };
   // Automatic graphics quality: switches decoration off on slow devices.
   Fx.watch();
+  // Preview builds: freezes are recorded (Settings > About).
+  if (BuildInfo.preview) unawaited(FreezeLog.start());
   runApp(PastraApp(settings: settings));
 }

@@ -18,6 +18,7 @@ import '../premium/premium.dart';
 import '../theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/game_header.dart';
+import '../widgets/font_warmup.dart';
 import '../widgets/invite_share.dart';
 import '../widgets/menu_tiles.dart';
 import '../widgets/name_prompt.dart';
@@ -64,6 +65,8 @@ class _OnlineScreenState extends State<OnlineScreen> {
   @override
   void initState() {
     super.initState();
+    // The quick chat emojis of the games to come: their font now, not mid-game.
+    FontWarmup.wantEmojis();
     _name.text = SettingsScope.read(context).playerName;
     _check();
   }

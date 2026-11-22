@@ -198,6 +198,12 @@ class Strings {
   String get rulesApplyToNewGames => _s('rulesApplyToNewGames');
   String points(int n) => _s('points', <String, Object>{'n': n});
   String get about => _s('about');
+  String get freezeLog => _s('freezeLog');
+  String get freezeLogHint => _s('freezeLogHint');
+  String get freezeNone => _s('freezeNone');
+  String get freezeCopy => _s('freezeCopy');
+  String get freezeCopied => _s('freezeCopied');
+  String get freezeClear => _s('freezeClear');
   String get aboutBody => _s('aboutBody');
 
   // ---------------------------------------------------------- statistics
