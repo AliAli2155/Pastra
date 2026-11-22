@@ -5,6 +5,9 @@ abstract class OnlineLink {
   /// Guest: asks the host to play [card].
   void sendMove(int card);
 
+  /// Guest: tells the host the player is ready for the round after [round].
+  void sendReady(int round);
+
   /// Host: is the player on [seat] still connected?
   bool isRemoteOnline(int seat);
 

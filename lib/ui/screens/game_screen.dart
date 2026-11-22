@@ -306,20 +306,31 @@ class _GameScreenState extends State<GameScreen> {
   /// The avatar of a seat on its name plate: my own picture and frame, the
   /// ones an online player chose, or a bot's (its frame shows its level).
   /// Without a frame a ring shows the turn: gold on the turn, else [ring].
-  Widget _seatAvatar(Strings s, int seat, double size, {required bool active, Color ring = PastraColors.teal}) {
+  /// The picture and frame of a seat: mine, the ones an online player chose,
+  /// or a bot's (its frame shows its level).
+  (AvatarPic, AvatarFrame) _seatLook(int seat) {
     final info = c.seats[seat];
-    final AvatarPic pic;
-    final AvatarFrame frame;
-    if (info.isHuman) {
-      pic = c.settings.avatarPic;
-      frame = c.settings.avatarFrame;
-    } else if (info.isBot) {
-      pic = botPic(info.botIndex);
-      frame = botFrame(info.level);
-    } else {
-      pic = AvatarPic.byName(info.pic);
-      frame = avatarFrameByName(info.frame);
-    }
+    if (info.isHuman) return (c.settings.avatarPic, c.settings.avatarFrame);
+    if (info.isBot) return (botPic(info.botIndex), botFrame(info.level));
+    return (AvatarPic.byName(info.pic), avatarFrameByName(info.frame));
+  }
+
+  /// Online, after a round: who at the table is ready for the next one.
+  RoundReady? _roundReady(Strings s) {
+    if (!c.isOnline || c.state.phase != GamePhase.roundOver) return null;
+    return RoundReady(
+      players: <ReadyPlayer>[
+        for (var seat = 0; seat < c.numPlayers; seat++)
+          ReadyPlayer(name: _seatName(s, seat), pic: _seatLook(seat).$1, frame: _seatLook(seat).$2),
+      ],
+      ready: c.readySeats,
+      deadline: c.readyDeadline,
+      onReady: c.readyUp,
+    );
+  }
+
+  Widget _seatAvatar(Strings s, int seat, double size, {required bool active, Color ring = PastraColors.teal}) {
+    final (pic, frame) = _seatLook(seat);
     final name = _seatName(s, seat);
     Widget avatar = frame == AvatarFrame.none
         ? Container(
@@ -332,7 +343,7 @@ class _GameScreenState extends State<GameScreen> {
         : PlayerAvatar(name: name, pic: pic, frame: frame, size: size);
     // Online a small robot marks the bots among the people, and the seats
     // of people who are gone (a bot plays for them until they are back).
-    if ((info.isBot && c.isOnline) || c.standIns.contains(seat)) {
+    if ((c.seats[seat].isBot && c.isOnline) || c.standIns.contains(seat)) {
       avatar = Stack(
         clipBehavior: Clip.none,
         children: <Widget>[
@@ -684,6 +695,7 @@ class _GameScreenState extends State<GameScreen> {
                       : RoundSummaryPanel(
                           state: state,
                           teamNames: _teamNames(s),
+                          ready: _roundReady(s),
                           onNextRound: c.nextRound,
                           onMainMenu: () => Navigator.of(context).pop(),
                           onPlayAgain: c.isOnline ? (_rematchAvailable ? _rematch : null) : _playAgain,

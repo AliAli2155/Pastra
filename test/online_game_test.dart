@@ -26,7 +26,10 @@ class _Link implements OnlineLink {
   final int seat;
 
   @override
-  void sendMove(int card) => room.send(seat, card);
+  void sendMove(int card) => room.send(seat, <String, Object?>{'card': card});
+
+  @override
+  void sendReady(int round) => room.send(seat, <String, Object?>{'ready': round});
 
   @override
   bool isRemoteOnline(int seat) => !room.offline.contains(seat);
@@ -52,7 +55,7 @@ class _Link implements OnlineLink {
 
 /// A room without a network. The host's views and the guests' moves go
 /// through the same functions as in a real room ([hostViews],
-/// [readHostView], [translateHostEvent], [readMove], [guestSeats]), as JSON,
+/// [readHostView], [translateHostEvent], [readSeatMessage], [guestSeats]), as JSON,
 /// a moment later, like through the database.
 class _Room {
   _Room({required this.players, required this.people, required this.settings, this.turnSeconds = 0});
@@ -176,15 +179,19 @@ class _Room {
     g.applyHostView(view.state, translateHostEvent(view.events, seat, players));
   }
 
-  void send(int seat, int card) {
+  /// A guest's move or "ready", through their slot `moves/s<seat>`.
+  void send(int seat, Map<String, Object?> message) {
     final n = _sent[seat] = (_sent[seat] ?? 0) + 1;
-    final raw = jsonDecode(jsonEncode(<String, Object?>{'n': n, 'card': card}));
+    final raw = jsonDecode(jsonEncode(<String, Object?>{'n': n, ...message}));
     Timer(latency, () {
       if (offline.contains(seat)) return;
-      final move = readMove(raw, _lastMove[seat] ?? 0);
-      if (move == null) return;
-      _lastMove[seat] = move.n;
-      host.submitRemoteMove(seat, move.card);
+      final m = readSeatMessage(raw, _lastMove[seat] ?? 0);
+      if (m == null) return;
+      _lastMove[seat] = m.n;
+      final card = m.card;
+      final ready = m.ready;
+      if (card != null) host.submitRemoteMove(seat, card);
+      if (ready != null) host.remoteReady(seat, ready);
     });
   }
 
@@ -238,19 +245,27 @@ void main() {
   }
 
   /// Everybody at the table plays a random card of their own when it is
-  /// their turn (apart from [idle] seats); the host goes on to the next
-  /// round. Every 100 ms of game time until [done].
-  Future<void> play(WidgetTester tester, _Room room, bool Function() done, {Set<int> idle = const <int>{}, int seconds = 1200}) async {
+  /// their turn (apart from [idle] seats) and, after a round, says they are
+  /// ready (unless [ready] is false). Every 100 ms of game time until [done].
+  Future<void> play(
+    WidgetTester tester,
+    _Room room,
+    bool Function() done, {
+    Set<int> idle = const <int>{},
+    bool ready = true,
+    int seconds = 1200,
+  }) async {
     final rng = Random(3);
     int pick(List<int> hand) => hand[rng.nextInt(hand.length)];
     for (var t = 0; t < seconds * 10 && !done(); t++) {
       await tester.pump(const Duration(milliseconds: 100));
       final h = room.host;
       if (h.isHumanTurn) h.playCard(pick(h.state.hands[0]));
-      if (h.state.phase == GamePhase.roundOver) h.nextRound();
+      if (ready && h.state.phase == GamePhase.roundOver) h.readyUp();
       for (final g in room.guests.entries) {
         if (idle.contains(g.key) || room.offline.contains(g.key)) continue;
         if (g.value.isHumanTurn) g.value.playCard(pick(g.value.state.hands[0]));
+        if (ready && g.value.state.phase == GamePhase.roundOver) g.value.readyUp();
       }
     }
   }
@@ -415,6 +430,128 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  group('ready for the next round', () {
+    /// Plays until the round is over on the host and every guest's screen,
+    /// nobody saying "ready".
+    Future<_Room> toRoundEnd(WidgetTester tester, {required int players, required Set<int> people}) async {
+      final room = await openRoom(players: players, people: people, target: 500, seed: 41);
+      await play(
+        tester,
+        room,
+        () =>
+            room.host.state.phase == GamePhase.roundOver &&
+            room.guests.length == people.length &&
+            room.guests.values.every((g) => g.state.phase == GamePhase.roundOver && g.readyDeadline != null),
+        ready: false,
+        seconds: 300,
+      );
+      expect(room.host.state.phase, GamePhase.roundOver);
+      expect(room.host.state.round, 1, reason: 'the first round is still waiting');
+      return room;
+    }
+
+    Future<void> wait(WidgetTester tester, int ms) async {
+      for (var t = 0; t < ms; t += 100) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    testWidgets('2v2: the next round starts when everybody is ready, and everybody sees who is', (tester) async {
+      final room = await toRoundEnd(tester, players: 4, people: <int>{1, 2});
+      final host = room.host;
+      final g1 = room.guests[1]!;
+      final g2 = room.guests[2]!;
+      final round = host.state.round;
+      // Only the bot (seat 3) is ready; each guest sees it from their seat.
+      expect(host.readySeats, <int>{3});
+      expect(g1.readySeats, <int>{rotateSeat(3, 1, 4)});
+      expect(g2.readySeats, <int>{rotateSeat(3, 2, 4)});
+      expect(g1.readyDeadline!.difference(DateTime.now()).inSeconds, inInclusiveRange(20, 30));
+
+      // Nobody else: the table waits.
+      await wait(tester, 5000);
+      expect(host.state.phase, GamePhase.roundOver);
+
+      g1.readyUp();
+      expect(g1.iAmReady, isTrue, reason: 'my own ring lights up at once');
+      await wait(tester, 300);
+      expect(host.readySeats, <int>{1, 3});
+      expect(g2.readySeats, <int>{rotateSeat(1, 2, 4), rotateSeat(3, 2, 4)});
+
+      host.readyUp();
+      await wait(tester, 300);
+      expect(host.readySeats, <int>{0, 1, 3});
+      expect(g1.readySeats, <int>{0, rotateSeat(0, 1, 4), rotateSeat(3, 1, 4)});
+      expect(host.state.phase, GamePhase.roundOver, reason: 'seat 2 is not ready yet');
+
+      // The last one: a moment later the next round is dealt.
+      g2.readyUp();
+      await wait(tester, 1500);
+      expect(host.state.phase, GamePhase.playing);
+      expect(host.state.round, round + 1);
+      await wait(tester, 1000);
+      expect(g1.state.round, round + 1);
+      expect(g1.readySeats, isEmpty);
+      expect(g1.readyDeadline, isNull);
+      room.dispose();
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('nobody waits forever: after 30 seconds the next round starts anyway', (tester) async {
+      final room = await toRoundEnd(tester, players: 2, people: <int>{1});
+      final round = room.host.state.round;
+      room.host.readyUp();
+      await wait(tester, 28000);
+      expect(room.host.state.phase, GamePhase.roundOver, reason: 'the guest has not said ready');
+      await wait(tester, 3000);
+      expect(room.host.state.phase, GamePhase.playing);
+      expect(room.host.state.round, round + 1);
+      room.dispose();
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a guest who is gone counts as ready once a bot plays for them', (tester) async {
+      final room = await toRoundEnd(tester, players: 2, people: <int>{1});
+      room.host.readyUp();
+      room.goOffline(1);
+      await wait(tester, 2000);
+      expect(room.host.state.phase, GamePhase.roundOver);
+      await wait(tester, 5000);
+      expect(room.host.standIns, <int>{1});
+      expect(room.host.state.phase, GamePhase.playing);
+      room.dispose();
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a "ready" from an older round, or for someone else, does not count', (tester) async {
+      final room = await toRoundEnd(tester, players: 2, people: <int>{1});
+      final host = room.host;
+      host.remoteReady(1, host.state.round - 1);
+      host.remoteReady(0, host.state.round);
+      host.remoteReady(5, host.state.round);
+      expect(host.readySeats, isEmpty);
+      // Twice is once.
+      host.remoteReady(1, host.state.round);
+      final v = host.stateVersion;
+      host.remoteReady(1, host.state.round);
+      expect(host.stateVersion, v);
+      expect(host.readySeats, <int>{1});
+      room.dispose();
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('offline games know nothing of it', (tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{'language': 'en', 'sound': false});
+      final settings = await AppSettings.load();
+      final state = PastraEngine.newGame(rules: const PastraRules(), numPlayers: 2, seed: 4)..phase = GamePhase.roundOver;
+      final c = GameController(settings: settings, seats: SeatInfo.lineup(2, AiLevel.medium), state: state);
+      c.readyUp();
+      expect(c.readySeats, isEmpty);
+      expect(c.readyDeadline, isNull);
+      c.dispose();
+    });
+  });
+
   group('messages', () {
     final state = PastraEngine.newGame(rules: const PastraRules(), numPlayers: 4, seed: 5);
     Map<String, Object?> view(int v) => <String, Object?>{'v': v, 's': jsonEncode(state.toJson()), 'e': '{}'};
@@ -429,13 +566,15 @@ void main() {
       expect(readHostView(null, 3), isNull);
     });
 
-    test('the host takes each move once', () {
-      expect(readMove(<String, Object?>{'n': 5, 'card': 12}, 4), (n: 5, card: 12));
-      expect(readMove(<String, Object?>{'n': 5, 'card': 12}, 5), isNull);
-      expect(readMove(<String, Object?>{'n': 6}, 5), isNull);
-      expect(readMove(<String, Object?>{'n': 6, 'card': 'ace'}, 5), isNull);
-      expect(readMove(<String, Object?>{'card': 12}, 0), isNull);
-      expect(readMove(null, 0), isNull);
+    test('the host takes each move and each "ready" once', () {
+      expect(readSeatMessage(<String, Object?>{'n': 5, 'card': 12}, 4), (n: 5, card: 12, ready: null));
+      expect(readSeatMessage(<String, Object?>{'n': 6, 'ready': 3}, 5), (n: 6, card: null, ready: 3));
+      expect(readSeatMessage(<String, Object?>{'n': 5, 'card': 12}, 5), isNull);
+      expect(readSeatMessage(<String, Object?>{'n': 6}, 5), isNull);
+      expect(readSeatMessage(<String, Object?>{'n': 6, 'card': 'ace'}, 5), isNull);
+      expect(readSeatMessage(<String, Object?>{'n': 6, 'ready': 'yes'}, 5), isNull);
+      expect(readSeatMessage(<String, Object?>{'card': 12}, 0), isNull);
+      expect(readSeatMessage(null, 0), isNull);
     });
 
     test('seats in the host\'s events are turned to the guest\'s seat', () {

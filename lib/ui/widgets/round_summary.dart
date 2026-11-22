@@ -6,15 +6,46 @@ import 'package:flutter/material.dart';
 import '../../engine/cards.dart';
 import '../../engine/game_state.dart';
 import '../../engine/rules.dart';
+import '../../game/avatar_pic.dart';
 import '../../game/progression.dart';
 import '../../game/sound.dart';
+import '../../l10n/online_strings.dart';
 import '../../l10n/social_strings.dart';
 import '../../l10n/strings.dart';
 import '../ege/widgets.dart';
 import '../fx/fx.dart';
 import '../theme.dart';
+import 'avatar.dart';
 import 'suit_icon.dart';
 import 'wallet_bar.dart';
+
+/// One player at an online table, as the "ready" row shows them.
+class ReadyPlayer {
+  const ReadyPlayer({required this.name, this.pic = AvatarPic.letter, this.frame = AvatarFrame.none});
+
+  final String name;
+  final AvatarPic pic;
+  final AvatarFrame frame;
+}
+
+/// Online, after a round: the next one starts when everybody is ready.
+class RoundReady {
+  const RoundReady({required this.players, required this.ready, required this.onReady, this.deadline});
+
+  /// Everybody at the table, the local player first.
+  final List<ReadyPlayer> players;
+
+  /// Indexes into [players] of those who are ready.
+  final Set<int> ready;
+
+  /// The local player says they are ready.
+  final VoidCallback onReady;
+
+  /// When the next round starts anyway.
+  final DateTime? deadline;
+
+  bool get iAmReady => ready.contains(0);
+}
 
 /// End-of-round (and end-of-game) score sheet shown over the table.
 class RoundSummaryPanel extends StatelessWidget {
@@ -30,6 +61,7 @@ class RoundSummaryPanel extends StatelessWidget {
     this.playAgainLabel,
     this.onReview,
     this.reviewCount = 0,
+    this.ready,
   });
 
   final GameState state;
@@ -54,6 +86,10 @@ class RoundSummaryPanel extends StatelessWidget {
 
   /// Tournament match: one "continue" button back to the bracket.
   final bool tournament;
+
+  /// Online, after a round: who is ready for the next one (instead of the
+  /// "next round" button).
+  final RoundReady? ready;
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +202,9 @@ class RoundSummaryPanel extends StatelessWidget {
     );
 
     final Widget buttons;
-    if (!over) {
+    if (!over && ready != null) {
+      buttons = _ReadyBlock(ready: ready!);
+    } else if (!over) {
       buttons = BevelButton(
         onPressed: onNextRound,
         height: 46,
@@ -282,7 +320,7 @@ class RoundSummaryPanel extends StatelessWidget {
             // A phone held sideways grows a little too, as far as it still fits
             // (the game-over panel is taller than the round panel).
             final zoom = wide
-                ? min(box.maxWidth / 700, box.maxHeight / (over ? 350 : 310)).clamp(1.0, 1.6).toDouble()
+                ? min(box.maxWidth / 700, box.maxHeight / (over ? 350 : (ready != null ? 370 : 310))).clamp(1.0, 1.6).toDouble()
                 : (box.maxWidth / 400).clamp(1.0, 1.4).toDouble();
             final content = wide
                 ? Row(
@@ -460,6 +498,155 @@ class _ScoreCountState extends State<_ScoreCount> with SingleTickerProviderState
     return GestureDetector(
       onTap: _skip,
       child: _CountScope(count: _count, timing: _timing, child: widget.child),
+    );
+  }
+}
+
+/// Online, after a round: everybody's picture, lit up in gold once they are
+/// ready and dim until then, the "I'm ready" button and how long the table
+/// still waits. The countdown is a slow timer (once a second) that stops.
+class _ReadyBlock extends StatefulWidget {
+  const _ReadyBlock({required this.ready});
+
+  final RoundReady ready;
+
+  @override
+  State<_ReadyBlock> createState() => _ReadyBlockState();
+}
+
+class _ReadyBlockState extends State<_ReadyBlock> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_secondsLeft == 0) _tick?.cancel();
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  int? get _secondsLeft {
+    final deadline = widget.ready.deadline;
+    if (deadline == null) return null;
+    final ms = deadline.difference(DateTime.now()).inMilliseconds;
+    return ms <= 0 ? 0 : (ms / 1000).ceil();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    final t = OnlineStrings(s.lang);
+    final r = widget.ready;
+    final f = MediaQuery.textScalerOf(context).scale(1);
+    final left = _secondsLeft;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (var i = 0; i < r.players.length; i++)
+              Flexible(child: ReadyAvatar(player: r.players[i], ready: r.ready.contains(i), size: 34 * f)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        BevelButton(
+          onPressed: r.iAmReady ? null : r.onReady,
+          gold: !r.iAmReady,
+          height: 44,
+          fontSize: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(r.iAmReady ? Icons.hourglass_top_rounded : Icons.check_rounded, size: 20),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(r.iAmReady ? t.waitingOthers : t.readyUp, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+        ),
+        if (left != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              t.nextIn(left),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: PastraColors.muted, fontSize: 11.5, fontWeight: FontWeight.w600),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A player's picture in the "ready" row: a gold, softly glowing ring once
+/// they are ready; dim with a faint ring until then.
+class ReadyAvatar extends StatelessWidget {
+  const ReadyAvatar({super.key, required this.player, required this.ready, this.size = 34});
+
+  final ReadyPlayer player;
+  final bool ready;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    const duration = Duration(milliseconds: 280);
+    return Semantics(
+      label: player.name,
+      selected: ready,
+      child: SizedBox(
+        width: size * 1.9,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AnimatedContainer(
+              duration: duration,
+              curve: Curves.easeOut,
+              padding: EdgeInsets.all(size * 0.08),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ready ? PastraColors.gold : Colors.white.withValues(alpha: 0.12),
+                boxShadow: ready
+                    ? <BoxShadow>[
+                        BoxShadow(color: PastraColors.gold.withValues(alpha: 0.6), blurRadius: size * 0.4, spreadRadius: 1),
+                      ]
+                    : const <BoxShadow>[],
+              ),
+              child: AnimatedOpacity(
+                duration: duration,
+                opacity: ready ? 1 : 0.4,
+                child: PlayerAvatar(name: player.name, pic: player.pic, frame: player.frame, size: size),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              player.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: ready ? PastraColors.gold : PastraColors.muted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

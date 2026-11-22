@@ -23,6 +23,9 @@ class _FakeLink implements OnlineLink {
   void sendMove(int card) {}
 
   @override
+  void sendReady(int round) {}
+
+  @override
   int get stake => 0;
 
   @override

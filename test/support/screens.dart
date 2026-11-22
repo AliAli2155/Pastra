@@ -11,6 +11,7 @@ import 'package:pastra/engine/game_state.dart';
 import 'package:pastra/engine/pastra_engine.dart';
 import 'package:pastra/engine/rules.dart';
 import 'package:pastra/game/app_settings.dart';
+import 'package:pastra/game/avatar_pic.dart';
 import 'package:pastra/game/game_controller.dart';
 import 'package:pastra/game/progression.dart';
 import 'package:pastra/game/seats.dart';
@@ -65,6 +66,7 @@ final List<SweepScreen> sweepScreens = <SweepScreen>[
   SweepScreen('quick_game', (_) => const _Lobby(), setUp: _openQuickGame),
   SweepScreen('game_over', (_) => _gameOver(sheet: false)),
   SweepScreen('score_sheet', (_) => _gameOver(sheet: true)),
+  SweepScreen('round_ready', (_) => roundReadySheet()),
   SweepScreen('table_1v1', (c) => GameScreen(controller: c!), game: 2),
   SweepScreen('table_2v2', (c) => GameScreen(controller: c!), game: 4),
 ];
@@ -121,6 +123,40 @@ Widget _gameOver({required bool sheet}) {
             onPlayAgain: () {},
             xpGain: const GameXp(amount: 120, levelBefore: 11, levelAfter: 12, chips: 400),
           ),
+  );
+}
+
+/// An online 2v2 table after a round: who is ready for the next one (the
+/// local player and their partner are).
+Widget roundReadySheet({Set<int> ready = const <int>{0, 2}, VoidCallback? onReady}) {
+  final state = PastraEngine.newGame(rules: PastraRules.pileDefaults, numPlayers: 4, seed: 7);
+  final rng = Random(3);
+  while (state.phase != GamePhase.roundOver) {
+    if (PastraEngine.needsDeal(state) || PastraEngine.roundCardsExhausted(state)) {
+      PastraEngine.advanceAuto(state);
+    } else {
+      PastraEngine.applyMove(state, PastraAI.chooseCard(state.copy(), AiLevel.medium, rng));
+    }
+  }
+  return Scaffold(
+    body: RoundSummaryPanel(
+      state: state,
+      teamNames: const <String>['Ali · Eleni', 'Konstantina · Nikos'],
+      onNextRound: () {},
+      onMainMenu: () {},
+      onPlayAgain: () {},
+      ready: RoundReady(
+        players: <ReadyPlayer>[
+          ReadyPlayer(name: 'Ali', pic: AvatarPic.byName('boat'), frame: AvatarFrame.gold),
+          const ReadyPlayer(name: 'Konstantina'),
+          ReadyPlayer(name: 'Eleni', pic: AvatarPic.byName('cat')),
+          ReadyPlayer(name: 'Nikos', pic: AvatarPic.byName('diamond'), frame: AvatarFrame.silver),
+        ],
+        ready: ready,
+        deadline: DateTime.now().add(const Duration(seconds: 24)),
+        onReady: onReady ?? () {},
+      ),
+    ),
   );
 }
 

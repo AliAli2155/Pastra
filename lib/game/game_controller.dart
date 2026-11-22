@@ -302,6 +302,40 @@ class GameController extends ChangeNotifier {
 
   /// Seconds offline before a bot takes over the seat.
   static const int standInAfter = 4;
+
+  /// Online, after a round: how long the table waits for everybody's
+  /// "ready" before the next round starts anyway (nobody waits forever for
+  /// a phone left on the table).
+  static const Duration readyWait = Duration(seconds: 30);
+
+  /// Host: seats whose player said they are ready for the next round.
+  final Set<int> _readyPressed = <int>{};
+
+  /// Guest: the ready seats the host sent (screen numbering).
+  Set<int> _hostReady = <int>{};
+
+  /// Guest: the round after which the local player said "ready".
+  int _readyRound = -1;
+
+  /// Online, after a round: when the next round starts anyway (null when
+  /// nobody is waiting).
+  DateTime? readyDeadline;
+
+  /// Online, after a round: the seats that are ready for the next one
+  /// (screen numbering). Bots, and seats a bot stands in for, always are.
+  Set<int> get readySeats {
+    if (link == null || _state.phase != GamePhase.roundOver) return const <int>{};
+    if (isGuest) return <int>{..._hostReady, if (_readyRound == _state.round) humanSeat};
+    return <int>{
+      for (var i = 0; i < seats.length; i++)
+        if (_readyPressed.contains(i) || _autoReady(i)) i,
+    };
+  }
+
+  /// Whether the local player said they are ready for the next round.
+  bool get iAmReady => readySeats.contains(humanSeat);
+
+  bool _autoReady(int seat) => seat != humanSeat && (seats[seat].isBot || standIns.contains(seat));
   final Map<int, int> _offlineSecs = <int, int>{};
   Timer? _presenceTimer;
   Timer? _autoNextTimer;
@@ -659,12 +693,18 @@ class GameController extends ChangeNotifier {
       ]);
       if (_state.phase != GamePhase.gameOver) _save();
       _busy = false;
-      _notify();
       if (link != null && _state.phase == GamePhase.roundOver) {
-        // Online: nobody waits forever for the host to tap "next round".
+        // Online: the next round starts when everybody is ready, or when
+        // the time is up.
+        _readyPressed.clear();
+        readyDeadline = DateTime.now().add(readyWait);
         _autoNextTimer?.cancel();
-        _autoNextTimer = Timer(const Duration(seconds: 12), nextRound);
+        _autoNextTimer = Timer(readyWait, nextRound);
+        // A new version, so that the guests learn who is ready and how
+        // long the table waits.
+        stateVersion++;
       }
+      _notify();
       return;
     }
     _busy = false;
@@ -779,6 +819,8 @@ class GameController extends ChangeNotifier {
     if (isGuest) return;
     if (_state.phase != GamePhase.roundOver || _busy) return;
     _autoNextTimer?.cancel();
+    _readyPressed.clear();
+    readyDeadline = null;
     PastraEngine.startNextRound(_state);
     stateVersion++;
     selected = null;
@@ -848,6 +890,41 @@ class GameController extends ChangeNotifier {
     _play(card);
   }
 
+  /// Online, after a round: the local player is ready for the next one.
+  /// The next round starts when everybody is (see [readySeats]).
+  void readyUp() {
+    if (_disposed || link == null || _state.phase != GamePhase.roundOver || iAmReady) return;
+    if (isGuest) {
+      _readyRound = _state.round;
+      link?.sendReady(_state.round);
+      _notify();
+      return;
+    }
+    _readyPressed.add(humanSeat);
+    stateVersion++;
+    _notify();
+    _startWhenAllReady();
+  }
+
+  /// Host: the player on [seat] is ready after round [round] (an older
+  /// round's message is ignored).
+  void remoteReady(int seat, int round) {
+    if (_disposed || isGuest || _state.phase != GamePhase.roundOver || round != _state.round) return;
+    if (seat <= humanSeat || seat >= seats.length || !seats[seat].isRemote || !_readyPressed.add(seat)) return;
+    stateVersion++;
+    _notify();
+    _startWhenAllReady();
+  }
+
+  /// Host: everybody is ready: a moment to see the last ring light up,
+  /// then the next round.
+  void _startWhenAllReady() {
+    if (!isHostOfLink || _state.phase != GamePhase.roundOver) return;
+    if (readySeats.length < seats.length) return;
+    _autoNextTimer?.cancel();
+    _autoNextTimer = Timer(const Duration(milliseconds: 700), nextRound);
+  }
+
   void _waitForRemote(int seat) {
     _awaitingRemote = seat;
     final queued = _queuedMoves.remove(seat);
@@ -897,6 +974,12 @@ class GameController extends ChangeNotifier {
       }
     }
     if (standInsChanged) link?.reportStandIns(standIns);
+    if (standInsChanged && _state.phase == GamePhase.roundOver) {
+      // A seat a bot stands in for is ready: the guests see it, and it may
+      // have been the last one.
+      stateVersion++;
+      _startWhenAllReady();
+    }
     if (changed || standInsChanged) _notify();
     final waiting = _awaitingRemote;
     if (waiting != null && standIns.contains(waiting)) _remoteFallback(waiting);
@@ -1123,6 +1206,17 @@ class GameController extends ChangeNotifier {
     }
     final lo = ev?['leftover'];
     leftoverSeat = lo is num ? lo.toInt() : null;
+    // After a round: who is ready, and how long the host still waits.
+    final ready = ev?['ready'];
+    _hostReady = <int>{
+      if (ready is List)
+        for (final x in ready)
+          if (x is num) x.toInt(),
+    };
+    final left = ev?['readyLeft'];
+    readyDeadline = _state.phase == GamePhase.roundOver && left is num
+        ? DateTime.now().add(Duration(milliseconds: left.toInt()))
+        : null;
     if (_state.phase == GamePhase.playing && turnChanged) {
       turnId++;
       if (_state.current == humanSeat) SoundFx.instance.play(Sfx.turn, volume: 0.7);

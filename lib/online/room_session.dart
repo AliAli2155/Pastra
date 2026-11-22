@@ -387,10 +387,13 @@ class HostRoom implements OnlineLink {
       final seat = i;
       _moveSubs.add(
         OnlineService.ref('rooms/$code/moves/s$seat').onValue.listen((e) {
-          final move = readMove(e.snapshot.value, _lastMove[seat] ?? 0);
-          if (move == null) return;
-          _lastMove[seat] = move.n;
-          c.submitRemoteMove(seat, move.card);
+          final message = readSeatMessage(e.snapshot.value, _lastMove[seat] ?? 0);
+          if (message == null) return;
+          _lastMove[seat] = message.n;
+          final card = message.card;
+          final ready = message.ready;
+          if (card != null) c.submitRemoteMove(seat, card);
+          if (ready != null) c.remoteReady(seat, ready);
         }),
       );
     }
@@ -418,6 +421,9 @@ class HostRoom implements OnlineLink {
 
   @override
   void sendMove(int card) {}
+
+  @override
+  void sendReady(int round) {}
 
   @override
   void reportStandIns(Set<int> seats) {
@@ -655,11 +661,18 @@ class GuestRoom implements OnlineLink {
   }
 
   @override
-  void sendMove(int card) {
+  void sendMove(int card) => _sendToHost(<String, Object?>{'card': card});
+
+  /// Ready for the next round: through the same slot as the moves (only the
+  /// host reads it), the host shows everybody who is ready.
+  @override
+  void sendReady(int round) => _sendToHost(<String, Object?>{'ready': round});
+
+  void _sendToHost(Map<String, Object?> message) {
     // Always increasing, also after reconnecting with a fresh GuestRoom.
     _moveCounter = max(_moveCounter + 1, DateTime.now().microsecondsSinceEpoch);
     OnlineService.ref('rooms/$code/moves/s$mySeat')
-        .set(<String, Object?>{'n': _moveCounter, 'card': card})
+        .set(<String, Object?>{'n': _moveCounter, ...message})
         .catchError((Object _) {});
   }
 
@@ -766,11 +779,18 @@ Map<int, Map<String, Object?>> hostViews(GameController c, int version) {
   final move = c.lastMove;
   final pastra = c.pastraEvent;
   final quad = c.quadAlert;
+  final deadline = state.phase == GamePhase.roundOver ? c.readyDeadline : null;
   final ev = jsonEncode(<String, Object?>{
     if (move != null) 'move': <String, Object?>{'id': move.id, 'seat': move.seat, 'card': move.card, 'cap': move.captured},
     if (pastra != null) 'pastra': <String, Object?>{'id': pastra.id, 'seat': pastra.seat, 'pts': pastra.points},
     if (quad != null) 'quad': <String, Object?>{'id': quad.id, 'seat': quad.seat, 'cards': quad.cards},
     'leftover': c.leftoverSeat,
+    // After a round: who is ready for the next one, and how long the host
+    // still waits for the others.
+    if (deadline != null) ...<String, Object?>{
+      'ready': c.readySeats.toList()..sort(),
+      'readyLeft': max(0, deadline.difference(DateTime.now()).inMilliseconds),
+    },
   });
   return <int, Map<String, Object?>>{
     for (var i = 1; i < c.seats.length; i++)
@@ -818,6 +838,15 @@ Map<String, dynamic>? translateHostEvent(Object? raw, int mySeat, int players) {
   }
   final lo = tr(ev['leftover']);
   if (lo != null) out['leftover'] = lo;
+  final ready = ev['ready'];
+  if (ready is List) {
+    out['ready'] = <int>[
+      for (final seat in ready)
+        if (tr(seat) case final int s when s >= 0 && s < players) s,
+    ]..sort();
+  }
+  final left = ev['readyLeft'];
+  if (left is num) out['readyLeft'] = left.toInt();
   return out;
 }
 
@@ -838,13 +867,15 @@ List<SeatInfo> guestSeats(RoomInfo info, int mySeat, int n) {
   return seats;
 }
 
-/// The host reads a guest's move [raw] (`moves/s<seat>`): null when it is
-/// not newer than [after] (the last one taken) or has no card.
-({int n, int card})? readMove(Object? raw, int after) {
+/// The host reads what a guest sent ([raw], `moves/s<seat>`): a card to
+/// play, or "ready" after a round. Null when it is not newer than [after]
+/// (the last one taken) or holds neither.
+({int n, int? card, int? ready})? readSeatMessage(Object? raw, int after) {
   final m = _map(raw);
   if (m == null) return null;
   final n = _int(m['n'], 0);
   final card = m['card'];
-  if (n <= after || card is! num) return null;
-  return (n: n, card: card.toInt());
+  final ready = m['ready'];
+  if (n <= after || (card is! num && ready is! num)) return null;
+  return (n: n, card: card is num ? card.toInt() : null, ready: ready is num ? ready.toInt() : null);
 }
